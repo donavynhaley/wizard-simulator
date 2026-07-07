@@ -21,10 +21,12 @@ func _ready() -> void:
 	var hands := get_node_or_null("%HandAnchor") as WizardHands
 	if hands:
 		hands.held_changed.connect(_on_held_changed)
-	var journal := SpellbookJournal.find(get_tree())
+	var journal := get_tree().root.get_node_or_null(^"Spellbook")
 	if journal:
-		journal.toast.connect(show_toast)
-		journal.discovery_made.connect(_on_discovery)
+		if journal.has_signal("toast"):
+			journal.toast.connect(show_toast)
+		if journal.has_signal("discovery_made"):
+			journal.discovery_made.connect(_on_discovery)
 
 
 func _build() -> void:
@@ -75,23 +77,23 @@ func _on_focus_changed(prompt: String) -> void:
 
 
 func _on_held_changed(item: Node3D) -> void:
-	var scroll := item as SpellScroll
-	var stone := item as RuneStone
 	if item == null:
 		_held_line.text = ""
-	elif scroll:
-		_held_line.text = "%s  [LMB cast / G drop]" % scroll.definition.spell_name
-	elif stone:
-		_held_line.text = "%s rune  [socket at a bench / G drop]" % stone.rune.display_name
+	elif item.has_method("get_display_name"):
+		_held_line.text = "%s  [G release]" % str(item.call("get_display_name"))
+	elif item.has_method("cast_from"):
+		_held_line.text = "%s  [LMB cast / G drop]" % item.name
+	elif item.get("rune") != null:
+		_held_line.text = "%s rune  [socket at a bench / G drop]" % item.get("rune").display_name
 	else:
 		_held_line.text = "%s  [G drop]" % item.name
 
 
 func _on_discovery(_entry: Dictionary) -> void:
 	# The Spellbook already toasts the headline; add the tally underneath.
-	var journal := SpellbookJournal.find(get_tree())
-	if journal:
-		show_toast("Spellbook: %d combinations recorded." % journal.discovered_count())
+	var journal := get_tree().root.get_node_or_null(^"Spellbook")
+	if journal and journal.has_method("discovered_count"):
+		show_toast("Spellbook: %d combinations recorded." % int(journal.call("discovered_count")))
 
 
 func show_toast(text: String) -> void:

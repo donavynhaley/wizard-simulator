@@ -1,6 +1,0 @@
-[gd_scene load_steps=2 format=3 uid="uid://potion_apparatus_model"]
-
-[ext_resource type="Script" path="res://scripts/props/potion_apparatus.gd" id="1"]
-
-[node name="PotionApparatus" type="Node3D"]
-script = ExtResource("1")

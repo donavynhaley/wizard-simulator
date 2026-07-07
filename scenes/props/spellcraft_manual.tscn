@@ -1,6 +1,0 @@
-[gd_scene load_steps=2 format=3 uid="uid://spellcraft_manual_model"]
-
-[ext_resource type="Script" path="res://scripts/props/spellcraft_manual.gd" id="1"]
-
-[node name="SpellcraftManual" type="Node3D"]
-script = ExtResource("1")

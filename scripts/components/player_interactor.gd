@@ -12,6 +12,9 @@ extends RayCast3D
 
 signal focus_changed(prompt: String)
 
+const LAYER_WORLD := 1
+const LAYER_PICKUP := 2
+
 var _player: Node3D
 var _focused: Node
 var _focused_collider: Object
@@ -20,7 +23,7 @@ var _focused_collider: Object
 func _ready() -> void:
 	enabled = true
 	target_position = Vector3(0.0, 0.0, -2.8)
-	collision_mask = SpellCast.LAYER_WORLD | SpellCast.LAYER_PICKUP
+	collision_mask = LAYER_WORLD | LAYER_PICKUP
 	collide_with_areas = false
 	_player = owner
 

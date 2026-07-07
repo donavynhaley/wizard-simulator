@@ -130,6 +130,6 @@ func _try_cast() -> void:
 	if camera == null:
 		return
 	var status: String = str(held_item.call("cast_from", owner, camera.global_transform))
-	var journal := SpellbookJournal.find(get_tree())
-	if status != "" and journal:
-		journal.announce(status)
+	var hud := get_tree().get_first_node_in_group("wizard_hud")
+	if status != "" and hud and hud.has_method("show_toast"):
+		hud.call("show_toast", status)

@@ -13,6 +13,8 @@ extends CharacterBody3D
 @export var step_probe_clearance: float = 0.35
 @export var step_forward_distance: float = 0.5
 @export var step_down_extra: float = 0.08
+@export var step_down_snap_height: float = 0.5
+@export var stair_floor_snap_length: float = 0.45
 @export_range(0.1, 1.0, 0.01) var stair_climb_speed_multiplier: float = 0.72
 @export var stair_step_feedback_time: float = 0.32
 @export var stair_camera_lift_amount: float = 0.045
@@ -57,6 +59,7 @@ var _head_step_offset := 0.0
 
 func _ready() -> void:
 	_capture_mouse()
+	floor_snap_length = maxf(floor_snap_length, stair_floor_snap_length)
 	_head_rest_position = head.position
 	viewmodel.position = viewmodel_rest_position
 	_mount_arms()
@@ -150,15 +153,22 @@ func apply_mouse_look(relative: Vector2) -> void:
 func _physics_process(delta: float) -> void:
 	var was_on_floor := is_on_floor()
 	var position_before_move := global_position
+	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
+	var direction := (transform.basis * Vector3(input_dir.x, 0.0, input_dir.y)).normalized()
+	var pre_snapped_down := false
 
-	if not is_on_floor():
+	if enable_stair_stepping \
+			and not was_on_floor \
+			and direction != Vector3.ZERO \
+			and velocity.y <= 0.0:
+		pre_snapped_down = _try_step_down()
+
+	if not is_on_floor() and not pre_snapped_down:
 		velocity.y -= _gravity * delta
 
 	if Input.is_action_just_pressed("jump") and is_on_floor():
 		velocity.y = jump_velocity
 
-	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
-	var direction := (transform.basis * Vector3(input_dir.x, 0.0, input_dir.y)).normalized()
 	var climb_multiplier := stair_climb_speed_multiplier if _stair_step_timer > 0.0 else 1.0
 	var target_velocity := direction * move_speed * climb_multiplier
 
@@ -169,24 +179,43 @@ func _physics_process(delta: float) -> void:
 		velocity.x = move_toward(velocity.x, 0.0, deceleration * delta)
 		velocity.z = move_toward(velocity.z, 0.0, deceleration * delta)
 
+	var prepared_step_down_height := -1.0
+	if enable_stair_stepping \
+			and was_on_floor \
+			and direction != Vector3.ZERO \
+			and velocity.y <= 0.0:
+		var horizontal_speed := Vector3(velocity.x, 0.0, velocity.z).length()
+		var horizontal_motion := direction.normalized() * maxf(step_forward_distance, horizontal_speed * delta)
+		prepared_step_down_height = _find_step_down_height(global_transform, horizontal_motion)
+		if prepared_step_down_height > 0.0:
+			velocity.y = minf(velocity.y, -prepared_step_down_height / maxf(delta, 0.001))
+
 	var expected_horizontal_motion := Vector3(velocity.x, 0.0, velocity.z).length() * delta
 	move_and_slide()
+	if prepared_step_down_height > 0.0 and is_on_floor():
+		_apply_stair_feedback(-prepared_step_down_height)
 
 	var actual_horizontal_motion := Vector3(
 		global_position.x - position_before_move.x,
 		0.0,
 		global_position.z - position_before_move.z).length()
 	var movement_was_blocked := actual_horizontal_motion < expected_horizontal_motion * 0.55
+	var stepped_up := false
 	if enable_stair_stepping \
 			and was_on_floor \
 			and direction != Vector3.ZERO \
 			and (_has_forward_wall_collision(direction) or movement_was_blocked):
-		_try_step_up(direction, delta)
+		stepped_up = _try_step_up(direction, delta)
+	if enable_stair_stepping \
+			and not stepped_up \
+			and direction != Vector3.ZERO \
+			and velocity.y <= 0.0:
+		_try_step_down()
 
 	_update_viewmodel(delta, input_dir.length())
 
 
-func _try_step_up(direction: Vector3, delta: float) -> void:
+func _try_step_up(direction: Vector3, delta: float) -> bool:
 	var original := global_transform
 	var horizontal_speed := Vector3(velocity.x, 0.0, velocity.z).length()
 	var forward_distance := maxf(step_forward_distance, horizontal_speed * delta)
@@ -196,21 +225,62 @@ func _try_step_up(direction: Vector3, delta: float) -> void:
 
 	if test_move(original, up_motion):
 		_debug_stair("blocked while checking step height")
-		return
+		return false
 
 	var step_height := _find_step_height(original, forward_motion, probe_lift)
 	if step_height < 0.0:
 		_debug_stair("no usable step landing found")
-		return
+		return false
 
 	var stepped := original
 	stepped.origin.y += step_height
 	global_transform = stepped
 	velocity.y = 0.0
-	_stair_step_timer = stair_step_feedback_time
-	_stair_step_strength = clampf(step_height / max_step_height, 0.0, 1.0)
-	_head_step_offset = minf(_head_step_offset, -step_height * 0.75)
+	_apply_stair_feedback(step_height)
 	_debug_stair("stepped up %.3f" % step_height)
+	return true
+
+
+func _try_step_down() -> bool:
+	var original := global_transform
+	var max_snap := minf(max_step_height, step_down_snap_height) + step_down_extra
+	var down_collision := KinematicCollision3D.new()
+	if not test_move(original, Vector3.DOWN * max_snap, down_collision):
+		return false
+
+	if down_collision.get_normal().dot(Vector3.UP) < cos(floor_max_angle):
+		return false
+
+	var step_height := -down_collision.get_travel().y
+	if step_height < min_step_height or step_height > max_snap + 0.01:
+		return false
+
+	global_transform = original.translated(down_collision.get_travel())
+	velocity.y = 0.0
+	apply_floor_snap()
+	_apply_stair_feedback(-step_height)
+	_debug_stair("stepped down %.3f" % step_height)
+	return true
+
+
+func _find_step_down_height(original: Transform3D, horizontal_motion: Vector3) -> float:
+	if horizontal_motion.length_squared() <= 0.000001:
+		return -1.0
+
+	var probe := original.translated(horizontal_motion)
+	var max_snap := minf(max_step_height, step_down_snap_height) + step_down_extra
+	var down_collision := KinematicCollision3D.new()
+	if not test_move(probe, Vector3.DOWN * max_snap, down_collision):
+		return -1.0
+
+	if down_collision.get_normal().dot(Vector3.UP) < cos(floor_max_angle):
+		return -1.0
+
+	var step_height := -down_collision.get_travel().y
+	if step_height < min_step_height or step_height > max_snap + 0.01:
+		return -1.0
+
+	return step_height
 
 
 func _find_step_height(original: Transform3D, forward_motion: Vector3, probe_lift: float) -> float:
@@ -256,6 +326,16 @@ func _has_forward_wall_collision(direction: Vector3) -> bool:
 func _debug_stair(message: String) -> void:
 	if debug_stair_stepping:
 		print("[stair] ", message)
+
+
+func _apply_stair_feedback(step_delta: float) -> void:
+	var step_height := absf(step_delta)
+	_stair_step_timer = stair_step_feedback_time
+	_stair_step_strength = clampf(step_height / max_step_height, 0.0, 1.0)
+	if step_delta > 0.0:
+		_head_step_offset = minf(_head_step_offset, -step_height * 0.75)
+	else:
+		_head_step_offset = maxf(_head_step_offset, step_height * 0.75)
 
 
 func _update_viewmodel(delta: float, input_amount: float) -> void:
