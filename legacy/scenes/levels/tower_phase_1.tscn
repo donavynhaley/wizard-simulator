@@ -1,6 +1,0 @@
-[gd_scene format=3 uid="uid://d1aser12b3kjl"]
-
-[ext_resource type="Script" path="res://scripts/levels/tower_phase_1.gd" id="1"]
-
-[node name="TowerPhase1" type="Node3D" unique_id=1833514133]
-script = ExtResource("1")

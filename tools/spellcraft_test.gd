@@ -91,7 +91,7 @@ func _forge_tests() -> void:
 
 
 func _scene_tests() -> void:
-	var scene := (load("res://scenes/levels/spellcraft_playground.tscn") as PackedScene).instantiate()
+	var scene := _make_spellcraft_test_scene()
 	root.add_child(scene)
 	current_scene = scene
 	await process_frame
@@ -218,6 +218,44 @@ func _scene_tests() -> void:
 	_check(demon_found, "tiny useless demon reported for duty")
 	for i in 30:
 		await physics_frame
+
+
+func _make_spellcraft_test_scene() -> Node3D:
+	var scene := Node3D.new()
+	scene.name = "SpellcraftRegressionPlayground"
+
+	var player := (load("res://scenes/characters/player.tscn") as PackedScene).instantiate()
+	player.name = "Player"
+	player.position = Vector3(0.0, 1.0, 4.0)
+	scene.add_child(player)
+
+	var floor := StaticBody3D.new()
+	floor.name = "Floor"
+	floor.collision_layer = SpellCast.LAYER_WORLD
+	var floor_shape := CollisionShape3D.new()
+	var floor_box := BoxShape3D.new()
+	floor_box.size = Vector3(18.0, 0.4, 18.0)
+	floor_shape.shape = floor_box
+	floor.add_child(floor_shape)
+	floor.position = Vector3(0.0, -0.2, 0.0)
+	scene.add_child(floor)
+
+	var bench := (load("res://scenes/props/spell_bench.tscn") as PackedScene).instantiate()
+	bench.position = Vector3(0.0, 0.0, -1.5)
+	scene.add_child(bench)
+
+	var cabinet := (load("res://scenes/props/rune_cabinet.tscn") as PackedScene).instantiate()
+	cabinet.position = Vector3(0.0, 0.0, -8.5)
+	scene.add_child(cabinet)
+
+	var dummy_scene := load("res://scenes/props/training_dummy.tscn") as PackedScene
+	for i in 3:
+		var dummy := dummy_scene.instantiate()
+		dummy.position = Vector3(5.5 + (i % 2) * 1.5, 0.0, -3.0 + i * 2.6)
+		dummy.rotation.y = -PI * 0.5
+		scene.add_child(dummy)
+
+	return scene
 
 
 func _grab_stone(cabinet: RuneCabinet, hands: WizardHands, rune_id: String) -> RuneStone:

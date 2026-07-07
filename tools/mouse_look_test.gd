@@ -9,7 +9,7 @@ extends SceneTree
 var _fail := 0
 
 
-func _initialize() -> void:
+func _init() -> void:
 	call_deferred("_run")
 
 
@@ -44,6 +44,26 @@ func _run() -> void:
 	await process_frame
 	_check(absf(head.rotation.x - pitch_before) > 0.001,
 		"mouse motion pitches the head (dx=%.5f)" % (head.rotation.x - pitch_before))
+
+	var yaw_before_click_hold := player.rotation.y
+	var click := InputEventMouseButton.new()
+	click.position = root.get_visible_rect().size * 0.5
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	Input.parse_input_event(click)
+	await process_frame
+
+	var held_motion := InputEventMouseMotion.new()
+	held_motion.position = root.get_visible_rect().size * 0.5
+	held_motion.button_mask = MOUSE_BUTTON_MASK_LEFT
+	held_motion.relative = Vector2(-100.0, 0.0)
+	held_motion.velocity = Vector2(-1000.0, 0.0)
+	Input.parse_input_event(held_motion)
+	await process_frame
+	await process_frame
+	_check(absf(player.rotation.y - yaw_before_click_hold) > 0.001,
+		"mouse motion still turns while left click is held (dy=%.5f)" %
+		(player.rotation.y - yaw_before_click_hold))
 
 	if _fail == 0:
 		print("MOUSE LOOK TEST OK")

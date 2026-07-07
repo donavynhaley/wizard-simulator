@@ -8,8 +8,27 @@ extends Node3D
 
 signal held_changed(item: Node3D)
 
+@export_group("Held Item Pose")
+@export var default_held_position: Vector3 = Vector3.ZERO
+@export var default_held_rotation: Vector3 = Vector3(0.0, -0.35, 0.1)
+@export var default_held_scale: Vector3 = Vector3.ONE
+
+@export_group("Grab And Drop")
+@export var pickup_time: float = 0.18
+@export var grab_lift: float = 0.055
+@export var drop_forward_impulse: float = 1.5
+@export var drop_up_impulse: float = 0.5
+
 var held_item: Node3D
 var _carry_tween: Tween
+var _pose_tween: Tween
+var _rest_position := Vector3.ZERO
+var _rest_rotation := Vector3.ZERO
+
+
+func _ready() -> void:
+	_rest_position = position
+	_rest_rotation = rotation
 
 
 func pick_up(item: Node3D) -> void:
@@ -20,12 +39,14 @@ func pick_up(item: Node3D) -> void:
 	if item.has_method("set_held"):
 		item.set_held(true)
 	item.reparent(self)
-	item.scale = Vector3.ONE
+	var pose := _held_pose_for(item)
+	item.scale = pose.scale
 	_carry_tween = item.create_tween()
-	_carry_tween.tween_property(item, "position", Vector3.ZERO, 0.18) \
+	_carry_tween.tween_property(item, "position", pose.position, pickup_time) \
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	_carry_tween.parallel().tween_property(item, "rotation",
-		Vector3(0.0, -0.35, 0.1), 0.18)
+		pose.rotation, pickup_time)
+	_play_grab_motion()
 	held_changed.emit(item)
 
 
@@ -42,7 +63,7 @@ func drop() -> void:
 	if item is RigidBody3D:
 		var camera := get_viewport().get_camera_3d()
 		var toss := -camera.global_transform.basis.z if camera else Vector3.FORWARD
-		item.apply_central_impulse(toss * 1.5 + Vector3.UP * 0.5)
+		item.apply_central_impulse(toss * drop_forward_impulse + Vector3.UP * drop_up_impulse)
 	held_changed.emit(null)
 
 
@@ -58,6 +79,30 @@ func _kill_carry_tween() -> void:
 	if _carry_tween and _carry_tween.is_valid():
 		_carry_tween.kill()
 	_carry_tween = null
+	if _pose_tween and _pose_tween.is_valid():
+		_pose_tween.kill()
+	_pose_tween = null
+
+
+func _held_pose_for(item: Node3D) -> Dictionary:
+	if item.has_method("get_held_pose"):
+		return item.call("get_held_pose")
+	return {
+		"position": default_held_position,
+		"rotation": default_held_rotation,
+		"scale": default_held_scale,
+	}
+
+
+func _play_grab_motion() -> void:
+	if _pose_tween and _pose_tween.is_valid():
+		_pose_tween.kill()
+	position = _rest_position + Vector3(0.0, grab_lift, 0.0)
+	_pose_tween = create_tween()
+	_pose_tween.tween_property(self, "position", _rest_position, pickup_time) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_pose_tween.parallel().tween_property(self, "rotation", _rest_rotation, pickup_time) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 
 ## Called by items that cease to exist while held (a spent scroll crumbling).

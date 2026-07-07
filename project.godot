@@ -11,8 +11,8 @@ config_version=5
 [application]
 
 config/name="Wizard Simulator"
-run/main_scene="res://scenes/levels/spellcraft_playground.tscn"
-config/features=PackedStringArray("4.6", "Forward Plus")
+run/main_scene="uid://oh688fkepu5k"
+config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
 
 [autoload]
@@ -26,7 +26,7 @@ window/size/viewport_height=720
 window/subwindows/embed_subwindows=false
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
-display_server/driver.linuxbsd="wayland"
+display_server/driver.linuxbsd="x11"
 
 [input]
 

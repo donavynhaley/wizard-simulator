@@ -7,6 +7,10 @@ extends RigidBody3D
 
 signal depleted(scroll: SpellScroll)
 
+@export var held_position: Vector3 = Vector3(0.0, -0.015, 0.0)
+@export var held_rotation: Vector3 = Vector3(0.0, -0.35, 0.08)
+@export var held_scale: Vector3 = Vector3(1.0, 1.0, 1.0)
+
 var definition: SpellDefinition
 var held := false
 
@@ -113,6 +117,14 @@ func interact(player: Node3D, _collider: Object) -> void:
 	var hands := player.get_node_or_null("%HandAnchor") as WizardHands
 	if hands:
 		hands.pick_up(self)
+
+
+func get_held_pose() -> Dictionary:
+	return {
+		"position": held_position,
+		"rotation": held_rotation,
+		"scale": held_scale,
+	}
 
 
 func set_held(now_held: bool) -> void:

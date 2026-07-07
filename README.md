@@ -1,6 +1,6 @@
 # Wizard Simulator
 
-First-person 3D wizard game built in Godot 4.6.
+First-person 3D wizard game built in Godot 4.7.
 
 ## Premise
 
@@ -37,7 +37,7 @@ The tower itself is being hand-built in the editor; these scenes are self-contai
 
 The player scene carries the look-to-focus `PlayerInteractor` (duck-typed contract: `focus_prompt(player, collider)` / `interact(player, collider)`), the `WizardHands` held-item component (`%HandAnchor`), and the `WizardHud` (prompts, held item, discovery toasts).
 Spell runtime lives in `scripts/spellcraft/` (rune catalog, forge, journal) and `scripts/spellcraft/casting/` (per-shape effects and backfires).
-The old procedural tower is parked in `legacy/`.
+Levels are editor-authored scenes.
 
 ## External assets
 
@@ -58,7 +58,8 @@ The first-person arms are a CC-BY model (`assets/external/polypizza/fps_arms.glb
 godot --path .
 ```
 
-Main scene is `scenes/levels/spellcraft_playground.tscn`, a temporary workshop room with the bench, cabinet, and dummies for exercising the mechanic while the real tower is built.
+Main scene is `scenes/levels/spellcraft_playground.tscn`.
+Use the Godot editor to build and arrange level geometry directly.
 
 ## Verify
 
@@ -68,27 +69,19 @@ Full end-to-end spellcraft test (forge outcomes, bench flow, casting, charges, j
 godot --headless --path . -s tools/spellcraft_test.gd
 ```
 
-Render the playground (overview, bench close-up, staged effects) to `user://playground_*.png` (needs a display):
-
-```sh
-godot --path . -s tools/survey_playground.gd
-```
-
 Verify external CC0 asset packs and licenses:
 
 ```sh
 godot --headless --path . -s tools/verify_assets.gd
 ```
 
-The old tower's tools (`survey_floors.gd`, `climb_spiral.gd`, `interact_test.gd`, `render_pov.gd`, `arms_diag.gd`) still point at `legacy/scenes/levels/wizard_tower.tscn`.
-
 ## Status
 
 In place:
 
 - Spell crafting mechanic end to end: rune stones -> physical bench -> scrolls -> casting, with instability quirks, comedic backfires, hidden rare recipes, and the persistent Spellbook journal.
-- Playground scene as the temporary main scene.
+- Editor-authored playground scene as the main scene.
 - Player components: look-to-focus interaction, held-item hands, HUD with discovery toasts.
 - First-person arms viewmodel (CC-BY, see `CREDITS.md`) with idle sway and a recurring gesture.
 
-Next: Donavyn hand-builds the tower in the editor from these assets; then potion alchemy, kingdom monitoring/quests, and royal decrees.
+Next: Donavyn builds levels in the editor from these assets; then potion alchemy, kingdom monitoring/quests, and royal decrees.

@@ -6,6 +6,9 @@ extends RigidBody3D
 ## its own look: glyph, inlay, and glow all come from the rune's definition.
 
 @export var rune_id: String = "fire"
+@export var held_position: Vector3 = Vector3(0.0, -0.01, 0.0)
+@export var held_rotation: Vector3 = Vector3(-0.45, -0.25, 0.18)
+@export var held_scale: Vector3 = Vector3(1.15, 1.15, 1.15)
 
 var rune: RuneData
 var held := false
@@ -80,6 +83,14 @@ func interact(player: Node3D, _collider: Object) -> void:
 	var hands := player.get_node_or_null("%HandAnchor") as WizardHands
 	if hands:
 		hands.pick_up(self)
+
+
+func get_held_pose() -> Dictionary:
+	return {
+		"position": held_position,
+		"rotation": held_rotation,
+		"scale": held_scale,
+	}
 
 
 ## Called by WizardHands and SpellBench when this stone changes custody.
