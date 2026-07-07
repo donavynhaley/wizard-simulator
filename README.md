@@ -1,0 +1,2 @@
+# wizard-simulator
+wizsim
