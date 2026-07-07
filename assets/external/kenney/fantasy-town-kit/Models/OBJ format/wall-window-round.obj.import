@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://bfq2yn60fdxha"
+path="res://.godot/imported/wall-window-round.obj-8d8d147811d3b0a7bae41de35d4cafeb.mesh"
+
+[deps]
+
+files=["res://.godot/imported/wall-window-round.obj-8d8d147811d3b0a7bae41de35d4cafeb.mesh"]
+
+source_file="res://assets/external/kenney/fantasy-town-kit/Models/OBJ format/wall-window-round.obj"
+dest_files=["res://.godot/imported/wall-window-round.obj-8d8d147811d3b0a7bae41de35d4cafeb.mesh", "res://.godot/imported/wall-window-round.obj-8d8d147811d3b0a7bae41de35d4cafeb.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

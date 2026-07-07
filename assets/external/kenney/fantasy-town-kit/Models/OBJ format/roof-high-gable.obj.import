@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://doas0qqiqkp8b"
+path="res://.godot/imported/roof-high-gable.obj-d2f373d6e5de505356d9e575e40eb36e.mesh"
+
+[deps]
+
+files=["res://.godot/imported/roof-high-gable.obj-d2f373d6e5de505356d9e575e40eb36e.mesh"]
+
+source_file="res://assets/external/kenney/fantasy-town-kit/Models/OBJ format/roof-high-gable.obj"
+dest_files=["res://.godot/imported/roof-high-gable.obj-d2f373d6e5de505356d9e575e40eb36e.mesh", "res://.godot/imported/roof-high-gable.obj-d2f373d6e5de505356d9e575e40eb36e.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

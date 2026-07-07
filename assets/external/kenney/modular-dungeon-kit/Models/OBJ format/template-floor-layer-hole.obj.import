@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://cw0meuwvd8355"
+path="res://.godot/imported/template-floor-layer-hole.obj-aff2cac22180688f4c2e8c4a67139fa2.mesh"
+
+[deps]
+
+files=["res://.godot/imported/template-floor-layer-hole.obj-aff2cac22180688f4c2e8c4a67139fa2.mesh"]
+
+source_file="res://assets/external/kenney/modular-dungeon-kit/Models/OBJ format/template-floor-layer-hole.obj"
+dest_files=["res://.godot/imported/template-floor-layer-hole.obj-aff2cac22180688f4c2e8c4a67139fa2.mesh", "res://.godot/imported/template-floor-layer-hole.obj-aff2cac22180688f4c2e8c4a67139fa2.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

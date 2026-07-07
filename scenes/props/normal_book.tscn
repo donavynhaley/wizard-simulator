@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://normal_book_model"]
+
+[ext_resource type="Script" path="res://scripts/props/normal_book.gd" id="1"]
+
+[node name="NormalBookModel" type="Node3D"]
+script = ExtResource("1")

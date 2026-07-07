@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://dhej2vyo0c7ak"
+path="res://.godot/imported/wall-pane-paint-door.obj-605da4e698dce05888b1e2a4b4a42c3c.mesh"
+
+[deps]
+
+files=["res://.godot/imported/wall-pane-paint-door.obj-605da4e698dce05888b1e2a4b4a42c3c.mesh"]
+
+source_file="res://assets/external/kenney/retro-fantasy-kit/Models/OBJ format/wall-pane-paint-door.obj"
+dest_files=["res://.godot/imported/wall-pane-paint-door.obj-605da4e698dce05888b1e2a4b4a42c3c.mesh", "res://.godot/imported/wall-pane-paint-door.obj-605da4e698dce05888b1e2a4b4a42c3c.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false
