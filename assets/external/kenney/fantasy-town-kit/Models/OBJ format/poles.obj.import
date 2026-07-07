@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://b22arxxgw4h04"
+path="res://.godot/imported/poles.obj-639b9677ed6c8025f710a3497f3d14cf.mesh"
+
+[deps]
+
+files=["res://.godot/imported/poles.obj-639b9677ed6c8025f710a3497f3d14cf.mesh"]
+
+source_file="res://assets/external/kenney/fantasy-town-kit/Models/OBJ format/poles.obj"
+dest_files=["res://.godot/imported/poles.obj-639b9677ed6c8025f710a3497f3d14cf.mesh", "res://.godot/imported/poles.obj-639b9677ed6c8025f710a3497f3d14cf.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false
