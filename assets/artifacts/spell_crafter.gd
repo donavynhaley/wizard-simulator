@@ -20,39 +20,31 @@ signal scribing_cancelled
 @export var ink_lift: float = 0.014
 ## Scales the physical table ink around the scroll center. Raise this if table ink looks smaller than scribe-mode ink.
 @export var table_ink_scale := Vector2(1.18, 1.18)
+## Pixel size of the render texture that is projected onto the scroll surface.
+@export var scribe_texture_size := Vector2i(1024, 768)
 
 @export_group("Table Camera")
-@export_multiline var table_camera_notes := "Height raises or lowers the scribe camera. Back moves it away from the scroll along the table's local Z axis. Pitch tilts toward or away from the scroll, yaw rotates left or right, and roll rotates the final view. Roll -90 points the parchment to the right."
-## Vertical distance above the scroll center.
-@export var camera_height: float = 1.15
-## Distance behind the scroll center along this table's local Z axis.
-@export var camera_back: float = 0.25
-## Field of view for the temporary scribing camera.
-@export var camera_fov: float = 48.0
-## Extra local pitch after the camera looks at the scroll.
-@export var camera_pitch_offset_degrees: float = 0.0
-## Extra local yaw after the camera looks at the scroll.
-@export var camera_yaw_offset_degrees: float = 0.0
-## Extra local roll after the camera looks at the scroll. Use this to rotate the parchment in screen space.
-@export var camera_roll_degrees: float = -90.0
+@export_multiline var table_camera_notes := "Scribing requires this Camera3D. Move, rotate, and tune its FOV directly in the crafting table scene for exact composition."
+## Required Camera3D in the crafting table scene. Move this camera in the editor for exact scribing composition.
+@export_node_path("Camera3D") var scribe_camera_path: NodePath = ^"ScribeCamera"
 
 @export_group("Scribe Props")
 ## Existing quill node moved during scribing. Leave as Quill for the current crafting table scene.
 @export_node_path("Node3D") var quill_path: NodePath = ^"Quill"
-## Higher values make the quill and hand catch up to the mouse faster.
-@export var prop_follow_speed: float = 28.0
+## 0 locks directly to the mouse. Higher values add catch-up smoothing.
+@export var prop_follow_speed: float = 0.0
 ## How far above the scroll surface the quill body rides while the tip follows the cursor.
-@export var quill_hover_lift: float = 0.006
+@export var quill_hover_lift: float = 0.002
 ## Local offset from the quill origin to the writing tip.
-@export var quill_tip_local_offset := Vector3(0.0, -0.04, 0.0)
+@export var quill_tip_local_offset := Vector3(0.0, -0.038, 0.0)
 ## How much the quill leans forward over the scroll.
-@export var quill_pitch_degrees: float = -62.0
+@export var quill_pitch_degrees: float = -54.0
 ## Rotates the quill around the scroll surface normal.
-@export var quill_yaw_degrees: float = -28.0
+@export var quill_yaw_degrees: float = -36.0
 ## Position of the simple hand prop relative to the quill origin.
-@export var hand_offset := Vector3(0.025, 0.025, 0.01)
+@export var hand_offset := Vector3(0.032, 0.018, 0.016)
 ## Rotation of the simple hand prop relative to the quill.
-@export var hand_rotation_degrees := Vector3(-18.0, -12.0, 22.0)
+@export var hand_rotation_degrees := Vector3(-28.0, -8.0, 26.0)
 
 @onready var scroll: Node3D = $Scroll
 @onready var quill: Node3D = get_node_or_null(quill_path) as Node3D
@@ -62,10 +54,10 @@ var _sealed := false
 var _player: Node3D
 var _original_camera: Camera3D
 var _scribe_camera: Camera3D
-var _scribe_layer: CanvasLayer
+var _scribe_viewport: SubViewport
+var _scribe_surface: MeshInstance3D
 var _scribe_canvas: ScribeCanvas
 var _saved_strokes: Array[PackedVector2Array] = []
-var _scroll_ink: MeshInstance3D
 var _seal_hold_elapsed := 0.0
 var _previous_mouse_mode := Input.MOUSE_MODE_VISIBLE
 var _interactor: RayCast3D
@@ -78,6 +70,7 @@ var _has_cursor_point := false
 func _ready() -> void:
 	if quill:
 		_quill_rest_transform = quill.transform
+	_create_scribe_surface()
 	_create_scribe_hand_prop()
 
 
@@ -85,7 +78,6 @@ class ScribeCanvas:
 	extends Control
 
 	signal strokes_changed(strokes: Array[PackedVector2Array])
-	signal cursor_changed(point: Vector2, inside: bool)
 
 	var initial_strokes: Array[PackedVector2Array] = []
 	var total_length := 0.0
@@ -93,63 +85,29 @@ class ScribeCanvas:
 	var sparkles: Array[Dictionary] = []
 	var seal_hold_progress := 0.0
 	var _drawing := false
-	var _scroll_rect := Rect2()
-	var _last_cursor := Vector2.INF
-	var _last_cursor_inside := false
 
 	func _ready() -> void:
-		mouse_filter = Control.MOUSE_FILTER_STOP
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		set_process(true)
-		_update_scroll_rect()
 		_load_initial_strokes()
-
-	func _notification(what: int) -> void:
-		if what == NOTIFICATION_RESIZED:
-			var normalized := _normalized_strokes()
-			_update_scroll_rect()
-			_load_strokes(normalized)
-			queue_redraw()
 
 	func _process(delta: float) -> void:
 		for i in range(sparkles.size() - 1, -1, -1):
 			sparkles[i]["age"] = float(sparkles[i]["age"]) + delta
 			if float(sparkles[i]["age"]) > 0.42:
 				sparkles.remove_at(i)
-		_emit_cursor_from_mouse()
 		queue_redraw()
 
-	func _gui_input(event: InputEvent) -> void:
-		if event is InputEventMouseButton:
-			var button_event := event as InputEventMouseButton
-			if button_event.button_index != MOUSE_BUTTON_LEFT:
-				return
-			if button_event.pressed and _scroll_rect.has_point(button_event.position):
-				_begin_stroke(button_event.position)
-				_emit_cursor(button_event.position, true)
-			elif not button_event.pressed:
-				_drawing = false
-			accept_event()
-			return
-
-		if event is InputEventMouseMotion:
-			var motion := event as InputEventMouseMotion
-			var clamped := motion.position.clamp(_scroll_rect.position, _scroll_rect.end)
-			_emit_cursor(clamped, _scroll_rect.has_point(motion.position))
-			if _drawing:
-				_append_point(clamped)
-			accept_event()
-
 	func _draw() -> void:
-		draw_rect(_scroll_rect, Color(0.86, 0.78, 0.62, 0.08), true)
-		draw_rect(_scroll_rect, Color(0.98, 0.91, 0.72, 0.65), false, 2.0)
-
 		for stroke in strokes:
 			if stroke.size() >= 2:
-				draw_polyline(stroke, Color(0.12, 0.08, 0.16, 0.92), 4.0, true)
+				draw_polyline(_stroke_to_pixels(stroke), Color(0.12, 0.08, 0.16, 0.92), 6.0, true)
+			elif stroke.size() == 1:
+				draw_circle(_point_to_pixel(stroke[0]), 3.0, Color(0.12, 0.08, 0.16, 0.92))
 
 		for sparkle in sparkles:
 			var age := float(sparkle["age"])
-			var point := sparkle["point"] as Vector2
+			var point := _point_to_pixel(sparkle["point"] as Vector2)
 			var alpha := 1.0 - age / 0.42
 			var radius := 3.0 + age * 24.0
 			draw_circle(point, radius, Color(0.45, 0.9, 1.0, alpha * 0.7))
@@ -157,18 +115,18 @@ class ScribeCanvas:
 
 		if has_ink():
 			var bar_back := Rect2(
-				_scroll_rect.position + Vector2(0.0, _scroll_rect.size.y + 18.0),
-				Vector2(_scroll_rect.size.x, 5.0))
+				Vector2(size.x * 0.08, size.y - 24.0),
+				Vector2(size.x * 0.84, 7.0))
 			var bar_rect := Rect2(
-				_scroll_rect.position + Vector2(0.0, _scroll_rect.size.y + 18.0),
-				Vector2(_scroll_rect.size.x * seal_hold_progress, 5.0))
+				bar_back.position,
+				Vector2(bar_back.size.x * seal_hold_progress, bar_back.size.y))
 			draw_rect(bar_back, Color(0.12, 0.18, 0.22, 0.55), true)
 			draw_rect(bar_rect, Color(0.35, 0.82, 1.0, 0.85), true)
 
 	func _begin_stroke(point: Vector2) -> void:
 		_drawing = true
 		var stroke := PackedVector2Array()
-		stroke.append(point)
+		stroke.append(_clamp_normalized(point))
 		strokes.append(stroke)
 		_add_sparkle(point)
 		strokes_changed.emit(_normalized_strokes())
@@ -180,43 +138,36 @@ class ScribeCanvas:
 
 		var stroke := strokes[strokes.size() - 1]
 		var previous := stroke[stroke.size() - 1]
-		if previous.distance_to(point) < 4.0:
+		var normalized_point := _clamp_normalized(point)
+		if _point_to_pixel(previous).distance_to(_point_to_pixel(normalized_point)) < 4.0:
 			return
 
-		total_length += previous.distance_to(point)
-		stroke.append(point)
+		total_length += _point_to_pixel(previous).distance_to(_point_to_pixel(normalized_point))
+		stroke.append(normalized_point)
 		strokes[strokes.size() - 1] = stroke
 
 		if int(total_length) % 70 < 8:
-			_add_sparkle(point)
+			_add_sparkle(normalized_point)
 		strokes_changed.emit(_normalized_strokes())
 
 	func _add_sparkle(point: Vector2) -> void:
 		sparkles.append({
-			"point": point,
+			"point": _clamp_normalized(point),
 			"age": 0.0,
 		})
 
-	func _update_scroll_rect() -> void:
-		var size := get_viewport_rect().size
-		var width := minf(size.x * 0.48, 620.0)
-		var height := width * 0.72
-		_scroll_rect = Rect2((size - Vector2(width, height)) * 0.5, Vector2(width, height))
-
-	func _emit_cursor_from_mouse() -> void:
-		var mouse_position := get_local_mouse_position()
-		var clamped := mouse_position.clamp(_scroll_rect.position, _scroll_rect.end)
-		_emit_cursor(clamped, _scroll_rect.has_point(mouse_position))
-
-	func _emit_cursor(point: Vector2, inside: bool) -> void:
-		if point.distance_squared_to(_last_cursor) < 1.0 and inside == _last_cursor_inside:
-			return
-		_last_cursor = point
-		_last_cursor_inside = inside
-		cursor_changed.emit(_normalized_point(point), inside)
-
 	func has_ink() -> bool:
 		return not strokes.is_empty()
+
+	func begin_surface_stroke(point: Vector2) -> void:
+		_begin_stroke(point)
+
+	func append_surface_point(point: Vector2) -> void:
+		if _drawing:
+			_append_point(point)
+
+	func end_surface_stroke() -> void:
+		_drawing = false
 
 	func _load_initial_strokes() -> void:
 		_load_strokes(initial_strokes)
@@ -226,34 +177,34 @@ class ScribeCanvas:
 		for normalized_stroke in source_strokes:
 			var stroke := PackedVector2Array()
 			for point in normalized_stroke:
-				stroke.append(_scroll_rect.position + point * _scroll_rect.size)
+				stroke.append(_clamp_normalized(point))
 			strokes.append(stroke)
 		total_length = _stroke_length(strokes)
 
 	func _normalized_strokes() -> Array[PackedVector2Array]:
 		var out: Array[PackedVector2Array] = []
-		if _scroll_rect.size.x <= 0.0 or _scroll_rect.size.y <= 0.0:
-			return out
 		for stroke in strokes:
-			var normalized := PackedVector2Array()
-			for point in stroke:
-				normalized.append(_normalized_point(point))
-			out.append(normalized)
+			out.append(PackedVector2Array(stroke))
 		return out
-
-	func _normalized_point(point: Vector2) -> Vector2:
-		if _scroll_rect.size.x <= 0.0 or _scroll_rect.size.y <= 0.0:
-			return Vector2(0.5, 0.5)
-		return Vector2(
-			(point.x - _scroll_rect.position.x) / _scroll_rect.size.x,
-			(point.y - _scroll_rect.position.y) / _scroll_rect.size.y)
 
 	func _stroke_length(source_strokes: Array[PackedVector2Array]) -> float:
 		var length := 0.0
 		for stroke in source_strokes:
 			for i in range(1, stroke.size()):
-				length += stroke[i - 1].distance_to(stroke[i])
+				length += _point_to_pixel(stroke[i - 1]).distance_to(_point_to_pixel(stroke[i]))
 		return length
+
+	func _stroke_to_pixels(stroke: PackedVector2Array) -> PackedVector2Array:
+		var out := PackedVector2Array()
+		for point in stroke:
+			out.append(_point_to_pixel(point))
+		return out
+
+	func _point_to_pixel(point: Vector2) -> Vector2:
+		return Vector2(point.x * size.x, point.y * size.y)
+
+	func _clamp_normalized(point: Vector2) -> Vector2:
+		return Vector2(clampf(point.x, 0.0, 1.0), clampf(point.y, 0.0, 1.0))
 
 
 func interact(player: Node3D, _collider: Object) -> void:
@@ -275,7 +226,7 @@ func interact(player: Node3D, _collider: Object) -> void:
 
 func focus_prompt(player: Node3D, _collider: Object) -> String:
 	if _active:
-		return active_prompt
+		return ""
 	if _sealed:
 		return sealed_prompt
 
@@ -295,12 +246,34 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("interact"):
 		get_viewport().set_input_as_handled()
+	elif event is InputEventMouseButton:
+		var button_event := event as InputEventMouseButton
+		if button_event.button_index == MOUSE_BUTTON_LEFT:
+			var point: Variant = _scroll_point_from_screen(button_event.position)
+			if button_event.pressed and point != null:
+				_scribe_canvas.begin_surface_stroke(point as Vector2)
+				_set_cursor_point(point as Vector2)
+				get_viewport().set_input_as_handled()
+			elif not button_event.pressed:
+				_scribe_canvas.end_surface_stroke()
+				get_viewport().set_input_as_handled()
+	elif event is InputEventMouseMotion:
+		var motion := event as InputEventMouseMotion
+		var point: Variant = _scroll_point_from_screen(motion.position)
+		if point != null:
+			_set_cursor_point(point as Vector2)
+			if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+				_scribe_canvas.append_surface_point(point as Vector2)
+			get_viewport().set_input_as_handled()
 
 
 func _process(delta: float) -> void:
 	if not _active or _scribe_canvas == null:
 		return
 
+	var point: Variant = _scroll_point_from_screen(get_viewport().get_mouse_position())
+	if point != null:
+		_set_cursor_point(point as Vector2)
 	_update_scribe_props(delta)
 
 	if _scribe_canvas.has_ink() and Input.is_action_pressed(seal_action):
@@ -320,16 +293,17 @@ func _begin_scribing(player: Node3D) -> void:
 	_previous_mouse_mode = Input.mouse_mode
 	_original_camera = get_viewport().get_camera_3d()
 	_interactor = player.get_node_or_null("%Interactor") as RayCast3D
+	_clear_interaction_prompt()
 	_last_cursor_point = Vector2(0.5, 0.5)
 	_has_cursor_point = true
-	if _scroll_ink:
-		_scroll_ink.visible = false
 	if _scribe_hand:
 		_scribe_hand.visible = true
 
+	if not _create_scribe_camera():
+		_active = false
+		return
 	_lock_player(player, true)
-	_create_scribe_camera()
-	_create_scribe_overlay()
+	_create_scribe_surface()
 	_update_scribe_props(1.0)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	scribing_started.emit()
@@ -342,21 +316,12 @@ func _end_scribing(completed: bool, stroke_count: int = 0) -> void:
 	_active = false
 	if _original_camera and is_instance_valid(_original_camera):
 		_original_camera.make_current()
-	if _scribe_camera and is_instance_valid(_scribe_camera):
-		_scribe_camera.queue_free()
-	if _scribe_layer and is_instance_valid(_scribe_layer):
-		_scribe_layer.queue_free()
 
 	_scribe_camera = null
-	_scribe_layer = null
-	_scribe_canvas = null
 	Input.mouse_mode = _previous_mouse_mode
 
 	if _player and is_instance_valid(_player):
 		_lock_player(_player, false)
-		_refresh_scroll_ink()
-		if _scroll_ink:
-			_scroll_ink.visible = true
 		if _scribe_hand:
 			_scribe_hand.visible = false
 		if quill:
@@ -374,43 +339,50 @@ func _end_scribing(completed: bool, stroke_count: int = 0) -> void:
 	_interactor = null
 
 
-func _create_scribe_camera() -> void:
-	_scribe_camera = Camera3D.new()
-	_scribe_camera.name = "SpellCrafterCamera"
-	_scribe_camera.fov = camera_fov
-	_scene_parent().add_child(_scribe_camera)
-
-	var target := scroll.global_position
-	var back := global_transform.basis.z.normalized() * camera_back
-	_scribe_camera.global_position = target + Vector3.UP * camera_height + back
-	_scribe_camera.look_at(target, _scribe_camera_up(target))
-	_scribe_camera.rotate_object_local(Vector3.RIGHT, deg_to_rad(camera_pitch_offset_degrees))
-	_scribe_camera.rotate_object_local(Vector3.UP, deg_to_rad(camera_yaw_offset_degrees))
-	_scribe_camera.rotate_object_local(Vector3.FORWARD, deg_to_rad(camera_roll_degrees))
+func _create_scribe_camera() -> bool:
+	_scribe_camera = get_node_or_null(scribe_camera_path) as Camera3D
+	if _scribe_camera == null:
+		push_error("SpellCrafter requires a Camera3D at scribe_camera_path.")
+		return false
 	_scribe_camera.make_current()
+	return true
 
 
-func _create_scribe_overlay() -> void:
-	_scribe_layer = CanvasLayer.new()
-	_scribe_layer.name = "ScribeMinigame"
-	_scene_parent().add_child(_scribe_layer)
+func _create_scribe_surface() -> void:
+	if _scribe_viewport != null and _scribe_canvas != null and _scribe_surface != null:
+		return
+
+	_scribe_viewport = SubViewport.new()
+	_scribe_viewport.name = "ScribeInkViewport"
+	_scribe_viewport.transparent_bg = true
+	_scribe_viewport.disable_3d = true
+	_scribe_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	_scribe_viewport.size = scribe_texture_size
+	add_child(_scribe_viewport)
 
 	_scribe_canvas = ScribeCanvas.new()
 	_scribe_canvas.name = "ScribeCanvas"
 	_scribe_canvas.initial_strokes = _duplicate_strokes(_saved_strokes)
 	_scribe_canvas.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_scribe_canvas.strokes_changed.connect(_on_canvas_strokes_changed)
-	_scribe_canvas.cursor_changed.connect(_on_canvas_cursor_changed)
-	_scribe_layer.add_child(_scribe_canvas)
+	_scribe_viewport.add_child(_scribe_canvas)
+
+	_scribe_surface = MeshInstance3D.new()
+	_scribe_surface.name = "ScribeInkSurface"
+	var mesh := PlaneMesh.new()
+	var scroll_size := _scroll_size()
+	mesh.size = Vector2(scroll_size.x * table_ink_scale.x, scroll_size.z * table_ink_scale.y)
+	_scribe_surface.mesh = mesh
+	_scribe_surface.position = Vector3(0.0, scroll_size.y * 0.5 + ink_lift, 0.0)
+	_scribe_surface.material_override = _scribe_surface_material()
+	scroll.add_child(_scribe_surface)
 
 
 func _on_canvas_strokes_changed(strokes: Array[PackedVector2Array]) -> void:
 	_saved_strokes = _duplicate_strokes(strokes)
 
 
-func _on_canvas_cursor_changed(point: Vector2, inside: bool) -> void:
-	if not inside:
-		return
+func _set_cursor_point(point: Vector2) -> void:
 	_last_cursor_point = point
 	_has_cursor_point = true
 
@@ -482,6 +454,23 @@ func _create_scribe_hand_prop() -> void:
 	thumb.rotation_degrees = Vector3(55.0, 28.0, -42.0)
 	_scribe_hand.add_child(thumb)
 
+	if quill and quill.get_node_or_null("WritingTip") == null:
+		var tip_material := StandardMaterial3D.new()
+		tip_material.albedo_color = Color(0.04, 0.025, 0.035)
+		tip_material.roughness = 0.38
+
+		var tip_mesh := CylinderMesh.new()
+		tip_mesh.bottom_radius = 0.009
+		tip_mesh.top_radius = 0.0
+		tip_mesh.height = 0.03
+		var tip := MeshInstance3D.new()
+		tip.name = "WritingTip"
+		tip.mesh = tip_mesh
+		tip.material_override = tip_material
+		tip.position = quill_tip_local_offset
+		tip.rotation_degrees = Vector3(180.0, 0.0, 0.0)
+		quill.add_child(tip)
+
 
 func _update_scribe_props(delta: float) -> void:
 	if not _has_cursor_point:
@@ -494,7 +483,7 @@ func _update_scribe_props(delta: float) -> void:
 	var prop_basis := _scribe_prop_basis()
 	var surface_normal := scroll.global_transform.basis.y.normalized()
 	var desired_origin := cursor_global + surface_normal * quill_hover_lift - prop_basis * quill_tip_local_offset
-	var weight := clampf(prop_follow_speed * delta, 0.0, 1.0)
+	var weight := 1.0 if prop_follow_speed <= 0.0 else clampf(prop_follow_speed * delta, 0.0, 1.0)
 
 	if quill:
 		var current_origin := quill.global_position
@@ -517,91 +506,9 @@ func _scribe_prop_basis() -> Basis:
 	return basis.orthonormalized()
 
 
-func _scribe_camera_up(target: Vector3) -> Vector3:
-	var view_direction := (target - _scribe_camera.global_position).normalized()
-	var up := Vector3.UP
-	if absf(view_direction.dot(up)) > 0.96:
-		up = global_transform.basis.z.normalized()
-		if up.length_squared() <= 0.0001:
-			up = Vector3.FORWARD
-	return up
-
-
-func _refresh_scroll_ink() -> void:
-	if _scroll_ink == null:
-		_scroll_ink = MeshInstance3D.new()
-		_scroll_ink.name = "ScribedInk"
-		scroll.add_child(_scroll_ink)
-
-	if _saved_strokes.is_empty():
-		_scroll_ink.mesh = null
-		return
-
-	var vertices := PackedVector3Array()
-	var normals := PackedVector3Array()
-	var indices := PackedInt32Array()
-	var scroll_size := _scroll_size()
-	var top_y := scroll_size.y * 0.5 + ink_lift
-
-	for stroke in _saved_strokes:
-		if stroke.size() == 1:
-			_add_ink_dot(vertices, normals, indices, _scroll_point(stroke[0], scroll_size, top_y))
-			continue
-		for i in range(1, stroke.size()):
-			_add_ink_segment(
-				vertices,
-				normals,
-				indices,
-				_scroll_point(stroke[i - 1], scroll_size, top_y),
-				_scroll_point(stroke[i], scroll_size, top_y))
-
-	var mesh := ArrayMesh.new()
-	var arrays := []
-	arrays.resize(Mesh.ARRAY_MAX)
-	arrays[Mesh.ARRAY_VERTEX] = vertices
-	arrays[Mesh.ARRAY_NORMAL] = normals
-	arrays[Mesh.ARRAY_INDEX] = indices
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	mesh.surface_set_material(0, _ink_material())
-	_scroll_ink.mesh = mesh
-
-
-func _add_ink_segment(
-		vertices: PackedVector3Array,
-		normals: PackedVector3Array,
-		indices: PackedInt32Array,
-		a: Vector3,
-		b: Vector3) -> void:
-	var direction := Vector2(b.x - a.x, b.z - a.z)
-	if direction.length_squared() <= 0.000001:
-		_add_ink_dot(vertices, normals, indices, a)
-		return
-
-	var perpendicular := Vector2(-direction.y, direction.x).normalized() * ink_width * 0.5
-	var start := vertices.size()
-	vertices.append(Vector3(a.x + perpendicular.x, a.y, a.z + perpendicular.y))
-	vertices.append(Vector3(a.x - perpendicular.x, a.y, a.z - perpendicular.y))
-	vertices.append(Vector3(b.x - perpendicular.x, b.y, b.z - perpendicular.y))
-	vertices.append(Vector3(b.x + perpendicular.x, b.y, b.z + perpendicular.y))
-	for i in 4:
-		normals.append(Vector3.UP)
-	indices.append_array(PackedInt32Array([start, start + 1, start + 2, start, start + 2, start + 3]))
-
-
-func _add_ink_dot(
-		vertices: PackedVector3Array,
-		normals: PackedVector3Array,
-		indices: PackedInt32Array,
-		center: Vector3) -> void:
-	var half_width := ink_width * 0.65
-	var start := vertices.size()
-	vertices.append(center + Vector3(-half_width, 0.0, -half_width))
-	vertices.append(center + Vector3(half_width, 0.0, -half_width))
-	vertices.append(center + Vector3(half_width, 0.0, half_width))
-	vertices.append(center + Vector3(-half_width, 0.0, half_width))
-	for i in 4:
-		normals.append(Vector3.UP)
-	indices.append_array(PackedInt32Array([start, start + 1, start + 2, start, start + 2, start + 3]))
+func _clear_interaction_prompt() -> void:
+	if _interactor and _interactor.has_signal("focus_changed"):
+		_interactor.emit_signal("focus_changed", "")
 
 
 func _scroll_point(point: Vector2, scroll_size: Vector3, top_y: float) -> Vector3:
@@ -611,6 +518,30 @@ func _scroll_point(point: Vector2, scroll_size: Vector3, top_y: float) -> Vector
 		(point.y - 0.5) * scroll_size.z * table_ink_scale.y)
 
 
+func _scroll_point_from_screen(screen_position: Vector2) -> Variant:
+	if _scribe_camera == null:
+		return null
+
+	var scroll_size := _scroll_size()
+	var top_y := scroll_size.y * 0.5 + ink_lift
+	var plane_point := scroll.to_global(Vector3(0.0, top_y, 0.0))
+	var plane_normal := scroll.global_transform.basis.y.normalized()
+	var plane := Plane(plane_normal, plane_point)
+	var ray_origin := _scribe_camera.project_ray_origin(screen_position)
+	var ray_direction := _scribe_camera.project_ray_normal(screen_position)
+	var intersection = plane.intersects_ray(ray_origin, ray_direction)
+	if intersection == null:
+		return null
+
+	var local_point := scroll.to_local(intersection)
+	var width := scroll_size.x * table_ink_scale.x
+	var height := scroll_size.z * table_ink_scale.y
+	var point := Vector2(local_point.x / width + 0.5, local_point.z / height + 0.5)
+	if point.x < 0.0 or point.x > 1.0 or point.y < 0.0 or point.y > 1.0:
+		return null
+	return point
+
+
 func _scroll_size() -> Vector3:
 	var size = scroll.get("size")
 	if size is Vector3:
@@ -618,9 +549,11 @@ func _scroll_size() -> Vector3:
 	return Vector3(0.36, 0.02, 0.29)
 
 
-func _ink_material() -> StandardMaterial3D:
+func _scribe_surface_material() -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
-	material.albedo_color = Color(0.08, 0.045, 0.12)
+	material.albedo_color = Color.WHITE
+	material.albedo_texture = _scribe_viewport.get_texture()
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	return material

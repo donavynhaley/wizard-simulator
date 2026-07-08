@@ -6,6 +6,8 @@
 [ext_resource type="Script" uid="uid://lkmq4o6q51xo" path="res://assets/artifacts/element_holder.gd" id="4_sooxi"]
 [ext_resource type="Script" uid="uid://5yuur3pjr7pd" path="res://assets/artifacts/spell_crafter.gd" id="5_70f7w"]
 [ext_resource type="PackedScene" uid="uid://ciluq5r4ob1mh" path="res://assets/external/seal_-_animated_low_poly.glb" id="6_dcnth"]
+[ext_resource type="PackedScene" uid="uid://co3m3qd6y2ebq" path="res://assets/models/book_closed.glb" id="7_05xbg"]
+[ext_resource type="PackedScene" uid="uid://tykeeyopje2q" path="res://assets/models/book_open.glb" id="8_1jmjg"]
 
 [sub_resource type="CylinderShape3D" id="CylinderShape3D_0jym3"]
 height = 0.1
@@ -59,11 +61,14 @@ shape = SubResource("BoxShape3D_0jym3")
 
 [node name="SpellCrafter" type="Node3D" parent="." unique_id=713436920]
 script = ExtResource("5_70f7w")
-camera_height = 1.0
 
 [node name="Scroll" type="CSGBox3D" parent="SpellCrafter" unique_id=1146428071]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.08979523, 1.0257996, -0.02878812)
 size = Vector3(0.35925293, 0.021240234, 0.28668213)
+
+[node name="ScribeCamera" type="Camera3D" parent="SpellCrafter" unique_id=79078189]
+transform = Transform3D(-4.371139e-08, -0.5284383, 0.8489717, 0, 0.8489717, 0.5284383, -1, 2.3098773e-08, -3.7109732e-08, 0.68941516, 1.546, 0.018)
+fov = 48.0
 
 [node name="InkWell" type="CSGCylinder3D" parent="SpellCrafter" unique_id=826901926]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0835723, 1.0417287, -0.3371022)
@@ -95,10 +100,6 @@ collision_layer = 2
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.06332451, 1.0292742, -0.016662598)
 shape = SubResource("BoxShape3D_dcnth")
 
-[node name="Book placeholder" type="CSGBox3D" parent="." unique_id=1035412162]
-transform = Transform3D(0.91471344, -0.40410313, 0, 0.40410313, 0.91471344, 0, 0, 0, 1, -0.37111366, 1.1695367, -0.11420898)
-size = Vector3(0.05, 0.3, 0.2)
-
 [node name="Seal" type="Node3D" parent="." unique_id=186659016]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.060479954, 1.0560905, 0.27169758)
 
@@ -113,3 +114,9 @@ height = 0.09954834
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.039970756, 0)
 inner_radius = 0.03
 outer_radius = 0.001
+
+[node name="book_closed" parent="." unique_id=1058687452 instance=ExtResource("7_05xbg")]
+transform = Transform3D(4, 0, 0, 0, 4, 0, 0, 0, 4, -0.601137, 1.236366, -0.3207046)
+
+[node name="book_open" parent="." unique_id=372880392 instance=ExtResource("8_1jmjg")]
+transform = Transform3D(-1.7484555e-07, 2.828427, -2.828427, 0, 2.828427, 2.828427, 4, 1.2363448e-07, -1.2363448e-07, -0.09072113, 0.875422, 0.03758949)
