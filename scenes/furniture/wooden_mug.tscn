@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://pn07d74caryq"]
+
+[ext_resource type="PackedScene" uid="uid://s1v77rlq5pv8" path="res://assets/models/wooden_mug.glb" id="1_mnw8h"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_kwr0e"]
+height = 0.135
+radius = 0.08
+
+[node name="WoodenMug" type="Node3D" unique_id=343108488]
+
+[node name="wooden_mug" parent="." unique_id=34282361 instance=ExtResource("1_mnw8h")]
+
+[node name="Area3D" type="Area3D" parent="wooden_mug" unique_id=144221833]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="wooden_mug/Area3D" unique_id=1465494085]
+shape = SubResource("CylinderShape3D_kwr0e")
