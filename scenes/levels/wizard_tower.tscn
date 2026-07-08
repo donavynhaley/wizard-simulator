@@ -3,7 +3,8 @@
 [ext_resource type="PackedScene" uid="uid://cddno6g0vwy6f" path="res://scenes/characters/player.tscn" id="1_y6bsx"]
 [ext_resource type="Script" uid="uid://ivvjr42yf0nn" path="res://scripts/world/day_night_cycle.gd" id="2_daynight"]
 [ext_resource type="PackedScene" uid="uid://b81rmvhavrt2s" path="res://assets/external/kenney/fantasy-town-kit/Models/GLB format/fountain-square-detail.glb" id="3_o6hnd"]
-[ext_resource type="Script" uid="uid://cdpjhe0jk65iv" path="res://fountain_of_endless_spring.gd" id="4_spring"]
+[ext_resource type="Script" uid="uid://cdpjhe0jk65iv" path="res://scripts/components/fountain_of_endless_spring.gd" id="4_spring"]
+[ext_resource type="PackedScene" uid="uid://5fyhxou04dxg" path="res://assets/artifacts/crafting-table.tscn" id="5_r62g1"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_o6hnd"]
 sky_top_color = Color(0.24, 0.57, 1, 1)
@@ -160,7 +161,6 @@ light_energy = 0.0
 
 [node name="DayNightCycle" type="Node" parent="." unique_id=1992185705]
 script = ExtResource("2_daynight")
-day_length_minutes = 1.0
 sun_path = NodePath("../Sun")
 moon_path = NodePath("../Moon")
 world_environment_path = NodePath("../WorldEnvironment")
@@ -296,3 +296,6 @@ size = Vector3(0.15222168, 5.2475586, 7.625702)
 transform = Transform3D(0.9238795, 0, 0.38268343, 0, 1, 0, -0.38268343, 0, 0.9238795, -8.504345, 7.4, 3.522615)
 use_collision = true
 size = Vector3(0.15222168, 5.2475586, 7.625702)
+
+[node name="Table" parent="." unique_id=277921942 instance=ExtResource("5_r62g1")]
+transform = Transform3D(0.61455363, 0, -0.78887504, 0, 1, 0, 0.78887504, 0, 0.61455363, -5.7092285, -0.30895996, -2.9230957)

@@ -24,9 +24,28 @@ extends CharacterBody3D
 
 @export_group("Viewmodel Placement")
 @export var viewmodel_rest_position: Vector3 = Vector3(0.0, -0.5, -0.55)
-@export var arms_pivot_rest_position: Vector3 = Vector3(0.0, -0.02, -0.12)
-@export var arms_pivot_rest_rotation: Vector3 = Vector3(-16.0, 0.0, 0.0)
-@export var arms_mesh_scale: float = 0.07
+@export var wizard_body_position: Vector3 = Vector3(0.0, -0.84, 0.0)
+@export var wizard_body_rotation_degrees: Vector3 = Vector3(0.0, 180.0, 0.0)
+@export var wizard_body_scale: Vector3 = Vector3.ONE
+@export var body_local_head_cut: float = 0.035
+@export var body_local_arm_side_cut: float = 0.027
+@export var body_local_arm_height_cut: float = 0.064
+@export var body_visible_pitch_degrees: float = -35.0
+@export var arm_pitch_follow: float = 0.45
+
+@export_group("Water Hold Pose")
+@export var water_hold_blend_speed: float = 7.0
+@export var water_hold_body_position_offset: Vector3 = Vector3(0.0, 0.015, 0.0)
+
+@export_group("First Person Model Arms")
+@export var show_first_person_model_arms: bool = true
+@export var left_model_arm_rest_position: Vector3 = Vector3(-0.20, -1.72, -0.86)
+@export var right_model_arm_rest_position: Vector3 = Vector3(0.20, -1.72, -0.86)
+@export var left_model_arm_water_position: Vector3 = Vector3(-0.08, -1.62, -0.78)
+@export var right_model_arm_water_position: Vector3 = Vector3(0.08, -1.62, -0.78)
+@export var model_arm_rest_rotation_degrees: Vector3 = Vector3(-28.0, 180.0, 0.0)
+@export var model_arm_water_rotation_degrees: Vector3 = Vector3(-34.0, 180.0, 0.0)
+@export var model_arm_scale: float = 1.0
 
 @export_group("Viewmodel Motion")
 @export var walk_bob_amount: float = 0.012
@@ -37,24 +56,48 @@ extends CharacterBody3D
 @export var look_sway_rotation_amount: float = 0.045
 @export var look_sway_return_speed: float = 9.0
 
-# CC-BY low-poly first-person arms by Player11132 (via poly.pizza). See CREDITS.md.
-const ARMS_SCENE := preload("res://assets/external/polypizza/fps_arms.glb")
+const WIZARD_BODY_SCENE := preload("res://assets/artifacts/player_wizard.tscn")
+const LEFT_ARM_BASE_ROTATION := Quaternion(-0.023753023, -0.006342602, -0.48897812, 0.87194955)
+const LEFT_FOREARM_BASE_ROTATION := Quaternion(0.07219099, -0.348859, -0.26778162, 0.89519763)
+const RIGHT_ARM_BASE_ROTATION := Quaternion(-0.023753023, 0.006342602, 0.48897812, 0.87194955)
+const RIGHT_FOREARM_BASE_ROTATION := Quaternion(0.07219099, 0.348859, 0.26778162, 0.89519763)
+const ALL_3D_RENDER_LAYERS := (1 << 20) - 1
+const WORLD_RENDER_LAYER := 1 << 0
+const LEFT_VIEWMODEL_ARM_BONES := [
+	"DEF-ARM.L",
+	"DEF-FOREARM.L",
+	"DEF-HAND.L",
+	"DEF-THUMB01.L",
+	"DEF-THUMB02.L",
+	"DEF-THUMB03.L",
+	"DEF-FINGER01.L",
+	"DEF-FINGER02.L",
+	"DEF-FINGER03.L",
+	"DEF-FOREARM-HANG01.L",
+	"DEF-FOREARM-HANG02.L",
+	"DEF-FOREARM-HANG03.L",
+]
 
 @onready var head: Node3D = $Head
 @onready var viewmodel: Node3D = $Head/Camera3D/Viewmodel
-
-# Raw mesh centroid (native units) so the arms can be recentered on their pivot.
-const ARMS_CENTROID := Vector3(2.68, 0.0, 4.54)
+@onready var camera: Camera3D = $Head/Camera3D
 
 var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
-var _arms: Node3D
-var _arms_pivot: Node3D
+var _body: Node3D
+var _body_skeleton: Skeleton3D
+var _body_materials: Array[ShaderMaterial] = []
+var _viewmodel_arms_root: Node3D
+var _left_viewmodel_arm: Node3D
+var _right_viewmodel_arm: Node3D
 var _look_sway := Vector2.ZERO
 var _look_sway_target := Vector2.ZERO
 var _stair_step_timer := 0.0
 var _stair_step_strength := 0.0
 var _head_rest_position := Vector3.ZERO
+var _body_rest_position := Vector3.ZERO
 var _head_step_offset := 0.0
+var _water_hold_target := 0.0
+var _water_hold_blend := 0.0
 
 
 func _ready() -> void:
@@ -62,7 +105,11 @@ func _ready() -> void:
 	floor_snap_length = maxf(floor_snap_length, stair_floor_snap_length)
 	_head_rest_position = head.position
 	viewmodel.position = viewmodel_rest_position
-	_mount_arms()
+	_mount_body()
+	_mount_first_person_model_arms()
+	var hands := get_node_or_null("%HandAnchor")
+	if hands and hands.has_signal("held_changed"):
+		hands.held_changed.connect(_on_held_changed)
 
 
 func _capture_mouse() -> void:
@@ -82,52 +129,223 @@ func _notification(what: int) -> void:
 				_capture_mouse()
 
 
-func _mount_arms() -> void:
-	# A pivot re-centers the off-origin mesh so idle sway rotates cleanly. The mesh's
-	# hands are at its native -Z end, so no yaw flip is needed to point them forward.
-	_arms_pivot = Node3D.new()
-	_arms_pivot.name = "ArmsPivot"
-	_arms_pivot.position = arms_pivot_rest_position
-	_arms_pivot.rotation_degrees = arms_pivot_rest_rotation
-	viewmodel.add_child(_arms_pivot)
+func _mount_body() -> void:
+	camera.cull_mask = ALL_3D_RENDER_LAYERS
 
-	_arms = ARMS_SCENE.instantiate()
-	_arms.name = "FpsArms"
-	_arms.scale = Vector3.ONE * arms_mesh_scale
-	_arms.position = -ARMS_CENTROID * arms_mesh_scale
-	_arms_pivot.add_child(_arms)
-	_apply_arm_material(_arms)
+	_body = WIZARD_BODY_SCENE.instantiate()
+	_body.name = "FirstPersonBody"
+	_body.position = wizard_body_position
+	_body.rotation_degrees = wizard_body_rotation_degrees
+	_body.scale = wizard_body_scale
+	add_child(_body)
+
+	_body_rest_position = wizard_body_position
+	_body_skeleton = _find_skeleton(_body)
+	_set_visual_layer(_body, WORLD_RENDER_LAYER)
+	if _body_skeleton:
+		_pose_wizard_hands()
+	_apply_body_material(_body)
+	_update_body_materials()
 
 
-func _apply_arm_material(node: Node) -> void:
-	if node is MeshInstance3D:
-		node.material_override = _arm_material()
+func _find_skeleton(node: Node) -> Skeleton3D:
+	if node is Skeleton3D:
+		return node
 	for child in node.get_children():
-		_apply_arm_material(child)
+		var found := _find_skeleton(child)
+		if found != null:
+			return found
+	return null
 
 
-func _arm_material() -> ShaderMaterial:
-	# Robe sleeve near the elbow blending to skin at the hand, keyed off local Z.
+func _pose_wizard_hands() -> void:
+	if _body_skeleton == null:
+		return
+	var pitch_offset := Quaternion(Vector3.RIGHT, head.rotation.x * arm_pitch_follow)
+	_set_bone_rotation("DEF-ARM.L", (pitch_offset * LEFT_ARM_BASE_ROTATION).normalized())
+	_set_bone_rotation("DEF-FOREARM.L", (pitch_offset * LEFT_FOREARM_BASE_ROTATION).normalized())
+	_set_bone_rotation("DEF-ARM.R", (pitch_offset * RIGHT_ARM_BASE_ROTATION).normalized())
+	_set_bone_rotation("DEF-FOREARM.R", (pitch_offset * RIGHT_FOREARM_BASE_ROTATION).normalized())
+
+
+func _set_bone_rotation(bone_name: String, rotation: Quaternion) -> void:
+	var bone := _body_skeleton.find_bone(bone_name)
+	if bone != -1:
+		_body_skeleton.set_bone_pose_rotation(bone, rotation)
+
+
+func _set_visual_layer(node: Node, layer_mask: int) -> void:
+	if node is VisualInstance3D:
+		(node as VisualInstance3D).layers = layer_mask
+	for child in node.get_children():
+		_set_visual_layer(child, layer_mask)
+
+
+func _apply_body_material(node: Node) -> void:
+	if node is MeshInstance3D:
+		var mesh_instance := node as MeshInstance3D
+		mesh_instance.material_override = _body_material(mesh_instance)
+	for child in node.get_children():
+		_apply_body_material(child)
+
+
+func _body_material(mesh_instance: MeshInstance3D) -> ShaderMaterial:
+	var source_material := _source_mesh_material(mesh_instance)
 	var shader := Shader.new()
 	shader.code = """
 shader_type spatial;
-uniform vec3 skin : source_color = vec3(0.55, 0.40, 0.28);
-uniform vec3 sleeve : source_color = vec3(0.10, 0.09, 0.16);
-uniform vec3 cuff : source_color = vec3(0.52, 0.40, 0.16);
-varying float zlocal;
-void vertex() { zlocal = VERTEX.z; }
+render_mode cull_back;
+
+uniform sampler2D albedo_texture : source_color, filter_nearest_mipmap;
+uniform vec4 albedo_color : source_color = vec4(1.0);
+uniform float metallic = 0.0;
+uniform float roughness = 1.0;
+uniform float local_head_cut = 0.055;
+uniform float local_arm_side_cut = 0.027;
+uniform float local_arm_height_cut = 0.035;
+
+varying vec3 local_position;
+
+void vertex() {
+	local_position = VERTEX;
+}
+
 void fragment() {
-	ROUGHNESS = 0.92;
-	float hand = smoothstep(-1.0, 2.5, zlocal);
-	vec3 c = mix(sleeve, skin, hand);
-	float cuff_band = smoothstep(1.0, 1.6, zlocal) * (1.0 - smoothstep(1.9, 2.5, zlocal));
-	c = mix(c, cuff, cuff_band);
-	ALBEDO = c;
+	if (local_position.z > local_head_cut) {
+		discard;
+	}
+	if (abs(local_position.x) > local_arm_side_cut && local_position.z > local_arm_height_cut) {
+		discard;
+	}
+
+	vec4 tex = texture(albedo_texture, UV) * albedo_color;
+	ALBEDO = tex.rgb;
+	ALPHA = tex.a;
+	METALLIC = metallic;
+	ROUGHNESS = roughness;
 }
 """
-	var mat := ShaderMaterial.new()
-	mat.shader = shader
-	return mat
+
+	var material := ShaderMaterial.new()
+	material.shader = shader
+	if source_material:
+		material.set_shader_parameter("albedo_texture", source_material.albedo_texture)
+		material.set_shader_parameter("albedo_color", source_material.albedo_color)
+		material.set_shader_parameter("metallic", source_material.metallic)
+		material.set_shader_parameter("roughness", source_material.roughness)
+	material.set_shader_parameter("local_head_cut", body_local_head_cut)
+	material.set_shader_parameter("local_arm_side_cut", body_local_arm_side_cut)
+	material.set_shader_parameter("local_arm_height_cut", body_local_arm_height_cut)
+	_body_materials.append(material)
+	return material
+
+
+func _source_mesh_material(mesh_instance: MeshInstance3D) -> BaseMaterial3D:
+	var override_material := mesh_instance.get_active_material(0)
+	if override_material is BaseMaterial3D:
+		return override_material as BaseMaterial3D
+	if mesh_instance.mesh and mesh_instance.mesh.get_surface_count() > 0:
+		var surface_material := mesh_instance.mesh.surface_get_material(0)
+		if surface_material is BaseMaterial3D:
+			return surface_material as BaseMaterial3D
+	return null
+
+
+func _mount_first_person_model_arms() -> void:
+	if not show_first_person_model_arms:
+		return
+
+	_viewmodel_arms_root = Node3D.new()
+	_viewmodel_arms_root.name = "FirstPersonModelArms"
+	viewmodel.add_child(_viewmodel_arms_root)
+
+	_left_viewmodel_arm = _build_viewmodel_arm("LeftModelArm", false)
+	_right_viewmodel_arm = _build_viewmodel_arm("RightModelArm", true)
+	_update_first_person_model_arms()
+
+
+func _build_viewmodel_arm(arm_name: String, mirrored: bool) -> Node3D:
+	var arm := WIZARD_BODY_SCENE.instantiate()
+	arm.name = arm_name
+	arm.scale = Vector3(-model_arm_scale, model_arm_scale, model_arm_scale) \
+		if mirrored else Vector3.ONE * model_arm_scale
+	_viewmodel_arms_root.add_child(arm)
+
+	var skeleton := _find_skeleton(arm)
+	if skeleton:
+		_filter_to_viewmodel_arm_meshes(arm, _bone_indices(skeleton, LEFT_VIEWMODEL_ARM_BONES))
+		_set_viewmodel_materials(arm)
+	return arm
+
+
+func _filter_to_viewmodel_arm_meshes(node: Node, arm_indices: Dictionary) -> void:
+	if node is MeshInstance3D:
+		var mesh_instance := node as MeshInstance3D
+		mesh_instance.mesh = _filtered_arm_mesh(mesh_instance.mesh, arm_indices)
+	for child in node.get_children():
+		_filter_to_viewmodel_arm_meshes(child, arm_indices)
+
+
+func _filtered_arm_mesh(source: Mesh, arm_indices: Dictionary) -> ArrayMesh:
+	var filtered := ArrayMesh.new()
+	for surface in source.get_surface_count():
+		var arrays := source.surface_get_arrays(surface)
+		var source_indices := arrays[Mesh.ARRAY_INDEX] as PackedInt32Array
+		var bones := arrays[Mesh.ARRAY_BONES] as PackedInt32Array
+		var weights := arrays[Mesh.ARRAY_WEIGHTS] as PackedFloat32Array
+		var kept_indices := PackedInt32Array()
+
+		for i in range(0, source_indices.size(), 3):
+			var a := source_indices[i]
+			var b := source_indices[i + 1]
+			var c := source_indices[i + 2]
+			if _arm_weight(a, bones, weights, arm_indices) >= 0.45 \
+					and _arm_weight(b, bones, weights, arm_indices) >= 0.45 \
+					and _arm_weight(c, bones, weights, arm_indices) >= 0.45:
+				kept_indices.append(a)
+				kept_indices.append(b)
+				kept_indices.append(c)
+
+		arrays[Mesh.ARRAY_INDEX] = kept_indices
+		filtered.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		filtered.surface_set_material(surface, source.surface_get_material(surface))
+	return filtered
+
+
+func _arm_weight(
+		vertex_index: int,
+		bones: PackedInt32Array,
+		weights: PackedFloat32Array,
+		arm_indices: Dictionary) -> float:
+	var total := 0.0
+	var offset := vertex_index * 4
+	for i in 4:
+		if arm_indices.has(bones[offset + i]):
+			total += weights[offset + i]
+	return total
+
+
+func _bone_indices(skeleton: Skeleton3D, bone_names: Array) -> Dictionary:
+	var indices := {}
+	for bone_name in bone_names:
+		var bone := skeleton.find_bone(bone_name)
+		if bone != -1:
+			indices[bone] = true
+	return indices
+
+
+func _set_viewmodel_materials(node: Node) -> void:
+	if node is MeshInstance3D:
+		var mesh_instance := node as MeshInstance3D
+		mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		for surface in mesh_instance.mesh.get_surface_count():
+			var source_material := mesh_instance.mesh.surface_get_material(surface)
+			if source_material is BaseMaterial3D:
+				var material := (source_material as BaseMaterial3D).duplicate()
+				material.cull_mode = BaseMaterial3D.CULL_DISABLED
+				mesh_instance.set_surface_override_material(surface, material)
+	for child in node.get_children():
+		_set_viewmodel_materials(child)
 
 
 func _input(event: InputEvent) -> void:
@@ -148,6 +366,7 @@ func apply_mouse_look(relative: Vector2) -> void:
 	head.rotate_x(-relative.y * mouse_sensitivity)
 	head.rotation.x = clamp(head.rotation.x, -PI * 0.48, PI * 0.48)
 	_look_sway_target = relative
+	_update_body_visibility()
 
 
 func _physics_process(delta: float) -> void:
@@ -340,6 +559,7 @@ func _apply_stair_feedback(step_delta: float) -> void:
 
 func _update_viewmodel(delta: float, input_amount: float) -> void:
 	var t := Time.get_ticks_msec() * 0.001
+	_water_hold_blend = move_toward(_water_hold_blend, _water_hold_target, water_hold_blend_speed * delta)
 	_head_step_offset = move_toward(_head_step_offset, 0.0, stair_camera_step_smoothing * delta)
 	head.position = _head_rest_position + Vector3.UP * _head_step_offset
 
@@ -358,30 +578,67 @@ func _update_viewmodel(delta: float, input_amount: float) -> void:
 	var target_position := viewmodel_rest_position + Vector3(sway, bob, 0.0) + look_offset + stair_lift
 	viewmodel.position = viewmodel.position.lerp(target_position, minf(1.0, 8.0 * delta))
 
-	if not _arms_pivot:
+	if not _body:
 		return
 
-	# Idle breathing + gentle drift so the arms feel alive when standing still.
+	# Idle breathing + gentle drift so the visible body does not feel locked in place.
 	var breathe := sin(t * 1.3) * idle_breathe_amount
 	var drift_x := sin(t * 0.6) * idle_drift_amount
-	var idle_pitch := sin(t * 1.1) * 1.3
-	var idle_yaw := cos(t * 0.7) * 1.6
-	var idle_roll := sin(t * 0.9) * 2.0
-	var look_rot := Vector3(
-		clampf(_look_sway.y * look_sway_rotation_amount, -3.0, 3.0),
-		clampf(_look_sway.x * look_sway_rotation_amount, -5.0, 5.0),
-		clampf(_look_sway.x * look_sway_rotation_amount * 0.55, -3.0, 3.0))
 
-	# A slow recurring gesture: a small, eased hand lift/tilt every ~9 s.
 	var g := 0.0
 	var phase := fmod(t, 9.0)
 	if phase < 1.5:
 		g = sin(phase / 1.5 * PI)
 
-	_arms_pivot.position = arms_pivot_rest_position + Vector3(drift_x, breathe + g * 0.035, 0.0)
-	_arms_pivot.rotation_degrees = arms_pivot_rest_rotation \
-		+ Vector3(idle_pitch - g * 6.0 - stair_feedback * stair_camera_pitch_degrees, idle_yaw, idle_roll + g * 9.0) \
-		+ look_rot
+	var water_position := water_hold_body_position_offset * _water_hold_blend
+	var body_motion := Vector3(drift_x * 0.35, breathe * 0.45 + g * 0.012, 0.0) + water_position
+	var body_rotation := wizard_body_rotation_degrees \
+		+ Vector3(0.0, sin(t * 0.7) * 0.7, sin(t * 0.9) * 0.45)
+
+	_update_body_visibility()
+	_body.position = _body_rest_position + body_motion
+	_body.rotation_degrees = body_rotation
+	if _body_skeleton:
+		_pose_wizard_hands()
+	_update_body_materials()
+	_update_first_person_model_arms()
+
+
+func _update_body_materials() -> void:
+	for material in _body_materials:
+		material.set_shader_parameter("local_head_cut", body_local_head_cut)
+		material.set_shader_parameter("local_arm_side_cut", body_local_arm_side_cut)
+		material.set_shader_parameter("local_arm_height_cut", body_local_arm_height_cut)
+
+
+func _update_body_visibility() -> void:
+	if _body:
+		_body.visible = head.rotation.x <= deg_to_rad(body_visible_pitch_degrees)
+
+
+func _update_first_person_model_arms() -> void:
+	if _left_viewmodel_arm == null or _right_viewmodel_arm == null:
+		return
+
+	var rotation := model_arm_rest_rotation_degrees.lerp(model_arm_water_rotation_degrees, _water_hold_blend)
+	_left_viewmodel_arm.position = left_model_arm_rest_position.lerp(
+		left_model_arm_water_position,
+		_water_hold_blend)
+	_right_viewmodel_arm.position = right_model_arm_rest_position.lerp(
+		right_model_arm_water_position,
+		_water_hold_blend)
+	_left_viewmodel_arm.rotation_degrees = rotation
+	_right_viewmodel_arm.rotation_degrees = rotation
+
+
+func _on_held_changed(item: Node3D) -> void:
+	_water_hold_target = 1.0 if _is_spring_water(item) else 0.0
+
+
+func _is_spring_water(item: Node3D) -> bool:
+	return item != null \
+		and item.has_method("get_display_name") \
+		and str(item.call("get_display_name")) == "Spring water"
 
 
 func _stair_feedback(delta: float) -> float:

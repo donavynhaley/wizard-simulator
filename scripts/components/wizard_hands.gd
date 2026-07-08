@@ -19,6 +19,10 @@ signal held_changed(item: Node3D)
 @export var drop_forward_impulse: float = 1.5
 @export var drop_up_impulse: float = 0.5
 
+@export_group("Visual Layers")
+@export var held_item_visual_layer: int = 1 << 0
+@export var world_item_visual_layer: int = 1 << 0
+
 var held_item: Node3D
 var _carry_tween: Tween
 var _pose_tween: Tween
@@ -36,9 +40,10 @@ func pick_up(item: Node3D) -> void:
 		drop()
 	_kill_carry_tween()
 	held_item = item
+	item.reparent(self)
+	_set_visual_layer(item, held_item_visual_layer)
 	if item.has_method("set_held"):
 		item.set_held(true)
-	item.reparent(self)
 	var pose := _held_pose_for(item)
 	item.scale = pose.scale
 	_carry_tween = item.create_tween()
@@ -58,6 +63,7 @@ func drop() -> void:
 	var item := held_item
 	held_item = null
 	item.reparent(get_tree().current_scene)
+	_set_visual_layer(item, world_item_visual_layer)
 	if item.has_method("set_held"):
 		item.set_held(false)
 	if item is RigidBody3D:
@@ -72,6 +78,7 @@ func release_item(item: Node3D) -> void:
 	if held_item == item:
 		_kill_carry_tween()
 		held_item = null
+		_set_visual_layer(item, world_item_visual_layer)
 		held_changed.emit(null)
 
 
@@ -92,6 +99,13 @@ func _held_pose_for(item: Node3D) -> Dictionary:
 		"rotation": default_held_rotation,
 		"scale": default_held_scale,
 	}
+
+
+func _set_visual_layer(node: Node, layer_mask: int) -> void:
+	if node is VisualInstance3D:
+		(node as VisualInstance3D).layers = layer_mask
+	for child in node.get_children():
+		_set_visual_layer(child, layer_mask)
 
 
 func _play_grab_motion() -> void:
