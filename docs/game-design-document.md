@@ -219,6 +219,67 @@ Alchemy is the scarcity economy and the ink factory.
 Where spellcrafting is precision and knowledge, alchemy is timing and process.
 It should feel like cooking under pressure, not another drawing minigame.
 
+### Frankies Alchemy Design Musings
+
+Alchemy basics
+
+Process ingredients into either powders or liguids you add in varying mixtures for desired effect.
+
+Example 2 parts ginseng powder with 1 parts water makes a simple healing potion.
+Example 3 parts kraken juice with 1 part water and 1 part any herb powder makes basic ink.
+
+Books and villagers, (and maybe quests) will tell you the steps neccessary to proccess the various ingredients and how the ratios to mix them at.
+
+If taken off to soon or too late you will not get the full amount of reageant you could yield.
+
+There may or may not be various steps to process one reagent to it's final form. You can also mix potions and inks with the intermediate reagents for more possibilites.
+
+Process Possibilites:
+Boil - Combine water element and ingredient in pot. Letting it boil for too short or too long of a time will yield less.
+Crush - place ingredient or ingredients in mortar and pestle and crush. Crush too few or too many times will yield less.
+Chop - Place ingredient on cutting board and cut into various pieces. The recipe will call for a specific amount and deviation will yield less.
+
+Animal Parts / Herbs / Liguids / Elements
+
+Animal parts:
+Kraken sack (Kraken Juice) - Boil the until it squeals. Yields Kraken Juice. One sack makes 9 parts of juice if done correctly. 
+Leg of goat (Goat meat and Goat bones) - Chop to get goat meat and goat leg bones. Yields four parts if done correctly.
+Goat meat (Mana of Goat) - Chop goat meat into five pieces. The water in the pot will turn brown when done. Yields Mana of Goat. Makes 4 parts if done correctly.
+Goat bones (Goat Marrow Powder) - Crush with mortar and pestle to get goat marrow powder. Crush five times to get full amount. Yields 3 parts goat marrow powder if done correctly.
+
+Herbs:
+Basil (Chopped basil) - Chop into various amounts depending on recipe.
+Mint (Mint Powder) - Crush six times with mortar and pestle to get full amount. Yields 3 parts mint powder if done correctly.
+
+Liguids:
+Milk (Milk essence) - Boil until it reduces to a fourth. Makes four parts milk essence if done correctly.
+Beer
+
+Elements:
+Fire
+Water - Use to boil in pot.
+Earth
+Air
+Etc
+
+### Systems - I like these and want to implement alot of the ideas in here
+
+- **Standing orders**: the village apothecary wants 3 healing potions a week.
+- **Taste-testing**: unknown brew means you can drink it.
+- **Failed batches**: produce sludge.
+- **Aging**: potions stored in the Cellar improve over in-game time.
+
+Standing orders create recurring passive income against quest spikes.
+They make the wizard feel like the town pharmacist.
+Taste-testing uses a random effect table.
+Some results are hilarious, such as haze, floating, or voice change.
+An identification artifact removes the guesswork later.
+Failed-batch sludge is greenhouse fertilizer or the base for Fool's ink.
+Failure always feeds something.
+Potion aging hooks into the calendar.
+A potion laid down in spring is stronger by harvest.
+
+
 ### The Brewing Process
 
 1. **Prep**: chop, grind, or crush reagents.
