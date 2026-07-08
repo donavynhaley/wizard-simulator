@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://b4igrh7m75jab"]
+
+[ext_resource type="PackedScene" uid="uid://tykeeyopje2q" path="res://assets/models/book_open.glb" id="1_bqar4"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_xpu6o"]
+size = Vector3(0.08, 0.02, 0.065)
+
+[node name="Book_open" type="Node3D" unique_id=631536809]
+
+[node name="book_open" parent="." unique_id=1290153565 instance=ExtResource("1_bqar4")]
+
+[node name="Area3D" type="Area3D" parent="book_open" unique_id=1821731915]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="book_open/Area3D" unique_id=386018544]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.025883246, 0, 0.088536575)
+shape = SubResource("BoxShape3D_xpu6o")
