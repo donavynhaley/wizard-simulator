@@ -8,11 +8,11 @@ The wizard has lost his memories and does not know why he is trapped in his own 
 He watches over the local village kingdom and takes quests to help it, plus timed decrees from the king that must be completed on a deadline.
 Fulfilling them means diving into the library, discovering and crafting spells and potions, and casting them; success grows the wizard's renown and coffers.
 
-Four core mechanics are planned: **spell crafting** (done), potion alchemy, kingdom monitoring/quests, and royal decrees.
+Four core mechanics are planned: **spell crafting** (in progress), potion alchemy, kingdom monitoring/quests, and royal decrees.
 
 ## Spell crafting
 
-Spells are forged from modular **rune stones** at a physical **spell bench** (no menus):
+Planned design - spells are forged from modular **rune stones** at a physical **spell bench** (no menus):
 
 - Categories: one **Element** (fire, ice, lightning, shadow, wind, earth), one **Shape** (beam, orb, wave, trap, shield, chain, aura), up to two **Behaviors** (bounce, split, linger, home, explode, pierce), one **Trigger** (on impact, on timer, on death, when touched, when recast), up to two **Modifiers** (bigger, faster, cheaper, unstable, silent, delayed, charged, precise, raging).
 - Carry stones to the bench's floating sockets, then channel the focus crystal.
@@ -27,7 +27,7 @@ The tower itself is being hand-built in the editor; these scenes are self-contai
 
 | Scene | What it does |
 | --- | --- |
-| `scenes/props/spell_bench.tscn` | The crafting bench: 7 rune sockets + focus crystal |
+| `assets/artifacts/crafting-table.tscn` | The crafting table: element holder socket + scribing station |
 | `scenes/props/rune_cabinet.tscn` | Shelf stocked with one stone per rune; restocks itself |
 | `scenes/props/rune_stone.tscn` | One rune (set `rune_id`); pick up with E |
 | `scenes/props/spell_scroll.tscn` | A castable spell with charges (usually forged, not placed) |
@@ -58,15 +58,15 @@ The first-person arms are a CC-BY model (`assets/external/polypizza/fps_arms.glb
 godot --path .
 ```
 
-Main scene is `scenes/levels/spellcraft_playground.tscn`.
+Main scene is `scenes/levels/wizard_tower.tscn`.
 Use the Godot editor to build and arrange level geometry directly.
 
 ## Verify
 
-Full end-to-end spellcraft test (forge outcomes, bench flow, casting, charges, journal; headless):
+End-to-end interaction test (fountain -> hands -> element holder -> scribing lock; headless):
 
 ```sh
-godot --headless --path . -s tools/spellcraft_test.gd
+godot --headless --path . -s tools/interaction_test.gd
 ```
 
 Verify external CC0 asset packs and licenses:
@@ -79,9 +79,9 @@ godot --headless --path . -s tools/verify_assets.gd
 
 In place:
 
-- Spell crafting mechanic end to end: rune stones -> physical bench -> scrolls -> casting, with instability quirks, comedic backfires, hidden rare recipes, and the persistent Spellbook journal.
-- Editor-authored playground scene as the main scene.
-- Player components: look-to-focus interaction, held-item hands, HUD with discovery toasts.
+- Hand-built wizard tower as the main scene, with a day/night cycle and the Fountain of Endless Spring.
+- Crafting table with an element holder socket and the scroll-scribing station (draw strokes, hold Space to seal).
+- Player components: look-to-focus interaction, held-item hands, HUD with toasts.
 - First-person arms viewmodel (CC-BY, see `CREDITS.md`) with idle sway and a recurring gesture.
 
 Next: Donavyn builds levels in the editor from these assets; then potion alchemy, kingdom monitoring/quests, and royal decrees.

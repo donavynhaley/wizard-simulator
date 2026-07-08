@@ -1,5 +1,10 @@
 extends Node3D
 
+## Scribing station on the crafting table. Interacting with empty hands takes
+## over the camera (ScribeCamera), locks the player through
+## WizardPlayer.set_control_enabled(), and lets the player draw strokes onto
+## the scroll via a ScribeCanvas rendered to a SubViewport.
+
 signal scribing_started
 signal scribing_completed(stroke_count: int)
 signal scribing_cancelled
@@ -41,17 +46,26 @@ signal scribing_cancelled
 @export var quill_pitch_degrees: float = -54.0
 ## Rotates the quill around the scroll surface normal.
 @export var quill_yaw_degrees: float = -36.0
-## Position of the simple hand prop relative to the quill origin.
-@export var hand_offset := Vector3(0.032, 0.018, 0.016)
-## Rotation of the simple hand prop relative to the quill.
-@export var hand_rotation_degrees := Vector3(-28.0, -8.0, 26.0)
+
+@export_group("Scribe Arm")
+## Shoulder anchor of the drawing arm, in SpellCrafter space. The ScribeArm
+## node's origin is the shoulder joint; the whole scroll must stay within
+## roughly 0.5 m (the wizard's arm reach) of this point.
+@export var arm_shoulder_position := Vector3(0.38, 1.18, -0.38)
+## Orientation of the arm anchor. Tune with the shoulder position for composition.
+@export var arm_rotation_degrees := Vector3.ZERO
+## Where the hand grips, relative to the quill origin (quill space).
+@export var hand_grip_offset := Vector3(0.0, 0.005, 0.0)
+## How far the wrist sits back from the grip toward the shoulder, so the
+## fingers (not the wrist joint) land on the quill.
+@export var wrist_back_distance: float = 0.06
 
 @onready var scroll: Node3D = $Scroll
 @onready var quill: Node3D = get_node_or_null(quill_path) as Node3D
 
 var _active := false
 var _sealed := false
-var _player: Node3D
+var _player: WizardPlayer
 var _original_camera: Camera3D
 var _scribe_camera: Camera3D
 var _scribe_viewport: SubViewport
@@ -60,8 +74,7 @@ var _scribe_canvas: ScribeCanvas
 var _saved_strokes: Array[PackedVector2Array] = []
 var _seal_hold_elapsed := 0.0
 var _previous_mouse_mode := Input.MOUSE_MODE_VISIBLE
-var _interactor: RayCast3D
-var _scribe_hand: Node3D
+var _scribe_arm: ScribeArm
 var _quill_rest_transform := Transform3D.IDENTITY
 var _last_cursor_point := Vector2(0.5, 0.5)
 var _has_cursor_point := false
@@ -71,169 +84,35 @@ func _ready() -> void:
 	if quill:
 		_quill_rest_transform = quill.transform
 	_create_scribe_surface()
-	_create_scribe_hand_prop()
+	_create_scribe_arm()
+	_ensure_quill_tip()
 
 
-class ScribeCanvas:
-	extends Control
-
-	signal strokes_changed(strokes: Array[PackedVector2Array])
-
-	var initial_strokes: Array[PackedVector2Array] = []
-	var total_length := 0.0
-	var strokes: Array[PackedVector2Array] = []
-	var sparkles: Array[Dictionary] = []
-	var seal_hold_progress := 0.0
-	var _drawing := false
-
-	func _ready() -> void:
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		set_process(true)
-		_load_initial_strokes()
-
-	func _process(delta: float) -> void:
-		for i in range(sparkles.size() - 1, -1, -1):
-			sparkles[i]["age"] = float(sparkles[i]["age"]) + delta
-			if float(sparkles[i]["age"]) > 0.42:
-				sparkles.remove_at(i)
-		queue_redraw()
-
-	func _draw() -> void:
-		for stroke in strokes:
-			if stroke.size() >= 2:
-				draw_polyline(_stroke_to_pixels(stroke), Color(0.12, 0.08, 0.16, 0.92), 6.0, true)
-			elif stroke.size() == 1:
-				draw_circle(_point_to_pixel(stroke[0]), 3.0, Color(0.12, 0.08, 0.16, 0.92))
-
-		for sparkle in sparkles:
-			var age := float(sparkle["age"])
-			var point := _point_to_pixel(sparkle["point"] as Vector2)
-			var alpha := 1.0 - age / 0.42
-			var radius := 3.0 + age * 24.0
-			draw_circle(point, radius, Color(0.45, 0.9, 1.0, alpha * 0.7))
-			draw_circle(point, 2.0, Color(0.95, 1.0, 1.0, alpha))
-
-		if has_ink():
-			var bar_back := Rect2(
-				Vector2(size.x * 0.08, size.y - 24.0),
-				Vector2(size.x * 0.84, 7.0))
-			var bar_rect := Rect2(
-				bar_back.position,
-				Vector2(bar_back.size.x * seal_hold_progress, bar_back.size.y))
-			draw_rect(bar_back, Color(0.12, 0.18, 0.22, 0.55), true)
-			draw_rect(bar_rect, Color(0.35, 0.82, 1.0, 0.85), true)
-
-	func _begin_stroke(point: Vector2) -> void:
-		_drawing = true
-		var stroke := PackedVector2Array()
-		stroke.append(_clamp_normalized(point))
-		strokes.append(stroke)
-		_add_sparkle(point)
-		strokes_changed.emit(_normalized_strokes())
-
-	func _append_point(point: Vector2) -> void:
-		if strokes.is_empty():
-			_begin_stroke(point)
-			return
-
-		var stroke := strokes[strokes.size() - 1]
-		var previous := stroke[stroke.size() - 1]
-		var normalized_point := _clamp_normalized(point)
-		if _point_to_pixel(previous).distance_to(_point_to_pixel(normalized_point)) < 4.0:
-			return
-
-		total_length += _point_to_pixel(previous).distance_to(_point_to_pixel(normalized_point))
-		stroke.append(normalized_point)
-		strokes[strokes.size() - 1] = stroke
-
-		if int(total_length) % 70 < 8:
-			_add_sparkle(normalized_point)
-		strokes_changed.emit(_normalized_strokes())
-
-	func _add_sparkle(point: Vector2) -> void:
-		sparkles.append({
-			"point": _clamp_normalized(point),
-			"age": 0.0,
-		})
-
-	func has_ink() -> bool:
-		return not strokes.is_empty()
-
-	func begin_surface_stroke(point: Vector2) -> void:
-		_begin_stroke(point)
-
-	func append_surface_point(point: Vector2) -> void:
-		if _drawing:
-			_append_point(point)
-
-	func end_surface_stroke() -> void:
-		_drawing = false
-
-	func _load_initial_strokes() -> void:
-		_load_strokes(initial_strokes)
-
-	func _load_strokes(source_strokes: Array[PackedVector2Array]) -> void:
-		strokes.clear()
-		for normalized_stroke in source_strokes:
-			var stroke := PackedVector2Array()
-			for point in normalized_stroke:
-				stroke.append(_clamp_normalized(point))
-			strokes.append(stroke)
-		total_length = _stroke_length(strokes)
-
-	func _normalized_strokes() -> Array[PackedVector2Array]:
-		var out: Array[PackedVector2Array] = []
-		for stroke in strokes:
-			out.append(PackedVector2Array(stroke))
-		return out
-
-	func _stroke_length(source_strokes: Array[PackedVector2Array]) -> float:
-		var length := 0.0
-		for stroke in source_strokes:
-			for i in range(1, stroke.size()):
-				length += _point_to_pixel(stroke[i - 1]).distance_to(_point_to_pixel(stroke[i]))
-		return length
-
-	func _stroke_to_pixels(stroke: PackedVector2Array) -> PackedVector2Array:
-		var out := PackedVector2Array()
-		for point in stroke:
-			out.append(_point_to_pixel(point))
-		return out
-
-	func _point_to_pixel(point: Vector2) -> Vector2:
-		return Vector2(point.x * size.x, point.y * size.y)
-
-	func _clamp_normalized(point: Vector2) -> Vector2:
-		return Vector2(clampf(point.x, 0.0, 1.0), clampf(point.y, 0.0, 1.0))
-
-
-func interact(player: Node3D, _collider: Object) -> void:
+func interact(player: WizardPlayer, _collider: Object) -> void:
 	if _active:
 		return
 	if _sealed:
-		_show_toast(player, sealed_prompt)
+		WizardHud.toast(self, sealed_prompt)
 		return
 
-	var hands := _hands_for(player)
-	if hands == null:
+	if player == null or player.hands == null:
 		return
-	if hands.held_item != null:
-		_show_toast(player, held_item_prompt)
+	if player.hands.held_item != null:
+		WizardHud.toast(self, held_item_prompt)
 		return
 
 	_begin_scribing(player)
 
 
-func focus_prompt(player: Node3D, _collider: Object) -> String:
+func focus_prompt(player: WizardPlayer, _collider: Object) -> String:
 	if _active:
 		return ""
 	if _sealed:
 		return sealed_prompt
 
-	var hands := _hands_for(player)
-	if hands == null:
+	if player == null or player.hands == null:
 		return ""
-	if hands.held_item != null:
+	if player.hands.held_item != null:
 		return held_item_prompt
 	return prompt_text
 
@@ -286,23 +165,21 @@ func _process(delta: float) -> void:
 		_scribe_canvas.seal_hold_progress = 0.0
 
 
-func _begin_scribing(player: Node3D) -> void:
+func _begin_scribing(player: WizardPlayer) -> void:
 	_active = true
 	_player = player
 	_seal_hold_elapsed = 0.0
 	_previous_mouse_mode = Input.mouse_mode
 	_original_camera = get_viewport().get_camera_3d()
-	_interactor = player.get_node_or_null("%Interactor") as RayCast3D
-	_clear_interaction_prompt()
 	_last_cursor_point = Vector2(0.5, 0.5)
 	_has_cursor_point = true
-	if _scribe_hand:
-		_scribe_hand.visible = true
 
-	if not _create_scribe_camera():
+	if not _activate_scribe_camera():
 		_active = false
 		return
-	_lock_player(player, true)
+	player.set_control_enabled(false)
+	if _scribe_arm:
+		_scribe_arm.set_active(true)
 	_create_scribe_surface()
 	_update_scribe_props(1.0)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -321,25 +198,24 @@ func _end_scribing(completed: bool, stroke_count: int = 0) -> void:
 	Input.mouse_mode = _previous_mouse_mode
 
 	if _player and is_instance_valid(_player):
-		_lock_player(_player, false)
-		if _scribe_hand:
-			_scribe_hand.visible = false
+		_player.set_control_enabled(true)
+		if _scribe_arm:
+			_scribe_arm.set_active(false)
 		if quill:
 			quill.transform = _quill_rest_transform
 		if completed:
 			_sealed = true
 			_finish_scroll_visual()
-			_show_toast(_player, "Scroll scribed")
+			WizardHud.toast(self, "Scroll scribed")
 			scribing_completed.emit(stroke_count)
 		else:
 			scribing_cancelled.emit()
 
 	_player = null
 	_original_camera = null
-	_interactor = null
 
 
-func _create_scribe_camera() -> bool:
+func _activate_scribe_camera() -> bool:
 	_scribe_camera = get_node_or_null(scribe_camera_path) as Camera3D
 	if _scribe_camera == null:
 		push_error("SpellCrafter requires a Camera3D at scribe_camera_path.")
@@ -387,16 +263,6 @@ func _set_cursor_point(point: Vector2) -> void:
 	_has_cursor_point = true
 
 
-func _lock_player(player: Node3D, locked: bool) -> void:
-	player.set_physics_process(not locked)
-	player.set_process_input(not locked)
-	player.set_process_unhandled_input(not locked)
-	if _interactor:
-		_interactor.enabled = not locked
-		_interactor.set_physics_process(not locked)
-		_interactor.set_process_unhandled_input(not locked)
-
-
 func _finish_scroll_visual() -> void:
 	if scroll is GeometryInstance3D:
 		var material := StandardMaterial3D.new()
@@ -407,69 +273,35 @@ func _finish_scroll_visual() -> void:
 		(scroll as GeometryInstance3D).material_override = material
 
 
-func _create_scribe_hand_prop() -> void:
-	if _scribe_hand:
+func _create_scribe_arm() -> void:
+	if _scribe_arm:
+		return
+	_scribe_arm = ScribeArm.new()
+	_scribe_arm.name = "ScribeArm"
+	_scribe_arm.position = arm_shoulder_position
+	_scribe_arm.rotation_degrees = arm_rotation_degrees
+	add_child(_scribe_arm)
+
+
+func _ensure_quill_tip() -> void:
+	if quill == null or quill.get_node_or_null("WritingTip") != null:
 		return
 
-	_scribe_hand = Node3D.new()
-	_scribe_hand.name = "ScribeHand"
-	_scribe_hand.visible = false
-	add_child(_scribe_hand)
+	var tip_material := StandardMaterial3D.new()
+	tip_material.albedo_color = Color(0.04, 0.025, 0.035)
+	tip_material.roughness = 0.38
 
-	var skin_material := StandardMaterial3D.new()
-	skin_material.albedo_color = Color(0.78, 0.52, 0.36)
-	skin_material.roughness = 0.72
-
-	var palm_mesh := SphereMesh.new()
-	palm_mesh.radius = 0.034
-	palm_mesh.height = 0.045
-	var palm := MeshInstance3D.new()
-	palm.name = "Palm"
-	palm.mesh = palm_mesh
-	palm.material_override = skin_material
-	palm.position = Vector3(0.0, 0.0, 0.0)
-	palm.scale = Vector3(1.1, 0.7, 0.85)
-	_scribe_hand.add_child(palm)
-
-	for i in 4:
-		var finger_mesh := CapsuleMesh.new()
-		finger_mesh.radius = 0.006
-		finger_mesh.height = 0.052
-		var finger := MeshInstance3D.new()
-		finger.name = "Finger%d" % (i + 1)
-		finger.mesh = finger_mesh
-		finger.material_override = skin_material
-		finger.position = Vector3(-0.021 + i * 0.014, -0.018, -0.018)
-		finger.rotation_degrees = Vector3(72.0, 0.0, -10.0 + i * 5.0)
-		_scribe_hand.add_child(finger)
-
-	var thumb_mesh := CapsuleMesh.new()
-	thumb_mesh.radius = 0.007
-	thumb_mesh.height = 0.048
-	var thumb := MeshInstance3D.new()
-	thumb.name = "Thumb"
-	thumb.mesh = thumb_mesh
-	thumb.material_override = skin_material
-	thumb.position = Vector3(0.031, -0.012, 0.006)
-	thumb.rotation_degrees = Vector3(55.0, 28.0, -42.0)
-	_scribe_hand.add_child(thumb)
-
-	if quill and quill.get_node_or_null("WritingTip") == null:
-		var tip_material := StandardMaterial3D.new()
-		tip_material.albedo_color = Color(0.04, 0.025, 0.035)
-		tip_material.roughness = 0.38
-
-		var tip_mesh := CylinderMesh.new()
-		tip_mesh.bottom_radius = 0.009
-		tip_mesh.top_radius = 0.0
-		tip_mesh.height = 0.03
-		var tip := MeshInstance3D.new()
-		tip.name = "WritingTip"
-		tip.mesh = tip_mesh
-		tip.material_override = tip_material
-		tip.position = quill_tip_local_offset
-		tip.rotation_degrees = Vector3(180.0, 0.0, 0.0)
-		quill.add_child(tip)
+	var tip_mesh := CylinderMesh.new()
+	tip_mesh.bottom_radius = 0.009
+	tip_mesh.top_radius = 0.0
+	tip_mesh.height = 0.03
+	var tip := MeshInstance3D.new()
+	tip.name = "WritingTip"
+	tip.mesh = tip_mesh
+	tip.material_override = tip_material
+	tip.position = quill_tip_local_offset
+	tip.rotation_degrees = Vector3(180.0, 0.0, 0.0)
+	quill.add_child(tip)
 
 
 func _update_scribe_props(delta: float) -> void:
@@ -488,27 +320,17 @@ func _update_scribe_props(delta: float) -> void:
 	if quill:
 		var current_origin := quill.global_position
 		quill.global_transform = Transform3D(prop_basis, current_origin.lerp(desired_origin, weight))
-
-	if _scribe_hand:
-		_scribe_hand.visible = true
-		var hand_basis := prop_basis * Basis.from_euler(Vector3(
-			deg_to_rad(hand_rotation_degrees.x),
-			deg_to_rad(hand_rotation_degrees.y),
-			deg_to_rad(hand_rotation_degrees.z)))
-		var hand_origin := desired_origin + prop_basis * hand_offset
-		_scribe_hand.global_transform = Transform3D(hand_basis, _scribe_hand.global_position.lerp(hand_origin, weight))
+		if _scribe_arm:
+			var grip: Vector3 = quill.global_transform * hand_grip_offset
+			var toward_shoulder := (_scribe_arm.global_position - grip).normalized()
+			_scribe_arm.track(grip + toward_shoulder * wrist_back_distance)
 
 
 func _scribe_prop_basis() -> Basis:
-	var basis := scroll.global_transform.basis.orthonormalized()
-	basis = basis.rotated(scroll.global_transform.basis.y.normalized(), deg_to_rad(quill_yaw_degrees))
-	basis = basis.rotated(basis.x.normalized(), deg_to_rad(quill_pitch_degrees))
-	return basis.orthonormalized()
-
-
-func _clear_interaction_prompt() -> void:
-	if _interactor and _interactor.has_signal("focus_changed"):
-		_interactor.emit_signal("focus_changed", "")
+	var prop_basis := scroll.global_transform.basis.orthonormalized()
+	prop_basis = prop_basis.rotated(scroll.global_transform.basis.y.normalized(), deg_to_rad(quill_yaw_degrees))
+	prop_basis = prop_basis.rotated(prop_basis.x.normalized(), deg_to_rad(quill_pitch_degrees))
+	return prop_basis.orthonormalized()
 
 
 func _scroll_point(point: Vector2, scroll_size: Vector3, top_y: float) -> Vector3:
@@ -545,7 +367,8 @@ func _scroll_point_from_screen(screen_position: Vector2) -> Variant:
 func _scroll_size() -> Vector3:
 	var size = scroll.get("size")
 	if size is Vector3:
-		return size as Vector3
+		print("size found", size)
+		return (size * 0.90) as Vector3
 	return Vector3(0.36, 0.02, 0.29)
 
 
@@ -564,22 +387,3 @@ func _duplicate_strokes(source: Array[PackedVector2Array]) -> Array[PackedVector
 	for stroke in source:
 		out.append(PackedVector2Array(stroke))
 	return out
-
-
-func _show_toast(player: Node3D, message: String) -> void:
-	var hud := player.get_tree().get_first_node_in_group("wizard_hud")
-	if hud and hud.has_method("show_toast"):
-		hud.call("show_toast", message)
-
-
-func _scene_parent() -> Node:
-	return get_tree().current_scene if get_tree().current_scene != null else get_tree().root
-
-
-func _hands_for(player: Node3D) -> Node:
-	if player == null:
-		return null
-	var hands := player.get_node_or_null("%HandAnchor")
-	if hands == null or not hands.has_method("pick_up"):
-		return null
-	return hands

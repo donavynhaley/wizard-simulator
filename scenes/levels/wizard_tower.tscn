@@ -223,11 +223,11 @@ height = 8.107461
 sides = 64
 
 [node name="AreaLight3D" type="AreaLight3D" parent="Floor1" unique_id=1564117812]
-transform = Transform3D(0.1298535, -0.3814558, -0.915221, 0.07919658, 0.9240774, -0.3739103, 0.9883652, -0.023928821, 0.15020467, -8.241287, -0.062316895, -0.19968414)
+transform = Transform3D(0.06780122, 0.9533144, -0.29427007, -0.13615076, 0.30103034, 0.94384515, 0.9883652, -0.023928775, 0.15020466, -8.241287, 1.1085815, -0.19968414)
 light_color = Color(0, 1, 1, 1)
 light_energy = 5.0
-light_size = 1.0
-area_range = 9.895
+light_size = 0.195
+area_range = 2.014
 area_normalize_energy = false
 
 [node name="EndlessSpring" parent="Floor1" unique_id=302023470 instance=ExtResource("3_o6hnd")]

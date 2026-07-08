@@ -4,18 +4,20 @@ extends RayCast3D
 ## Look-to-focus interaction. Lives under the player camera; whatever the
 ## crosshair rests on gets focused, and E interacts with it.
 ##
-## Interactable contract (duck-typed, on the collider or any ancestor):
-##   focus_prompt(player, collider) -> String   what the HUD shows
-##   interact(player, collider)                 do the thing
-## The collider is passed through so multi-part props (like the SpellBench's
-## sockets) can tell which part was used.
+## Interactable contract (dispatched by method name, on the collider or any
+## ancestor):
+##   focus_prompt(player: WizardPlayer, collider) -> String   what the HUD shows
+##   interact(player: WizardPlayer, collider)                 do the thing
+## The player is the typed WizardPlayer, so implementers get player.hands
+## autocompletion. The collider is passed through so multi-part props (like
+## the crafting table's element holder) can tell which part was used.
 
 signal focus_changed(prompt: String)
 
 const LAYER_WORLD := 1
 const LAYER_PICKUP := 2
 
-var _player: Node3D
+var _player: WizardPlayer
 var _focused: Node
 var _focused_collider: Object
 
@@ -25,7 +27,7 @@ func _ready() -> void:
 	target_position = Vector3(0.0, 0.0, -2.8)
 	collision_mask = LAYER_WORLD | LAYER_PICKUP
 	collide_with_areas = false
-	_player = owner
+	_player = owner as WizardPlayer
 
 
 func _physics_process(_delta: float) -> void:
@@ -48,6 +50,22 @@ func _unhandled_input(event: InputEvent) -> void:
 		# Prompts usually change after an interaction; force a refresh.
 		_focused = null
 		_focused_collider = null
+
+
+## Suspends or resumes the whole look-to-focus loop. Deactivating also clears
+## the HUD prompt.
+func set_active(active: bool) -> void:
+	enabled = active
+	set_physics_process(active)
+	set_process_unhandled_input(active)
+	if not active:
+		clear_focus()
+
+
+func clear_focus() -> void:
+	_focused = null
+	_focused_collider = null
+	focus_changed.emit("")
 
 
 func _find_interactable(from: Object) -> Node:

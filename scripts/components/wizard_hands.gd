@@ -1,10 +1,9 @@
 class_name WizardHands
 extends Node3D
 
-## The wizard's hands. Holds one physical item (a RuneStone or a SpellScroll)
-## in front of the camera. Holding a scroll is the only way to cast it: left
-## click casts, G drops whatever is held. Marked scene-unique (%HandAnchor) so
-## props can find it from anywhere.
+## The wizard's hands. Holds one physical item in front of the camera. Left
+## click casts a castable item, G drops whatever is held. Marked scene-unique
+## (%HandAnchor); interactables reach it through the typed player.hands.
 
 signal held_changed(item: Node3D)
 
@@ -41,7 +40,7 @@ func pick_up(item: Node3D) -> void:
 	_kill_carry_tween()
 	held_item = item
 	item.reparent(self)
-	_set_visual_layer(item, held_item_visual_layer)
+	VisualLayers.apply_layer(item, held_item_visual_layer)
 	if item.has_method("set_held"):
 		item.set_held(true)
 	var pose := _held_pose_for(item)
@@ -63,7 +62,7 @@ func drop() -> void:
 	var item := held_item
 	held_item = null
 	item.reparent(get_tree().current_scene)
-	_set_visual_layer(item, world_item_visual_layer)
+	VisualLayers.apply_layer(item, world_item_visual_layer)
 	if item.has_method("set_held"):
 		item.set_held(false)
 	if item is RigidBody3D:
@@ -78,7 +77,7 @@ func release_item(item: Node3D) -> void:
 	if held_item == item:
 		_kill_carry_tween()
 		held_item = null
-		_set_visual_layer(item, world_item_visual_layer)
+		VisualLayers.apply_layer(item, world_item_visual_layer)
 		held_changed.emit(null)
 
 
@@ -99,13 +98,6 @@ func _held_pose_for(item: Node3D) -> Dictionary:
 		"rotation": default_held_rotation,
 		"scale": default_held_scale,
 	}
-
-
-func _set_visual_layer(node: Node, layer_mask: int) -> void:
-	if node is VisualInstance3D:
-		(node as VisualInstance3D).layers = layer_mask
-	for child in node.get_children():
-		_set_visual_layer(child, layer_mask)
 
 
 func _play_grab_motion() -> void:
@@ -144,6 +136,5 @@ func _try_cast() -> void:
 	if camera == null:
 		return
 	var status: String = str(held_item.call("cast_from", owner, camera.global_transform))
-	var hud := get_tree().get_first_node_in_group("wizard_hud")
-	if status != "" and hud and hud.has_method("show_toast"):
-		hud.call("show_toast", status)
+	if status != "":
+		WizardHud.toast(self, status)

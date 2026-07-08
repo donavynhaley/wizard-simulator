@@ -4,6 +4,7 @@
 [ext_resource type="Script" uid="uid://ba4uytaelk731" path="res://scripts/components/player_interactor.gd" id="2"]
 [ext_resource type="Script" uid="uid://dmw3sx6stv5yv" path="res://scripts/components/wizard_hands.gd" id="3"]
 [ext_resource type="Script" uid="uid://dbg6kjyle46wi" path="res://scripts/components/wizard_hud.gd" id="4"]
+[ext_resource type="Script" uid="uid://baegque02dse" path="res://scripts/characters/wizard_body_rig.gd" id="5"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
 radius = 0.35
@@ -38,3 +39,6 @@ script = ExtResource("3")
 
 [node name="WizardHud" type="CanvasLayer" parent="." unique_id=506628545]
 script = ExtResource("4")
+
+[node name="BodyRig" type="Node3D" parent="." unique_id=636929919]
+script = ExtResource("5")
