@@ -1,0 +1,18 @@
+[gd_scene format=3 uid="uid://bf1m1ufy0wu2v"]
+
+[ext_resource type="PackedScene" uid="uid://1meyl64tn2vf" path="res://assets/models/golden_chalice.glb" id="1_xubca"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_xpu6o"]
+height = 0.185
+radius = 0.035
+
+[node name="GoldenChalice" type="Node3D" unique_id=1439280969]
+
+[node name="golden_chalice" parent="." unique_id=539439539 instance=ExtResource("1_xubca")]
+transform = Transform3D(1.13, 0, 0, 0, 1.13, 0, 0, 0, 1.13, 0, 0, 0)
+
+[node name="Area3D" type="Area3D" parent="golden_chalice" unique_id=188715064]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="golden_chalice/Area3D" unique_id=692901487]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.024367632, 0)
+shape = SubResource("CylinderShape3D_xpu6o")
