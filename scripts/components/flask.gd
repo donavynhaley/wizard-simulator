@@ -1,4 +1,4 @@
-extends RigidBody3D
+extends Item
 class_name Flask
 
 @export var pickup_prompt_text =  "pick up flask of "

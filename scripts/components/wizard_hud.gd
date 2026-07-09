@@ -88,7 +88,7 @@ func _on_held_changed(item: Node3D) -> void:
 	if item == null:
 		_held_line.text = ""
 	elif item.has_method("cast_from"):
-		var display_name := str(item.call("get_display_name")) if item.has_method("get_display_name") else item.name
+		var display_name: String = str(item.call("get_display_name")) if item.has_method("get_display_name") else item.name
 		_held_line.text = "%s  [LMB cast / G drop]" % display_name
 	elif item.has_method("get_display_name"):
 		_held_line.text = "%s  [G release]" % str(item.call("get_display_name"))

@@ -46,7 +46,7 @@ func cast_from(caster: Node, camera_transform: Transform3D) -> String:
 		_spend_self(caster)
 		return "The scroll has already crumbled."
 
-		var context := SpellCastContext.new()
+	var context := SpellCastContext.new()
 	context.caster = caster
 	context.world = get_tree().current_scene
 	context.origin = camera_transform.origin

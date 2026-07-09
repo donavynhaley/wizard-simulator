@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://jtttvlmcy1jg"]
+[gd_scene format=3 uid="uid://jtttvlmcy1jg"]
 
 [ext_resource type="PackedScene" uid="uid://1meyl64tn2vf" path="res://assets/models/golden_chalice.glb" id="1_ftsp2"]
 [ext_resource type="PackedScene" uid="uid://bykwrxhkq5qhr" path="res://scenes/magical_flame.tscn" id="2_g0ips"]
