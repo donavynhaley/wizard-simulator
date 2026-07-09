@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://btdn0g25o1dya"]
+
+[ext_resource type="PackedScene" uid="uid://bbq2lprlv50up" path="res://assets/models/flask.glb" id="1_3232o"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_xpu6o"]
+radius = 1.015
+
+[node name="Flask" type="Node3D" unique_id=1682019147]
+
+[node name="flask" parent="." unique_id=1848228236 instance=ExtResource("1_3232o")]
+transform = Transform3D(0.2, 0, 0, 0, 0.2, 0, 0, 0, 0.2, 0, 0, 0)
+
+[node name="Area3D" type="Area3D" parent="flask" unique_id=92742174]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="flask/Area3D" unique_id=382077404]
+shape = SubResource("SphereShape3D_xpu6o")
