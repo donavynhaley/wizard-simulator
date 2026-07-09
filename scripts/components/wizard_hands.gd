@@ -1,10 +1,9 @@
 class_name WizardHands
 extends Node3D
 
-## The wizard's hands. Holds one physical item (a RuneStone or a SpellScroll)
-## in front of the camera. Holding a scroll is the only way to cast it: left
-## click casts, G drops whatever is held. Marked scene-unique (%HandAnchor) so
-## props can find it from anywhere.
+## The wizard's hands. Holds one physical item in front of the camera. Left
+## click casts a castable item, G drops whatever is held. Marked scene-unique
+## (%HandAnchor); interactables reach it through the typed player.hands.
 
 signal held_changed(item: Node3D)
 
@@ -18,6 +17,10 @@ signal held_changed(item: Node3D)
 @export var grab_lift: float = 0.055
 @export var drop_forward_impulse: float = 1.5
 @export var drop_up_impulse: float = 0.5
+
+@export_group("Visual Layers")
+@export var held_item_visual_layer: int = 1 << 0
+@export var world_item_visual_layer: int = 1 << 0
 
 var held_item: Node3D
 var _carry_tween: Tween
@@ -36,9 +39,10 @@ func pick_up(item: Node3D) -> void:
 		drop()
 	_kill_carry_tween()
 	held_item = item
+	item.reparent(self)
+	VisualLayers.apply_layer(item, held_item_visual_layer)
 	if item.has_method("set_held"):
 		item.set_held(true)
-	item.reparent(self)
 	var pose := _held_pose_for(item)
 	item.scale = pose.scale
 	_carry_tween = item.create_tween()
@@ -58,6 +62,7 @@ func drop() -> void:
 	var item := held_item
 	held_item = null
 	item.reparent(get_tree().current_scene)
+	VisualLayers.apply_layer(item, world_item_visual_layer)
 	if item.has_method("set_held"):
 		item.set_held(false)
 	if item is RigidBody3D:
@@ -72,6 +77,7 @@ func release_item(item: Node3D) -> void:
 	if held_item == item:
 		_kill_carry_tween()
 		held_item = null
+		VisualLayers.apply_layer(item, world_item_visual_layer)
 		held_changed.emit(null)
 
 
@@ -130,6 +136,5 @@ func _try_cast() -> void:
 	if camera == null:
 		return
 	var status: String = str(held_item.call("cast_from", owner, camera.global_transform))
-	var hud := get_tree().get_first_node_in_group("wizard_hud")
-	if status != "" and hud and hud.has_method("show_toast"):
-		hud.call("show_toast", status)
+	if status != "":
+		WizardHud.toast(self, status)

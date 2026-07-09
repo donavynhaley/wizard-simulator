@@ -1,0 +1,125 @@
+[gd_scene format=3 uid="uid://5fyhxou04dxg"]
+
+[ext_resource type="PackedScene" uid="uid://ds420wksjuoqe" path="res://assets/external/kenney/fantasy-town-kit/Models/GLB format/pillar-wood.glb" id="1_aa1pw"]
+[ext_resource type="PackedScene" uid="uid://84kei5ottca7" path="res://assets/external/kenney/fantasy-town-kit/Models/GLB format/planks.glb" id="2_kisc1"]
+[ext_resource type="PackedScene" uid="uid://dya0xacrgn0y1" path="res://assets/external/kenney/fantasy-town-kit/Models/GLB format/overhang.glb" id="3_kisc1"]
+[ext_resource type="Script" uid="uid://lkmq4o6q51xo" path="res://scripts/artifacts/element_holder.gd" id="4_sooxi"]
+[ext_resource type="Script" uid="uid://5yuur3pjr7pd" path="res://scripts/artifacts/spell_crafter.gd" id="5_70f7w"]
+[ext_resource type="PackedScene" uid="uid://ciluq5r4ob1mh" path="res://assets/external/seal_-_animated_low_poly.glb" id="6_dcnth"]
+[ext_resource type="PackedScene" uid="uid://co3m3qd6y2ebq" path="res://assets/models/book_closed.glb" id="7_05xbg"]
+[ext_resource type="PackedScene" uid="uid://tykeeyopje2q" path="res://assets/models/book_open.glb" id="8_1jmjg"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_0jym3"]
+height = 0.1
+radius = 0.1
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_0jym3"]
+size = Vector3(1, 0.96484375, 1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_05xbg"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_dcnth"]
+size = Vector3(0.6329956, 0.03515625, 0.3531494)
+
+[node name="CraftingTable" type="Node3D" unique_id=277921942]
+
+[node name="leg" parent="." unique_id=1764407051 instance=ExtResource("1_aa1pw")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4309538, 0, 0.43087792)
+
+[node name="top" parent="." unique_id=1788029138 instance=ExtResource("2_kisc1")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95352715, 0)
+
+[node name="leg2" parent="." unique_id=1838177468 instance=ExtResource("1_aa1pw")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.42858392, 0, 0.43087792)
+
+[node name="leg3" parent="." unique_id=1912969644 instance=ExtResource("1_aa1pw")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.42858392, 0, -0.4142344)
+
+[node name="leg4" parent="." unique_id=244929068 instance=ExtResource("1_aa1pw")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4289881, 0, -0.4142344)
+
+[node name="overhang2" parent="." unique_id=129384261 instance=ExtResource("3_kisc1")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.87747264, 0.20729518, -0.0068775713)
+
+[node name="ElementHolder" type="CSGCylinder3D" parent="." unique_id=1639004423]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6003406, 1.2425802, 0.4)
+radius = 0.049
+height = 0.099
+script = ExtResource("4_sooxi")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="ElementHolder" unique_id=130180570]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.406273, -1.0605408, -0.4)
+collision_layer = 2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ElementHolder/StaticBody3D" unique_id=576345703]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.41149908, 1.0664347, 0.37862968)
+shape = SubResource("CylinderShape3D_0jym3")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="." unique_id=944163110]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D" unique_id=1919803288]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.49902344, 0)
+shape = SubResource("BoxShape3D_0jym3")
+
+[node name="SpellCrafter" type="Node3D" parent="." unique_id=713436920]
+script = ExtResource("5_70f7w")
+
+[node name="Scroll" type="CSGBox3D" parent="SpellCrafter" unique_id=1146428071]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.06947002, 1.0257996, -0.02878812)
+size = Vector3(0.5, 0.002, 0.3)
+material = SubResource("ShaderMaterial_05xbg")
+
+[node name="ScribeCamera" type="Camera3D" parent="SpellCrafter" unique_id=79078189]
+transform = Transform3D(-4.371139e-08, -0.5284383, 0.8489717, 0, 0.8489717, 0.5284383, -1, 2.3098773e-08, -3.7109732e-08, 0.68941516, 1.546, 0.018)
+fov = 48.0
+
+[node name="InkWell" type="CSGCylinder3D" parent="SpellCrafter" unique_id=826901926]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0835723, 1.0417287, -0.3371022)
+radius = 0.05
+height = 0.1
+
+[node name="StaticBody3D" type="StaticBody3D" parent="SpellCrafter/InkWell" unique_id=1931572131]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.406273, -1.0605408, -0.4)
+collision_layer = 2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SpellCrafter/InkWell/StaticBody3D" unique_id=1206103088]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.41149908, 1.0664347, 0.39423445)
+shape = SubResource("CylinderShape3D_0jym3")
+
+[node name="Quill" type="CSGCylinder3D" parent="SpellCrafter" unique_id=1867312045]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.084506005, 1.121171, -0.34022743)
+radius = 0.008
+height = 0.065
+
+[node name="CSGTorus3D" type="CSGTorus3D" parent="SpellCrafter/Quill" unique_id=98357361]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.007462144, 0)
+inner_radius = 0.001
+outer_radius = 0.022
+
+[node name="StaticBody3D" type="StaticBody3D" parent="SpellCrafter" unique_id=88514684]
+collision_layer = 2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SpellCrafter/StaticBody3D" unique_id=1480621867]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.14770561, 1.0292742, -0.016662598)
+shape = SubResource("BoxShape3D_dcnth")
+
+[node name="Seal" type="Node3D" parent="." unique_id=186659016]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.060479954, 1.0560905, 0.27169758)
+
+[node name="Sketchfab_Scene" parent="Seal" unique_id=1035655518 instance=ExtResource("6_dcnth")]
+transform = Transform3D(-0.0010935115, 0, 0.044986714, 0, 0.045, 0, -0.044986714, 0, -0.0010935115, 0.0023997128, 0.045892, 0.0008189678)
+
+[node name="CSGCylinder3D" type="CSGCylinder3D" parent="Seal" unique_id=1142474081]
+radius = 0.01
+height = 0.09954834
+
+[node name="CSGTorus3D" type="CSGTorus3D" parent="Seal/CSGCylinder3D" unique_id=1564651313]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.039970756, 0)
+inner_radius = 0.03
+outer_radius = 0.001
+
+[node name="book_closed" parent="." unique_id=1058687452 instance=ExtResource("7_05xbg")]
+transform = Transform3D(4, 0, 0, 0, 4, 0, 0, 0, 4, -0.601137, 1.236366, -0.3207046)
+
+[node name="book_open" parent="." unique_id=372880392 instance=ExtResource("8_1jmjg")]
+transform = Transform3D(-1.7484555e-07, 2.828427, -2.828427, 0, 2.828427, 2.828427, 4, 1.2363448e-07, -1.2363448e-07, -0.09072113, 0.875422, 0.03758949)

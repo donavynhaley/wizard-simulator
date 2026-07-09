@@ -47,8 +47,15 @@ var _sky_material: ProceduralSkyMaterial
 func _ready() -> void:
 	running = auto_start
 	time_of_day = start_hour
-	_sun = _find_or_create_sun()
-	_moon = _find_or_create_moon()
+	_sun = _find_light(sun_path, "Sun")
+	if _sun == null:
+		_sun = _spawn_light("Sun")
+		_sun.shadow_enabled = true
+	_moon = _find_light(moon_path, "Moon")
+	if _moon == null:
+		_moon = _spawn_light("Moon")
+		_moon.light_color = moon_color
+		_moon.shadow_enabled = false
 	_environment = _find_environment()
 	_sky_material = _find_sky_material(_environment)
 	_apply_time()
@@ -67,39 +74,19 @@ func _process(delta: float) -> void:
 	_apply_time()
 
 
-func _find_or_create_sun() -> DirectionalLight3D:
-	var existing := get_node_or_null(sun_path) as DirectionalLight3D
-	if existing:
-		return existing
-
-	existing = get_parent().get_node_or_null("Sun") as DirectionalLight3D
-	if existing:
-		return existing
-
-	var sun := DirectionalLight3D.new()
-	sun.name = "Sun"
-	sun.shadow_enabled = true
-	get_parent().add_child(sun)
-	sun.owner = get_tree().edited_scene_root if Engine.is_editor_hint() else null
-	return sun
+func _find_light(explicit_path: NodePath, fallback_name: String) -> DirectionalLight3D:
+	var light := get_node_or_null(explicit_path) as DirectionalLight3D
+	if light:
+		return light
+	return get_parent().get_node_or_null(NodePath(fallback_name)) as DirectionalLight3D
 
 
-func _find_or_create_moon() -> DirectionalLight3D:
-	var existing := get_node_or_null(moon_path) as DirectionalLight3D
-	if existing:
-		return existing
-
-	existing = get_parent().get_node_or_null("Moon") as DirectionalLight3D
-	if existing:
-		return existing
-
-	var moon := DirectionalLight3D.new()
-	moon.name = "Moon"
-	moon.light_color = moon_color
-	moon.shadow_enabled = false
-	get_parent().add_child(moon)
-	moon.owner = get_tree().edited_scene_root if Engine.is_editor_hint() else null
-	return moon
+func _spawn_light(light_name: String) -> DirectionalLight3D:
+	var light := DirectionalLight3D.new()
+	light.name = light_name
+	get_parent().add_child(light)
+	light.owner = get_tree().edited_scene_root if Engine.is_editor_hint() else null
+	return light
 
 
 func _find_environment() -> Environment:

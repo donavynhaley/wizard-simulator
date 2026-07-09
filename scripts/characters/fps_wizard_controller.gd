@@ -1,4 +1,10 @@
+class_name WizardPlayer
 extends CharacterBody3D
+
+## First-person wizard controller: movement, stair stepping, mouse look and
+## capture, and the viewmodel's walk/sway motion. Body and arm presentation
+## lives on the BodyRig child (WizardBodyRig), interaction on %Interactor,
+## and held items on %HandAnchor.
 
 @export var move_speed: float = 4.2
 @export var jump_velocity: float = 4.5
@@ -18,37 +24,28 @@ extends CharacterBody3D
 @export_range(0.1, 1.0, 0.01) var stair_climb_speed_multiplier: float = 0.72
 @export var stair_step_feedback_time: float = 0.32
 @export var stair_camera_lift_amount: float = 0.045
-@export var stair_camera_pitch_degrees: float = 1.8
 @export var stair_camera_step_smoothing: float = 5.0
 @export var debug_stair_stepping: bool = false
 
-@export_group("Viewmodel Placement")
-@export var viewmodel_rest_position: Vector3 = Vector3(0.0, -0.5, -0.55)
-@export var arms_pivot_rest_position: Vector3 = Vector3(0.0, -0.02, -0.12)
-@export var arms_pivot_rest_rotation: Vector3 = Vector3(-16.0, 0.0, 0.0)
-@export var arms_mesh_scale: float = 0.07
-
 @export_group("Viewmodel Motion")
+@export var viewmodel_rest_position: Vector3 = Vector3(0.0, -0.5, -0.55)
 @export var walk_bob_amount: float = 0.012
 @export var walk_sway_amount: float = 0.006
-@export var idle_breathe_amount: float = 0.01
-@export var idle_drift_amount: float = 0.006
 @export var look_sway_position_amount: float = 0.00045
-@export var look_sway_rotation_amount: float = 0.045
 @export var look_sway_return_speed: float = 9.0
-
-# CC-BY low-poly first-person arms by Player11132 (via poly.pizza). See CREDITS.md.
-const ARMS_SCENE := preload("res://assets/external/polypizza/fps_arms.glb")
 
 @onready var head: Node3D = $Head
 @onready var viewmodel: Node3D = $Head/Camera3D/Viewmodel
 
-# Raw mesh centroid (native units) so the arms can be recentered on their pivot.
-const ARMS_CENTROID := Vector3(2.68, 0.0, 4.54)
+## Typed accessors for the player's scene-unique components. Interactables
+## receive a WizardPlayer, so player.hands / player.interactor autocomplete.
+## Plain getters (not @onready) so they work regardless of ready order.
+var hands: WizardHands:
+	get: return get_node_or_null(^"%HandAnchor") as WizardHands
+var interactor: PlayerInteractor:
+	get: return get_node_or_null(^"%Interactor") as PlayerInteractor
 
 var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
-var _arms: Node3D
-var _arms_pivot: Node3D
 var _look_sway := Vector2.ZERO
 var _look_sway_target := Vector2.ZERO
 var _stair_step_timer := 0.0
@@ -62,7 +59,20 @@ func _ready() -> void:
 	floor_snap_length = maxf(floor_snap_length, stair_floor_snap_length)
 	_head_rest_position = head.position
 	viewmodel.position = viewmodel_rest_position
-	_mount_arms()
+
+
+## Freezes or resumes the player wholesale: movement, look, interaction, and
+## body idle motion. Stations that take over the camera (like the spell
+## crafter) call this instead of poking the player's internals.
+func set_control_enabled(enabled: bool) -> void:
+	set_physics_process(enabled)
+	set_process_input(enabled)
+	set_process_unhandled_input(enabled)
+	if interactor:
+		interactor.set_active(enabled)
+	var body_rig := get_node_or_null(^"BodyRig") as WizardBodyRig
+	if body_rig:
+		body_rig.set_active(enabled)
 
 
 func _capture_mouse() -> void:
@@ -80,54 +90,6 @@ func _notification(what: int) -> void:
 		NOTIFICATION_APPLICATION_FOCUS_IN:
 			if Input.mouse_mode != Input.MOUSE_MODE_VISIBLE:
 				_capture_mouse()
-
-
-func _mount_arms() -> void:
-	# A pivot re-centers the off-origin mesh so idle sway rotates cleanly. The mesh's
-	# hands are at its native -Z end, so no yaw flip is needed to point them forward.
-	_arms_pivot = Node3D.new()
-	_arms_pivot.name = "ArmsPivot"
-	_arms_pivot.position = arms_pivot_rest_position
-	_arms_pivot.rotation_degrees = arms_pivot_rest_rotation
-	viewmodel.add_child(_arms_pivot)
-
-	_arms = ARMS_SCENE.instantiate()
-	_arms.name = "FpsArms"
-	_arms.scale = Vector3.ONE * arms_mesh_scale
-	_arms.position = -ARMS_CENTROID * arms_mesh_scale
-	_arms_pivot.add_child(_arms)
-	_apply_arm_material(_arms)
-
-
-func _apply_arm_material(node: Node) -> void:
-	if node is MeshInstance3D:
-		node.material_override = _arm_material()
-	for child in node.get_children():
-		_apply_arm_material(child)
-
-
-func _arm_material() -> ShaderMaterial:
-	# Robe sleeve near the elbow blending to skin at the hand, keyed off local Z.
-	var shader := Shader.new()
-	shader.code = """
-shader_type spatial;
-uniform vec3 skin : source_color = vec3(0.55, 0.40, 0.28);
-uniform vec3 sleeve : source_color = vec3(0.10, 0.09, 0.16);
-uniform vec3 cuff : source_color = vec3(0.52, 0.40, 0.16);
-varying float zlocal;
-void vertex() { zlocal = VERTEX.z; }
-void fragment() {
-	ROUGHNESS = 0.92;
-	float hand = smoothstep(-1.0, 2.5, zlocal);
-	vec3 c = mix(sleeve, skin, hand);
-	float cuff_band = smoothstep(1.0, 1.6, zlocal) * (1.0 - smoothstep(1.9, 2.5, zlocal));
-	c = mix(c, cuff, cuff_band);
-	ALBEDO = c;
-}
-"""
-	var mat := ShaderMaterial.new()
-	mat.shader = shader
-	return mat
 
 
 func _input(event: InputEvent) -> void:
@@ -357,31 +319,6 @@ func _update_viewmodel(delta: float, input_amount: float) -> void:
 	var stair_lift := Vector3(0.0, stair_feedback * stair_camera_lift_amount, 0.0)
 	var target_position := viewmodel_rest_position + Vector3(sway, bob, 0.0) + look_offset + stair_lift
 	viewmodel.position = viewmodel.position.lerp(target_position, minf(1.0, 8.0 * delta))
-
-	if not _arms_pivot:
-		return
-
-	# Idle breathing + gentle drift so the arms feel alive when standing still.
-	var breathe := sin(t * 1.3) * idle_breathe_amount
-	var drift_x := sin(t * 0.6) * idle_drift_amount
-	var idle_pitch := sin(t * 1.1) * 1.3
-	var idle_yaw := cos(t * 0.7) * 1.6
-	var idle_roll := sin(t * 0.9) * 2.0
-	var look_rot := Vector3(
-		clampf(_look_sway.y * look_sway_rotation_amount, -3.0, 3.0),
-		clampf(_look_sway.x * look_sway_rotation_amount, -5.0, 5.0),
-		clampf(_look_sway.x * look_sway_rotation_amount * 0.55, -3.0, 3.0))
-
-	# A slow recurring gesture: a small, eased hand lift/tilt every ~9 s.
-	var g := 0.0
-	var phase := fmod(t, 9.0)
-	if phase < 1.5:
-		g = sin(phase / 1.5 * PI)
-
-	_arms_pivot.position = arms_pivot_rest_position + Vector3(drift_x, breathe + g * 0.035, 0.0)
-	_arms_pivot.rotation_degrees = arms_pivot_rest_rotation \
-		+ Vector3(idle_pitch - g * 6.0 - stair_feedback * stair_camera_pitch_degrees, idle_yaw, idle_roll + g * 9.0) \
-		+ look_rot
 
 
 func _stair_feedback(delta: float) -> float:
