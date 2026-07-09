@@ -6,8 +6,9 @@
 [ext_resource type="PackedScene" uid="uid://b81rmvhavrt2s" path="res://assets/external/kenney/fantasy-town-kit/Models/GLB format/fountain-square-detail.glb" id="3_o6hnd"]
 [ext_resource type="Script" uid="uid://cdpjhe0jk65iv" path="res://scripts/components/fountain_of_endless_spring.gd" id="4_spring"]
 [ext_resource type="PackedScene" uid="uid://5fyhxou04dxg" path="res://assets/artifacts/crafting-table.tscn" id="5_r62g1"]
+[ext_resource type="Script" uid="uid://duwe13r5kkl2m" path="res://scripts/components/mood_light.gd" id="6_2r11s"]
 [ext_resource type="PackedScene" uid="uid://ckttbfrao7whi" path="res://alchemy_lab.tscn" id="6_hxol8"]
-[ext_resource type="PackedScene" uid="uid://btdn0g25o1dya" path="res://scenes/artifacts/flask.tscn" id="7_wopf2"]
+[ext_resource type="PackedScene" uid="uid://duigk3wthhukx" path="res://scripts/components/book_shelf.tscn" id="7_e4xuk"]
 [ext_resource type="PackedScene" uid="uid://bchhcoi8ov80b" path="res://scripts/components/flask_filled_storage_shelf.tscn" id="9_2r11s"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_o6hnd"]
@@ -34,6 +35,53 @@ reflected_light_source = 2
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_spring_interact"]
 size = Vector3(1.35, 1.45, 1.35)
+
+[sub_resource type="Gradient" id="Gradient_2r11s"]
+offsets = PackedFloat32Array(0, 0.55, 1)
+colors = PackedColorArray(0, 0.8901219, 0.88322216, 1, 0, 0.6447173, 0.66755885, 0.72, 0.45, 0.05, 0.02, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_46ud6"]
+gradient = SubResource("Gradient_2r11s")
+
+[sub_resource type="Curve" id="Curve_e4xuk"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(0.72, 0.75), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="CurveTexture" id="CurveTexture_pfup0"]
+curve = SubResource("Curve_e4xuk")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_nuofk"]
+emission_shape = 1
+emission_sphere_radius = 0.077
+direction = Vector3(0, 1, 0)
+spread = 42.0
+initial_velocity_min = 0.19
+initial_velocity_max = 0.57
+gravity = Vector3(0, 0.12, 0)
+radial_accel_min = -0.08
+radial_accel_max = 0.12
+tangential_accel_min = -0.2
+tangential_accel_max = 0.2
+damping_min = 0.12
+damping_max = 0.36
+scale_min = 0.75
+scale_max = 1.7
+scale_curve = SubResource("CurveTexture_pfup0")
+color_ramp = SubResource("GradientTexture1D_46ud6")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1ca5e"]
+transparency = 1
+blend_mode = 1
+shading_mode = 0
+albedo_color = Color(0, 0.70108336, 0.79398686, 0.9019608)
+billboard_mode = 1
+
+[sub_resource type="SphereMesh" id="SphereMesh_6wrrw"]
+material = SubResource("StandardMaterial3D_1ca5e")
+radius = 0.006
+height = 0.012
+radial_segments = 6
+rings = 3
 
 [node name="WizardTower" type="Node3D" unique_id=1917175163]
 
@@ -174,7 +222,7 @@ moon_path = NodePath("../Moon")
 world_environment_path = NodePath("../WorldEnvironment")
 
 [node name="Player" parent="." unique_id=1184757697 instance=ExtResource("1_y6bsx")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.695, 1.5090332, 1.887)
+transform = Transform3D(0.7420006, 0, 0.67039925, 0, 1, 0, -0.67039925, 0, 0.7420006, -1.5217464, 1.5090332, 3.382835)
 
 [node name="Floor1" type="Node3D" parent="." unique_id=1131415474]
 
@@ -231,14 +279,6 @@ use_collision = true
 height = 8.107461
 sides = 64
 
-[node name="AreaLight3D" type="AreaLight3D" parent="Floor1" unique_id=1564117812]
-transform = Transform3D(0.06780123, 0.9533143, -0.29427, -0.13615078, 0.3010303, 0.9438452, 0.9883653, -0.023928775, 0.15020472, -2.512807, 2.0498657, -3.2091126)
-light_color = Color(0, 1, 1, 1)
-light_energy = 5.0
-light_size = 0.195
-area_range = 2.014
-area_normalize_energy = false
-
 [node name="EndlessSpring" parent="Floor1" unique_id=302023470 instance=ExtResource("3_o6hnd")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.9559164, 0, -3.0570374)
 script = ExtResource("4_spring")
@@ -250,6 +290,24 @@ collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Floor1/EndlessSpring/InteractionBody" unique_id=332055629]
 shape = SubResource("BoxShape3D_spring_interact")
+
+[node name="MoodLight" type="OmniLight3D" parent="Floor1/EndlessSpring" unique_id=1199807133]
+light_color = Color(4.3317677e-06, 0.76190245, 0.7627682, 1)
+script = ExtResource("6_2r11s")
+metadata/_custom_type_script = "uid://duwe13r5kkl2m"
+
+[node name="WaterSarkles" type="GPUParticles3D" parent="Floor1/EndlessSpring" unique_id=1726416732]
+transform = Transform3D(0.75, 0, 0, 0, 0.75, 0, 0, 0, 0.75, 0, 0.16280508, 0)
+amount = 48
+lifetime = 1.35
+preprocess = 1.35
+fixed_fps = 24
+local_coords = true
+process_material = SubResource("ParticleProcessMaterial_nuofk")
+draw_pass_1 = SubResource("SphereMesh_6wrrw")
+
+[node name="BookShelf" parent="Floor1/EndlessSpring/WaterSarkles" unique_id=1339605367 instance=ExtResource("7_e4xuk")]
+transform = Transform3D(1.8425993, 0, 0.7777068, 0, 2, 0, -0.7777068, 0, 1.8425993, 1.4064369, 0, -2.5577865)
 
 [node name="Floor2" type="Node3D" parent="." unique_id=1937687745]
 visible = false
@@ -307,13 +365,10 @@ use_collision = true
 size = Vector3(0.15222168, 5.2475586, 7.625702)
 
 [node name="Table" parent="." unique_id=277921942 instance=ExtResource("5_r62g1")]
-transform = Transform3D(0.9256861, 0, -0.37829244, 0, 1, 0, 0.37829244, 0, 0.9256861, -4.430512, 0, -1.4698045)
+transform = Transform3D(0.9256861, 0, -0.37829244, 0, 1, 0, 0.37829244, 0, 0.9256861, -4.4311295, 0.0013484359, -1.4691505)
 
 [node name="AlchemyLab" parent="." unique_id=233318363 instance=ExtResource("6_hxol8")]
 transform = Transform3D(0.9140432, 0, 0.4056172, 0, 1, 0, -0.4056172, 0, 0.9140432, -4.324766, 0, 1.705534)
 
-[node name="Flask" parent="." unique_id=746868921 instance=ExtResource("7_wopf2")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0827212, 0, 3.2248435)
-
-[node name="StorageShelf" parent="." unique_id=1339605367 instance=ExtResource("9_2r11s")]
+[node name="StorageShelf" parent="." unique_id=1373303997 instance=ExtResource("9_2r11s")]
 transform = Transform3D(-0.9247093, 0, 0.38067394, 0, 1, 0, -0.38067394, 0, -0.9247093, -3.4591055, 1.2903278, 4.52016)
