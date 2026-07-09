@@ -16,8 +16,10 @@ radius = 0.1
 [sub_resource type="BoxShape3D" id="BoxShape3D_0jym3"]
 size = Vector3(1, 0.96484375, 1)
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_05xbg"]
+
 [sub_resource type="BoxShape3D" id="BoxShape3D_dcnth"]
-size = Vector3(0.4642334, 0.03515625, 0.3531494)
+size = Vector3(0.6329956, 0.03515625, 0.3531494)
 
 [node name="CraftingTable" type="Node3D" unique_id=277921942]
 
@@ -63,8 +65,9 @@ shape = SubResource("BoxShape3D_0jym3")
 script = ExtResource("5_70f7w")
 
 [node name="Scroll" type="CSGBox3D" parent="SpellCrafter" unique_id=1146428071]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.08979523, 1.0257996, -0.02878812)
-size = Vector3(0.35925293, 0.021240234, 0.28668213)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.06947002, 1.0257996, -0.02878812)
+size = Vector3(0.5, 0.002, 0.3)
+material = SubResource("ShaderMaterial_05xbg")
 
 [node name="ScribeCamera" type="Camera3D" parent="SpellCrafter" unique_id=79078189]
 transform = Transform3D(-4.371139e-08, -0.5284383, 0.8489717, 0, 0.8489717, 0.5284383, -1, 2.3098773e-08, -3.7109732e-08, 0.68941516, 1.546, 0.018)
@@ -97,7 +100,7 @@ outer_radius = 0.022
 collision_layer = 2
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="SpellCrafter/StaticBody3D" unique_id=1480621867]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.06332451, 1.0292742, -0.016662598)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.14770561, 1.0292742, -0.016662598)
 shape = SubResource("BoxShape3D_dcnth")
 
 [node name="Seal" type="Node3D" parent="." unique_id=186659016]

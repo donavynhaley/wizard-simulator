@@ -22,9 +22,7 @@ signal scribing_cancelled
 ## Width of the physical ink mesh drawn back onto the table scroll.
 @export var ink_width: float = 0.007
 ## Small vertical offset that keeps physical ink from z-fighting with the scroll.
-@export var ink_lift: float = 0.014
-## Scales the physical table ink around the scroll center. Raise this if table ink looks smaller than scribe-mode ink.
-@export var table_ink_scale := Vector2(1.18, 1.18)
+@export var ink_lift: float = 0.001
 ## Pixel size of the render texture that is projected onto the scroll surface.
 @export var scribe_texture_size := Vector2i(1024, 768)
 
@@ -247,7 +245,7 @@ func _create_scribe_surface() -> void:
 	_scribe_surface.name = "ScribeInkSurface"
 	var mesh := PlaneMesh.new()
 	var scroll_size := _scroll_size()
-	mesh.size = Vector2(scroll_size.x * table_ink_scale.x, scroll_size.z * table_ink_scale.y)
+	mesh.size = Vector2(scroll_size.x, scroll_size.z)
 	_scribe_surface.mesh = mesh
 	_scribe_surface.position = Vector3(0.0, scroll_size.y * 0.5 + ink_lift, 0.0)
 	_scribe_surface.material_override = _scribe_surface_material()
@@ -335,9 +333,9 @@ func _scribe_prop_basis() -> Basis:
 
 func _scroll_point(point: Vector2, scroll_size: Vector3, top_y: float) -> Vector3:
 	return Vector3(
-		(point.x - 0.5) * scroll_size.x * table_ink_scale.x,
+		(point.x - 0.5) * scroll_size.x,
 		top_y,
-		(point.y - 0.5) * scroll_size.z * table_ink_scale.y)
+		(point.y - 0.5) * scroll_size.z)
 
 
 func _scroll_point_from_screen(screen_position: Vector2) -> Variant:
@@ -356,8 +354,8 @@ func _scroll_point_from_screen(screen_position: Vector2) -> Variant:
 		return null
 
 	var local_point := scroll.to_local(intersection)
-	var width := scroll_size.x * table_ink_scale.x
-	var height := scroll_size.z * table_ink_scale.y
+	var width := scroll_size.x 
+	var height := scroll_size.z
 	var point := Vector2(local_point.x / width + 0.5, local_point.z / height + 0.5)
 	if point.x < 0.0 or point.x > 1.0 or point.y < 0.0 or point.y > 1.0:
 		return null
@@ -367,8 +365,7 @@ func _scroll_point_from_screen(screen_position: Vector2) -> Variant:
 func _scroll_size() -> Vector3:
 	var size = scroll.get("size")
 	if size is Vector3:
-		print("size found", size)
-		return (size * 0.90) as Vector3
+		return size as Vector3
 	return Vector3(0.36, 0.02, 0.29)
 
 
