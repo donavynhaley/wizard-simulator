@@ -1,10 +1,13 @@
 [gd_scene format=3 uid="uid://oh688fkepu5k"]
 
+[ext_resource type="PackedScene" uid="uid://jtttvlmcy1jg" path="res://scenes/artifacts/torch_of_eternal_flame.tscn" id="1_8amnu"]
 [ext_resource type="PackedScene" uid="uid://cddno6g0vwy6f" path="res://scenes/characters/player.tscn" id="1_y6bsx"]
 [ext_resource type="Script" uid="uid://ivvjr42yf0nn" path="res://scripts/world/day_night_cycle.gd" id="2_daynight"]
 [ext_resource type="PackedScene" uid="uid://b81rmvhavrt2s" path="res://assets/external/kenney/fantasy-town-kit/Models/GLB format/fountain-square-detail.glb" id="3_o6hnd"]
 [ext_resource type="Script" uid="uid://cdpjhe0jk65iv" path="res://scripts/components/fountain_of_endless_spring.gd" id="4_spring"]
 [ext_resource type="PackedScene" uid="uid://5fyhxou04dxg" path="res://assets/artifacts/crafting-table.tscn" id="5_r62g1"]
+[ext_resource type="PackedScene" uid="uid://ckttbfrao7whi" path="res://alchemy_lab.tscn" id="6_hxol8"]
+[ext_resource type="PackedScene" uid="uid://btdn0g25o1dya" path="res://scenes/artifacts/flask.tscn" id="7_wopf2"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_o6hnd"]
 sky_top_color = Color(0.24, 0.57, 1, 1)
@@ -33,7 +36,12 @@ size = Vector3(1.35, 1.45, 1.35)
 
 [node name="WizardTower" type="Node3D" unique_id=1917175163]
 
+[node name="TorchOfEternalFlame" parent="." unique_id=1941162939 instance=ExtResource("1_8amnu")]
+transform = Transform3D(1.7326567, 0, 0.9989498, 0, 2, 0, -0.9989498, 0, 1.7326567, -7.3293324, 0.099999964, -0.038928032)
+
 [node name="Staircase" type="Node3D" parent="." unique_id=1786478379]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.09863281, 0)
+visible = false
 
 [node name="Step1" type="CSGBox3D" parent="Staircase" unique_id=1855529629]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.036)
@@ -166,64 +174,64 @@ moon_path = NodePath("../Moon")
 world_environment_path = NodePath("../WorldEnvironment")
 
 [node name="Player" parent="." unique_id=1184757697 instance=ExtResource("1_y6bsx")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.10000014, 0.90899354, 5.499138)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.695, 1.5090332, 1.887)
 
 [node name="Floor1" type="Node3D" parent="." unique_id=1131415474]
 
 [node name="Floor" type="CSGCylinder3D" parent="Floor1" unique_id=1041068365]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0146484375, -0.3293457, -0.0020751953)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0002587894, 0.017333984, 0.01991925)
 use_collision = true
-radius = 10.0
+radius = 8.0
 height = 0.1
 
 [node name="CSGBox3D" type="CSGBox3D" parent="Floor1" unique_id=126186496]
-transform = Transform3D(-0.9238795, 0, 0.38268343, 0, 1, 0, -0.38268343, 0, -0.9238795, 8.504345, 2.25, 3.522615)
+transform = Transform3D(-0.9238795, 0, 0.38268343, 0, 1, 0, -0.38268343, 0, -0.9238795, 6.8736277, 2, 2.8640292)
 use_collision = true
-size = Vector3(0.15222168, 5.2475586, 7.625702)
+size = Vector3(0.15, 4, 6.109585)
 
 [node name="CSGBox3D2" type="CSGBox3D" parent="Floor1" unique_id=1389148683]
-transform = Transform3D(-0.38268343, 0, 0.9238795, 0, 1, 0, -0.9238795, 0, -0.38268343, 3.522615, 2.25, 8.504345)
+transform = Transform3D(-0.38268343, 0, 0.9238795, 0, 1, 0, -0.9238795, 0, -0.38268343, 2.8215804, 2, 6.8253026)
 use_collision = true
-size = Vector3(0.15222168, 5.2475586, 7.625702)
+size = Vector3(0.15, 4, 6.2194138)
 
 [node name="CSGBox3D3" type="CSGBox3D" parent="Floor1" unique_id=646782071]
-transform = Transform3D(0.38268343, 0, 0.9238795, 0, 1, 0, -0.9238795, 0, 0.38268343, -3.522615, 2.25, 8.504345)
+transform = Transform3D(0.38268343, 0, 0.9238795, 0, 1, 0, -0.9238795, 0, 0.38268343, -2.8510354, 2, 6.820892)
 use_collision = true
-size = Vector3(0.15222168, 5.2475586, 7.625702)
+size = Vector3(0.15, 4, 6.1545258)
 
 [node name="CSGBox3D4" type="CSGBox3D" parent="Floor1" unique_id=1670128589]
-transform = Transform3D(-0.9238795, 0, -0.38268343, 0, 1, 0, 0.38268343, 0, -0.9238795, 8.504345, 2.25, -3.522615)
+transform = Transform3D(-0.9238795, 0, -0.38268343, 0, 1, 0, 0.38268343, 0, -0.9238795, 6.8846607, 2, -2.7687352)
 use_collision = true
-size = Vector3(0.15222168, 5.2475586, 7.625702)
+size = Vector3(0.15, 4, 6.155327)
 
 [node name="CSGBox3D5" type="CSGBox3D" parent="Floor1" unique_id=971009554]
-transform = Transform3D(-0.38268343, 0, -0.9238795, 0, 1, 0, 0.9238795, 0, -0.38268343, 3.522615, 2.25, -8.504345)
+transform = Transform3D(-0.38268343, 0, -0.9238795, 0, 1, 0, 0.9238795, 0, -0.38268343, 2.8861914, 2, -6.759444)
 use_collision = true
-size = Vector3(0.15222168, 5.2475586, 7.625702)
+size = Vector3(0.15, 4, 6.420273)
 
 [node name="CSGBox3D6" type="CSGBox3D" parent="Floor1" unique_id=1419387649]
-transform = Transform3D(0.38268343, 0, -0.9238795, 0, 1, 0, 0.9238795, 0, 0.38268343, -3.522615, 2.25, -8.504345)
+transform = Transform3D(0.38268343, 0, -0.9238795, 0, 1, 0, 0.9238795, 0, 0.38268343, -2.8114314, 2.0014648, -6.8330536)
 use_collision = true
-size = Vector3(0.15222168, 5.2475586, 7.625702)
+size = Vector3(0.15, 4, 6.05101)
 
 [node name="CSGBox3D7" type="CSGBox3D" parent="Floor1" unique_id=1802688512]
-transform = Transform3D(0.9238795, 0, -0.38268343, 0, 1, 0, 0.38268343, 0, 0.9238795, -8.504345, 2.25, -3.522615)
+transform = Transform3D(0.9238795, 0, -0.38268343, 0, 1, 0, 0.38268343, 0, 0.9238795, -6.7970586, 2, -2.8417664)
 use_collision = true
-size = Vector3(0.15222168, 5.2475586, 7.625702)
+size = Vector3(0.15, 4, 6.2947845)
 
 [node name="CSGBox3D8" type="CSGBox3D" parent="Floor1" unique_id=787635309]
-transform = Transform3D(0.9238795, 0, 0.38268343, 0, 1, 0, -0.38268343, 0, 0.9238795, -8.504345, 2.25, 3.522615)
+transform = Transform3D(0.9238795, 0, 0.38268343, 0, 1, 0, -0.38268343, 0, 0.9238795, -6.798401, 2, 2.823205)
 use_collision = true
-size = Vector3(0.15222168, 5.2475586, 7.625702)
+size = Vector3(0.15, 4, 6.157524)
 
 [node name="CSGCylinder3D" type="CSGCylinder3D" parent="Floor1" unique_id=904073784]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.7480664, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.015258789, 3.7654004, 0.02191925)
 use_collision = true
 height = 8.107461
 sides = 64
 
 [node name="AreaLight3D" type="AreaLight3D" parent="Floor1" unique_id=1564117812]
-transform = Transform3D(0.06780122, 0.9533144, -0.29427007, -0.13615076, 0.30103034, 0.94384515, 0.9883652, -0.023928775, 0.15020466, -8.241287, 1.1085815, -0.19968414)
+transform = Transform3D(0.06780123, 0.9533143, -0.29427, -0.13615078, 0.3010303, 0.9438452, 0.9883653, -0.023928775, 0.15020472, -4.616933, 2.5933228, -4.758597)
 light_color = Color(0, 1, 1, 1)
 light_energy = 5.0
 light_size = 0.195
@@ -231,7 +239,7 @@ area_range = 2.014
 area_normalize_energy = false
 
 [node name="EndlessSpring" parent="Floor1" unique_id=302023470 instance=ExtResource("3_o6hnd")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.073761, -0.2791748, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.5101156, 0, -4.4573975)
 script = ExtResource("4_spring")
 
 [node name="InteractionBody" type="StaticBody3D" parent="Floor1/EndlessSpring" unique_id=1978418761]
@@ -241,6 +249,26 @@ collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Floor1/EndlessSpring/InteractionBody" unique_id=332055629]
 shape = SubResource("BoxShape3D_spring_interact")
+
+[node name="flask shelf" type="CSGBox3D" parent="Floor1" unique_id=1440091112]
+transform = Transform3D(0.9236525, 0, 0.383231, 0, 1, 0, -0.383231, 0, 0.9236525, -7.062, 1.5, 1.576)
+size = Vector3(0.38, 0.075, 1)
+
+[node name="Flask" parent="Floor1/flask shelf" unique_id=138964369 instance=ExtResource("7_wopf2")]
+transform = Transform3D(1.0000002, 0, -0.0005927384, 0, 1, 0, 0.0005927384, 0, 1.0000002, 0.0242939, 0.0019288063, 0.34498143)
+_is_stationed = true
+
+[node name="Flask2" parent="Floor1/flask shelf" unique_id=1272731518 instance=ExtResource("7_wopf2")]
+transform = Transform3D(1.0000002, 0, -0.0005927682, 0, 1, 0, 0.0005927682, 0, 1.0000002, 0.01732254, 0.016943455, 0.1034565)
+_is_stationed = true
+
+[node name="Flask3" parent="Floor1/flask shelf" unique_id=777971701 instance=ExtResource("7_wopf2")]
+transform = Transform3D(1.0000002, 0, -0.0005927682, 0, 1, 0, 0.0005927682, 0, 1.0000002, 0.016343117, 0.016943455, -0.14932656)
+_is_stationed = true
+
+[node name="Flask4" parent="Floor1/flask shelf" unique_id=1130960627 instance=ExtResource("7_wopf2")]
+transform = Transform3D(1.0000002, 0, -0.0005927682, 0, 1, 0, 0.0005927682, 0, 1.0000002, -0.0019388199, 0.016943455, -0.40563822)
+_is_stationed = true
 
 [node name="Floor2" type="Node3D" parent="." unique_id=1937687745]
 visible = false
@@ -298,4 +326,10 @@ use_collision = true
 size = Vector3(0.15222168, 5.2475586, 7.625702)
 
 [node name="Table" parent="." unique_id=277921942 instance=ExtResource("5_r62g1")]
-transform = Transform3D(0.61455363, 0, -0.78887504, 0, 1, 0, 0.78887504, 0, 0.61455363, -5.7092285, -0.30895996, -2.9230957)
+transform = Transform3D(0.9256861, 0, -0.37829244, 0, 1, 0, 0.37829244, 0, 0.9256861, -5.99643, 0, -2.1221635)
+
+[node name="AlchemyLab" parent="." unique_id=233318363 instance=ExtResource("6_hxol8")]
+transform = Transform3D(0.9140432, 0, 0.4056172, 0, 1, 0, -0.4056172, 0, 0.9140432, -5.9419537, 0, 2.8263683)
+
+[node name="Flask" parent="." unique_id=746868921 instance=ExtResource("7_wopf2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.434174, 0, -1.1875143)

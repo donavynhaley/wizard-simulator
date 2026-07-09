@@ -65,12 +65,12 @@ shape = SubResource("BoxShape3D_0jym3")
 script = ExtResource("5_70f7w")
 
 [node name="Scroll" type="CSGBox3D" parent="SpellCrafter" unique_id=1146428071]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.06947002, 1.0257996, -0.02878812)
+transform = Transform3D(0.011697697, 0, 0.9999316, 0, 1, 0, -0.9999316, 0, 0.011697697, 0.16486797, 1.0257996, -0.02878812)
 size = Vector3(0.5, 0.002, 0.3)
 material = SubResource("ShaderMaterial_05xbg")
 
 [node name="ScribeCamera" type="Camera3D" parent="SpellCrafter" unique_id=79078189]
-transform = Transform3D(-4.371139e-08, -0.5284383, 0.8489717, 0, 0.8489717, 0.5284383, -1, 2.3098773e-08, -3.7109732e-08, 0.68941516, 1.546, 0.018)
+transform = Transform3D(1.3113416e-07, -1, 4.371139e-08, -3.821371e-15, 4.371139e-08, 1, -1, -1.3113416e-07, 1.9106853e-15, 0.173073, 1.4166055, -0.022771485)
 fov = 48.0
 
 [node name="InkWell" type="CSGCylinder3D" parent="SpellCrafter" unique_id=826901926]

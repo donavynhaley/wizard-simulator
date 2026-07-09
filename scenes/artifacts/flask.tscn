@@ -1,16 +1,22 @@
 [gd_scene format=3 uid="uid://btdn0g25o1dya"]
 
-[ext_resource type="PackedScene" uid="uid://bbq2lprlv50up" path="res://assets/models/flask.glb" id="1_3232o"]
+[ext_resource type="Script" uid="uid://d35jm05hshe4m" path="res://scripts/components/flask.gd" id="1_m2t28"]
+[ext_resource type="PackedScene" uid="uid://bbq2lprlv50up" path="res://assets/models/flask.glb" id="2_4x5jo"]
 
-[sub_resource type="SphereShape3D" id="SphereShape3D_xpu6o"]
-radius = 1.015
+[sub_resource type="SphereShape3D" id="SphereShape3D_rddas"]
+radius = 0.18
 
-[node name="Flask" type="Node3D" unique_id=1682019147]
+[node name="Flask" type="RigidBody3D" unique_id=138964369]
+collision_layer = 2
+mass = 0.18
+continuous_cd = true
+contact_monitor = true
+max_contacts_reported = 4
+script = ExtResource("1_m2t28")
 
-[node name="flask" parent="." unique_id=1848228236 instance=ExtResource("1_3232o")]
-transform = Transform3D(0.2, 0, 0, 0, 0.2, 0, 0, 0, 0.2, 0, 0, 0)
+[node name="flask_model" parent="." unique_id=604699440 instance=ExtResource("2_4x5jo")]
+transform = Transform3D(0.1, 0, 0, 0, 0.1, 0, 0, 0, 0.1, 0, 0.10367838, 0)
 
-[node name="Area3D" type="Area3D" parent="flask" unique_id=92742174]
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="flask/Area3D" unique_id=382077404]
-shape = SubResource("SphereShape3D_xpu6o")
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=513662365]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.145, 0)
+shape = SubResource("SphereShape3D_rddas")

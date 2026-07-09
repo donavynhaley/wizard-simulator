@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="FormDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://systems/spells/resources/form_definition.gd" id="1_form"]
+[ext_resource type="PackedScene" path="res://scenes/spells/font_area.tscn" id="2_font_scene"]
+
+[resource]
+script = ExtResource("1_form")
+id = &"font"
+display_name = "Font"
+delivery_scene = ExtResource("2_font_scene")
+base_range = 6.0
+base_speed = 1.0
+base_radius = 1.4
+base_duration = 5.0
+default_tags = Array[StringName]([&"font", &"area", &"ground_field", &"lingering"])

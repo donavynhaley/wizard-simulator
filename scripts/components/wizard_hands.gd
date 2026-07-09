@@ -66,9 +66,13 @@ func drop() -> void:
 	if item.has_method("set_held"):
 		item.set_held(false)
 	if item is RigidBody3D:
-		var camera := get_viewport().get_camera_3d()
-		var toss := -camera.global_transform.basis.z if camera else Vector3.FORWARD
-		item.apply_central_impulse(toss * drop_forward_impulse + Vector3.UP * drop_up_impulse)
+		if item.has_method("should_drop_straight_down") and bool(item.call("should_drop_straight_down")):
+			(item as RigidBody3D).linear_velocity = Vector3.ZERO
+			(item as RigidBody3D).angular_velocity = Vector3.ZERO
+		else:
+			var camera := get_viewport().get_camera_3d()
+			var toss := -camera.global_transform.basis.z if camera else Vector3.FORWARD
+			item.apply_central_impulse(toss * drop_forward_impulse + Vector3.UP * drop_up_impulse)
 	held_changed.emit(null)
 
 
