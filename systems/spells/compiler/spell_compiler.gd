@@ -58,7 +58,7 @@ func compile_scroll(scroll: SpellScrollData) -> CompiledSpellData:
 
 
 func _apply_base_stats(spell: CompiledSpellData) -> void:
-	spell.power = 1.0
+	spell.power = spell.effects[0].base_power if not spell.effects.is_empty() else 1.0
 	spell.speed = spell.form.base_speed
 	spell.radius = spell.form.base_radius
 	spell.duration = spell.form.base_duration

@@ -37,12 +37,14 @@ func _run() -> void:
 	var crafter := scene.find_child("SpellCrafter", true, false)
 	var burner := scene.find_child("Burner", true, false)
 	var flask := scene.find_child("Flask", true, false) as Flask
+	var book := _find_by_type(scene, "Book") as Book
 	_check(fountain != null, "tower has a fountain")
 	_check(torch != null, "tower has the Torch of Eternal Flame")
 	_check(holder != null, "tower has an element holder")
 	_check(crafter != null, "tower has a spell crafter")
 	_check(burner != null, "tower has a burner")
 	_check(flask != null, "tower has a flask")
+	_check(book != null, "tower has a readable book")
 	if _fail > 0:
 		_finish()
 		return
@@ -77,6 +79,22 @@ func _run() -> void:
 	hands.drop()
 	await process_frame
 	_check(hands.held_item == null, "dropping water empties the hands")
+
+	book.interact(player, null)
+	_check(hands.held_item == book, "player picks up a rune book")
+	_check(str(crafter.focus_prompt(player, null)) == "Place book reference",
+		"crafter prompts to place a held book reference")
+	crafter.interact(player, null)
+	_check(hands.held_item == null, "placing book reference empties the hands")
+	_check(crafter._reference_book == book, "crafter keeps the reference book")
+	_check(book.get_node("book_open").visible, "reference book is open on the table")
+	_check(str(crafter.focus_prompt(player, null)) == "Take book reference",
+		"crafter prompts to retrieve the reference book")
+	crafter.interact(player, null)
+	_check(hands.held_item == book, "player retrieves the reference book")
+	hands.drop()
+	await process_frame
+	_check(hands.held_item == null, "dropping book empties the hands")
 
 	# Alchemy heat chain: torch -> burner fire slot -> flask with contents -> cooked flask.
 	_check(str(torch.call("focus_prompt", player, null)) == str(torch.get("prompt_text")),
@@ -167,26 +185,47 @@ func _run() -> void:
 
 	var recognizer := RuneRecognizerResource.new()
 	recognizer.rune_definitions = [
-		_make_rune_definition(&"bolt", "form", [_make_rune_template("bolt", "form", _bolt_strokes())]),
+		_make_rune_definition(&"font", "form", [_make_rune_template("font", "form", _font_strokes())]),
+		_make_rune_definition(&"mend", "effect", [_make_rune_template("mend", "effect", _mend_strokes())]),
 	]
 	crafter._rune_recognizer = recognizer
-	crafter._scribe_canvas.replace_strokes(_bolt_strokes_in_form_segment())
+	crafter._scribe_canvas.replace_strokes(_spell_recipe_strokes_on_scroll())
 	var rune_result: Resource = crafter._try_auto_recognize_category("form")
 	_check(rune_result != null and bool(rune_result.call("is_match")),
-		"crafter auto-recognizes a completed rune segment")
-	_check(crafter.get_recognized_rune_ids() == [&"bolt"],
-		"crafter stores the recognized rune id")
-	_check(crafter.get_rune_qualities().size() == 1 and crafter.get_rune_qualities()[0] > 0.75,
+		"crafter auto-recognizes a completed form rune segment")
+	rune_result = crafter._try_auto_recognize_category("effect")
+	_check(rune_result != null and bool(rune_result.call("is_match")),
+		"crafter auto-recognizes a completed effect rune segment")
+	_check(crafter.get_recognized_rune_ids() == [&"font", &"mend"],
+		"crafter stores the recognized rune ids")
+	_check(crafter.get_rune_qualities().size() == 2 and crafter.get_rune_qualities()[0] > 0.75,
 		"crafter stores recognized rune quality")
 	_check(crafter._scribe_canvas.has_ink(),
 		"recognized rune remains on the scroll")
 	_check(crafter._scribe_canvas.is_category_recognized("form"),
-		"recognized rune segment is marked for blue glow")
+		"recognized form segment is marked for blue glow")
+	_check(crafter._scribe_canvas.is_category_recognized("effect"),
+		"recognized effect segment is marked for blue glow")
 
-	crafter._end_scribing(false)
-	_check(not crafter._active, "cancelling leaves scribing mode")
-	_check(player.is_physics_processing(), "cancelling unfreezes the player")
-	_check(interactor.enabled, "cancelling reactivates the interactor")
+	crafter._end_scribing(true, 2)
+	_check(not crafter._active, "sealing leaves scribing mode")
+	_check(player.is_physics_processing(), "sealing unfreezes the player")
+	_check(interactor.enabled, "sealing reactivates the interactor")
+	_check(hands.held_item is SpellScrollItem, "sealing gives the player a spell scroll")
+	var scroll_item := hands.held_item as SpellScrollItem
+	_check(scroll_item != null and scroll_item.scroll_data != null,
+		"crafted scroll item has scroll data")
+	if scroll_item != null and scroll_item.scroll_data != null:
+		_check(scroll_item.scroll_data.display_name == "Gilded Healing Spring Scroll",
+			"crafted scroll is the gilded healing spring")
+		_check(scroll_item.scroll_data.compiled_spell != null and scroll_item.scroll_data.compiled_spell.spell_id == &"healing_spring",
+			"crafted scroll stores the compiled healing spring spell")
+		var cast_status := scroll_item.cast_from(player, Transform3D(Basis(), Vector3(0.0, 1.6, 0.0)))
+		_check(cast_status.begins_with("Cast Healing Spring"), "crafted scroll casts through the held item path")
+		await process_frame
+		_check(hands.held_item == null, "single-charge scroll is consumed after casting")
+		_check(scene.find_child("FontArea", true, false) != null,
+			"casting the healing spring spawns a font delivery")
 
 	_finish()
 
@@ -236,22 +275,39 @@ func _make_rune_definition(rune_id: StringName, category: String, templates: Arr
 	return definition
 
 
-func _bolt_strokes() -> Array[PackedVector2Array]:
-	return [_stroke([
-		Vector2(0.16, 0.48),
-		Vector2(0.36, 0.42),
-		Vector2(0.62, 0.44),
-		Vector2(0.84, 0.36),
-	])]
-
-
-func _bolt_strokes_in_form_segment() -> Array[PackedVector2Array]:
+func _font_strokes() -> Array[PackedVector2Array]:
 	return [_stroke([
 		Vector2(0.04, 0.48),
 		Vector2(0.11, 0.42),
 		Vector2(0.20, 0.44),
 		Vector2(0.29, 0.36),
 	])]
+
+
+func _mend_strokes() -> Array[PackedVector2Array]:
+	return [_stroke([
+		Vector2(0.38, 0.74),
+		Vector2(0.44, 0.58),
+		Vector2(0.51, 0.70),
+		Vector2(0.59, 0.42),
+	])]
+
+
+func _spell_recipe_strokes_on_scroll() -> Array[PackedVector2Array]:
+	return [
+		_stroke([
+			Vector2(0.04, 0.48),
+			Vector2(0.11, 0.42),
+			Vector2(0.20, 0.44),
+			Vector2(0.29, 0.36),
+		]),
+		_stroke([
+			Vector2(0.38, 0.74),
+			Vector2(0.44, 0.58),
+			Vector2(0.51, 0.70),
+			Vector2(0.59, 0.42),
+		]),
+	]
 
 
 func _stroke(points: Array[Vector2]) -> PackedVector2Array:

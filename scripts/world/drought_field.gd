@@ -20,6 +20,17 @@ func _ready() -> void:
 		collision.name = "CollisionShape3D"
 		collision.shape = shape
 		add_child(collision)
+	if get_node_or_null("Visual") == null:
+		var visual := MeshInstance3D.new()
+		visual.name = "Visual"
+		var mesh := CylinderMesh.new()
+		mesh.top_radius = field_radius
+		mesh.bottom_radius = field_radius
+		mesh.height = 0.025
+		mesh.radial_segments = 40
+		visual.mesh = mesh
+		add_child(visual)
+	_update_visual_state()
 
 
 func receive_spell_event(event_id: StringName, context: SpellHitContext) -> void:
@@ -41,11 +52,13 @@ func receive_spell_event(event_id: StringName, context: SpellHitContext) -> void
 
 func _update_visual_state() -> void:
 	var ratio := clampf(restored_amount / maxf(required_restore_amount, 0.001), 0.0, 1.0)
-	if self is GeometryInstance3D:
-		var material := StandardMaterial3D.new()
-		material.albedo_color = Color(0.42, 0.25, 0.12).lerp(Color(0.24, 0.56, 0.2), ratio)
-		material.roughness = 0.9
-		(self as GeometryInstance3D).material_override = material
+	var visual := get_node_or_null("Visual") as GeometryInstance3D
+	if visual == null:
+		return
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color(0.42, 0.25, 0.12).lerp(Color(0.24, 0.56, 0.2), ratio)
+	material.roughness = 0.9
+	visual.material_override = material
 
 
 func _complete_drought_objective(context: SpellHitContext) -> void:

@@ -307,7 +307,7 @@ process_material = SubResource("ParticleProcessMaterial_nuofk")
 draw_pass_1 = SubResource("SphereMesh_6wrrw")
 
 [node name="BookShelf" parent="Floor1/EndlessSpring/WaterSarkles" unique_id=1339605367 instance=ExtResource("7_e4xuk")]
-transform = Transform3D(1.8425993, 0, 0.7777068, 0, 2, 0, -0.7777068, 0, 1.8425993, 1.4064369, 0, -2.5577865)
+transform = Transform3D(1.8425993, 0, 0.7777068, 0, 2, 0, -0.7777068, 0, 1.8425993, 1.4235935, 0, -2.4848971)
 
 [node name="Floor2" type="Node3D" parent="." unique_id=1937687745]
 visible = false

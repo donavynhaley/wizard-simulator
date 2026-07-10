@@ -122,23 +122,26 @@ func notify_item_gone(item: Node3D) -> void:
 		held_changed.emit(null)
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+func _input(event: InputEvent) -> void:
+	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED and held_item == null:
 		return
 	if event.is_action_pressed("drop_item") and held_item:
 		drop()
+		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("cast"):
-		_try_cast()
+		if _try_cast():
+			get_viewport().set_input_as_handled()
 
 
-func _try_cast() -> void:
+func _try_cast() -> bool:
 	if held_item == null or not is_instance_valid(held_item):
-		return
+		return false
 	if not held_item.has_method("cast_from"):
-		return
+		return false
 	var camera := get_viewport().get_camera_3d()
 	if camera == null:
-		return
+		return false
 	var status: String = str(held_item.call("cast_from", owner, camera.global_transform))
 	if status != "":
 		WizardHud.toast(self, status)
+	return true

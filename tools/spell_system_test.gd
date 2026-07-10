@@ -67,6 +67,10 @@ func _test_font_mend_restores_drought_field() -> void:
 		font.call("_apply_tick")
 	_check(drought_field.restored_amount > 0.0, "water mend font restores the drought field")
 	_check(drought_field.completed, "drought field completes once enough restoration is applied")
+	current_scene = null
+	root.remove_child(world)
+	world.free()
+	await process_frame
 
 
 func _make_scroll(form_id: StringName, effect_id: StringName, ink_id: StringName, quality: float) -> SpellScrollData:

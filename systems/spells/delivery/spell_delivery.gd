@@ -1,5 +1,5 @@
 class_name SpellDelivery
-extends Node3D
+extends RefCounted
 
 var spell: CompiledSpellData
 var cast_context: SpellCastContext

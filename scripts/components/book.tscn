@@ -1,18 +1,195 @@
 [gd_scene format=3 uid="uid://dpmk1jysfkho1"]
 
-[ext_resource type="PackedScene" uid="uid://co3m3qd6y2ebq" path="res://assets/models/book_closed.glb" id="1_2onri"]
+[ext_resource type="PackedScene" uid="uid://co3m3qd6y2ebq" path="res://assets/models/book_closed.glb" id="1_closed"]
+[ext_resource type="Script" uid="uid://b58drra8m8iw1" path="res://scripts/components/book.gd" id="2_book"]
+[ext_resource type="PackedScene" uid="uid://tykeeyopje2q" path="res://assets/models/book_open.glb" id="3_open"]
+[ext_resource type="Script" uid="uid://dn4cp6mr4ug0f" path="res://scripts/components/rune_template_view.gd" id="4_rune_view"]
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_8owjs"]
-size = Vector3(0.224823, 1, 0.8093262)
+[sub_resource type="BoxShape3D" id="BoxShape3D_book"]
+size = Vector3(0.224823, 0.24, 0.8093262)
 
-[node name="Book" type="Node3D" unique_id=1211495710]
+[sub_resource type="QuadMesh" id="QuadMesh_pages"]
+size = Vector2(0.58, 0.34)
 
-[node name="StaticBody3D" type="StaticBody3D" parent="." unique_id=1634254608]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_page"]
+bg_color = Color(0.76, 0.67, 0.48, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.24, 0.16, 0.08, 0.45)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_page_right"]
+bg_color = Color(0.8, 0.71, 0.51, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.24, 0.16, 0.08, 0.45)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="Book" type="RigidBody3D" unique_id=1211495710]
 collision_layer = 2
+mass = 0.32
+freeze = true
+script = ExtResource("2_book")
+book_title = "Rune Primer"
+is_rune_book = true
+rune_id = "bolt"
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D" unique_id=1254588339]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1254588339]
 transform = Transform3D(-0.0029313704, 0, -0.2399821, 0, 0.24, 0, 0.2399821, 0, -0.0029313704, -0.0021001697, 0, 0.00020507723)
-shape = SubResource("BoxShape3D_8owjs")
+shape = SubResource("BoxShape3D_book")
 
-[node name="book_closed" parent="." unique_id=383107399 instance=ExtResource("1_2onri")]
-transform = Transform3D(4, 0, 0, 0, -1.7484555e-07, 4, 0, -4, -1.7484555e-07, 0, 0, 0)
+[node name="book_closed" parent="." unique_id=383107399 instance=ExtResource("1_closed")]
+transform = Transform3D(5, 0, 0, 0, -2.1855695e-07, 5, 0, -5, -2.1855695e-07, 0, 0, 0)
+
+[node name="book_open" parent="." unique_id=1132256257 instance=ExtResource("3_open")]
+transform = Transform3D(5, 0, 0, 0, -2.1855695e-07, 5, 0, -5, -2.1855695e-07, 0, 0, 0)
+visible = false
+
+[node name="PageContent" type="Node3D" parent="." unique_id=2004552182]
+
+[node name="PageSurface" type="MeshInstance3D" parent="PageContent" unique_id=618543525]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0.028, 0)
+visible = false
+mesh = SubResource("QuadMesh_pages")
+
+[node name="BookPageViewport" type="SubViewport" parent="." unique_id=1167951276]
+disable_3d = true
+transparent_bg = true
+size = Vector2i(1024, 512)
+
+[node name="SpreadRoot" type="Control" parent="BookPageViewport" unique_id=107237353]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Background" type="ColorRect" parent="BookPageViewport/SpreadRoot" unique_id=774210193]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.57, 0.43, 0.25, 0.28)
+
+[node name="Pages" type="HBoxContainer" parent="BookPageViewport/SpreadRoot" unique_id=1228470516]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = -48.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 24
+
+[node name="LeftPage" type="PanelContainer" parent="BookPageViewport/SpreadRoot/Pages" unique_id=1059059927]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_page")
+
+[node name="Margin" type="MarginContainer" parent="BookPageViewport/SpreadRoot/Pages/LeftPage" unique_id=1379417861]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 20
+
+[node name="LeftColumn" type="VBoxContainer" parent="BookPageViewport/SpreadRoot/Pages/LeftPage/Margin" unique_id=485245935]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="BookPageViewport/SpreadRoot/Pages/LeftPage/Margin/LeftColumn" unique_id=966979827]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.13, 0.08, 0.035, 1)
+theme_override_font_sizes/font_size = 34
+text = "Rune Book"
+horizontal_alignment = 1
+
+[node name="Body" type="Label" parent="BookPageViewport/SpreadRoot/Pages/LeftPage/Margin/LeftColumn" unique_id=1148961860]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.12, 0.075, 0.03, 1)
+theme_override_font_sizes/font_size = 24
+text = "The pages are blank."
+autowrap_mode = 3
+
+[node name="RightPage" type="PanelContainer" parent="BookPageViewport/SpreadRoot/Pages" unique_id=1306379066]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_page_right")
+
+[node name="Margin" type="MarginContainer" parent="BookPageViewport/SpreadRoot/Pages/RightPage" unique_id=1200627275]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 20
+
+[node name="RightColumn" type="VBoxContainer" parent="BookPageViewport/SpreadRoot/Pages/RightPage/Margin" unique_id=1194912214]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="BookPageViewport/SpreadRoot/Pages/RightPage/Margin/RightColumn" unique_id=735238363]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.13, 0.08, 0.035, 1)
+theme_override_font_sizes/font_size = 32
+text = "Rune"
+horizontal_alignment = 1
+
+[node name="RuneView" type="Control" parent="BookPageViewport/SpreadRoot/Pages/RightPage/Margin/RightColumn" unique_id=952062795]
+custom_minimum_size = Vector2(0, 230)
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+script = ExtResource("4_rune_view")
+
+[node name="Body" type="Label" parent="BookPageViewport/SpreadRoot/Pages/RightPage/Margin/RightColumn" unique_id=1869941753]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.12, 0.075, 0.03, 1)
+theme_override_font_sizes/font_size = 22
+text = "Category"
+autowrap_mode = 3
+
+[node name="Footer" type="Label" parent="BookPageViewport/SpreadRoot" unique_id=547849764]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = -40.0
+offset_right = -24.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.16, 0.095, 0.04, 0.9)
+theme_override_font_sizes/font_size = 18
+text = "Page 1"
+horizontal_alignment = 1
+vertical_alignment = 1

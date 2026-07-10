@@ -31,6 +31,7 @@ func get_display_name() -> String:
 func set_scroll_data(value: SpellScrollData) -> void:
 	scroll_data = value
 	name = get_display_name().replace(" ", "")
+	_refresh_visual_materials()
 
 
 func set_held(value: bool) -> void:
@@ -87,6 +88,7 @@ func _spend_self(caster: Node) -> void:
 
 func _build_visual() -> void:
 	if get_node_or_null("ScrollVisual") != null:
+		_refresh_visual_materials()
 		return
 
 	var visual := MeshInstance3D.new()
@@ -108,6 +110,15 @@ func _build_visual() -> void:
 	seal.position = Vector3(0.0, 0.016, 0.0)
 	seal.material_override = _seal_material()
 	add_child(seal)
+
+
+func _refresh_visual_materials() -> void:
+	var visual := get_node_or_null("ScrollVisual") as MeshInstance3D
+	if visual != null:
+		visual.material_override = _scroll_material()
+	var seal := get_node_or_null("SealVisual") as MeshInstance3D
+	if seal != null:
+		seal.material_override = _seal_material()
 
 
 func _scroll_material() -> StandardMaterial3D:

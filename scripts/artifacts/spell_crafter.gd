@@ -49,6 +49,8 @@ const DEFAULT_SPELL_SCROLL_SCENE := preload("res://scenes/artifacts/spell_scroll
 @export var default_ink_id: StringName = &"gilded"
 @export var default_seal_id: StringName = &"cast_on_use"
 @export var spell_scroll_scene: PackedScene = DEFAULT_SPELL_SCROLL_SCENE
+@export var reference_book_position := Vector3(-0.36, 0.12, 0.18)
+@export var reference_book_rotation_degrees := Vector3(0.0, 24.0, 0.0)
 
 @export_group("Table Camera")
 @export_multiline var table_camera_notes := "Scribing requires this Camera3D. Move, rotate, and tune its FOV directly in the crafting table scene for exact composition."
@@ -99,6 +101,7 @@ var _recognized_by_category: Dictionary = {}
 var _quality_by_category: Dictionary = {}
 var _spell_compiler := SpellCompilerResource.new()
 var _last_created_scroll: SpellScrollData
+var _reference_book: Book
 var _seal_hold_elapsed := 0.0
 var _previous_mouse_mode := Input.MOUSE_MODE_VISIBLE
 var _scribe_arm: ScribeArm
@@ -125,6 +128,12 @@ func interact(player: WizardPlayer, _collider: Object) -> void:
 
 	if player == null or player.hands == null:
 		return
+	if player.hands.held_item is Book and _reference_book == null:
+		_place_reference_book(player.hands.held_item as Book, player)
+		return
+	if player.hands.held_item == null and _reference_book != null:
+		_take_reference_book(player)
+		return
 	if player.hands.held_item != null:
 		WizardHud.toast(self, held_item_prompt)
 		return
@@ -140,9 +149,35 @@ func focus_prompt(player: WizardPlayer, _collider: Object) -> String:
 
 	if player == null or player.hands == null:
 		return ""
+	if player.hands.held_item is Book and _reference_book == null:
+		return "Place book reference"
+	if player.hands.held_item == null and _reference_book != null:
+		return "Take book reference"
 	if player.hands.held_item != null:
 		return held_item_prompt
 	return prompt_text
+
+
+func _place_reference_book(book: Book, player: WizardPlayer) -> void:
+	if book == null or player == null or player.hands == null:
+		return
+	player.hands.release_item(book)
+	_reference_book = book
+	book.reparent(self)
+	book.position = reference_book_position
+	book.rotation_degrees = reference_book_rotation_degrees
+	book.scale = Vector3.ONE
+	book.set_stationed(true)
+	book.open_for_reference()
+
+
+func _take_reference_book(player: WizardPlayer) -> void:
+	if _reference_book == null or player == null or player.hands == null:
+		return
+	var book := _reference_book
+	_reference_book = null
+	book.set_stationed(false)
+	player.hands.pick_up(book)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -274,6 +309,8 @@ func _begin_scribing(player: WizardPlayer) -> void:
 		_scribe_arm.set_active(true)
 	_create_scribe_surface()
 	_update_scribe_props(1.0)
+	if _reference_book != null:
+		_reference_book.set_reference_page_turn_enabled(true)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	scribing_started.emit()
 
@@ -283,6 +320,8 @@ func _end_scribing(completed: bool, stroke_count: int = 0) -> void:
 		return
 
 	_active = false
+	if _reference_book != null:
+		_reference_book.set_reference_page_turn_enabled(false)
 	if _original_camera and is_instance_valid(_original_camera):
 		_original_camera.make_current()
 

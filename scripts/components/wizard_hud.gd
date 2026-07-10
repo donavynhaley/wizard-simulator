@@ -87,6 +87,8 @@ func _on_focus_changed(prompt: String) -> void:
 func _on_held_changed(item: Node3D) -> void:
 	if item == null:
 		_held_line.text = ""
+	elif item.has_method("get_held_hint"):
+		_held_line.text = str(item.call("get_held_hint"))
 	elif item.has_method("cast_from"):
 		var display_name: String = str(item.call("get_display_name")) if item.has_method("get_display_name") else item.name
 		_held_line.text = "%s  [LMB cast / G drop]" % display_name
