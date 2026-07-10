@@ -48,11 +48,11 @@ transform = Transform3D(-0.0029313704, 0, -0.2399821, 0, 0.24, 0, 0.2399821, 0, 
 shape = SubResource("BoxShape3D_book")
 
 [node name="book_closed" parent="." unique_id=383107399 instance=ExtResource("1_closed")]
-transform = Transform3D(5, 0, 0, 0, -2.1855695e-07, 5, 0, -5, -2.1855695e-07, 0, 0, 0)
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0, 0)
 visible = false
 
 [node name="book_open" parent="." unique_id=1132256257 instance=ExtResource("3_open")]
-transform = Transform3D(-4.948602, 0.5140575, -0.4970696, -0.28097758, -4.59394, -1.9536555, -0.6575599, -1.9056399, 4.5756035, 0.155, -0.36, -0.405)
+transform = Transform3D(-0.98972046, 0.1028115, -0.09941393, -0.056195516, -0.91878796, -0.3907311, -0.13151197, -0.38112795, 0.9151208, 0.155, -0.36, -0.405)
 
 [node name="PageContent" type="Node3D" parent="book_open" unique_id=2004552182]
 
@@ -61,7 +61,7 @@ transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0.0044, 0)
 mesh = SubResource("QuadMesh_pages")
 
 [node name="book_open_table" parent="." unique_id=2104457218 instance=ExtResource("3_open")]
-transform = Transform3D(5, 0, 0, 0, -2.1855695e-07, 5, 0, -5, -2.1855695e-07, 0, 0, 0)
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0, 0)
 
 [node name="PageContent" type="Node3D" parent="book_open_table" unique_id=2087471525]
 
