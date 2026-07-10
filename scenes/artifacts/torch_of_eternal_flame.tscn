@@ -1,0 +1,28 @@
+[gd_scene format=3 uid="uid://jtttvlmcy1jg"]
+
+[ext_resource type="PackedScene" uid="uid://1meyl64tn2vf" path="res://assets/models/golden_chalice.glb" id="1_ftsp2"]
+[ext_resource type="PackedScene" uid="uid://bykwrxhkq5qhr" path="res://scenes/magical_flame.tscn" id="2_g0ips"]
+[ext_resource type="Script" path="res://scripts/components/torch_of_eternal_flame.gd" id="3_e7gs3"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_torch_interact"]
+height = 0.9
+radius = 0.42
+
+[node name="TorchOfEternalFlame" type="Node3D" unique_id=1941162939]
+script = ExtResource("3_e7gs3")
+
+[node name="golden_chalice" parent="." unique_id=317797729 instance=ExtResource("1_ftsp2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.140253, 0)
+
+[node name="MagicalFlame" parent="." unique_id=544839145 instance=ExtResource("2_g0ips")]
+transform = Transform3D(1.15, 0, 0, 0, 1.15, 0, 0, 0, 1.15, 0, 0.22413817, 0)
+light_energy = 1.15
+light_range = 2.8
+
+[node name="InteractionBody" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.34, 0)
+collision_layer = 2
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractionBody"]
+shape = SubResource("CylinderShape3D_torch_interact")

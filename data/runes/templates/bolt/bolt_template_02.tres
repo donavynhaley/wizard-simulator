@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="RuneTemplate" format=3]
+
+[ext_resource type="Script" path="res://scripts/spellcraft/rune_template.gd" id="1_rqqyk"]
+
+[resource]
+script = ExtResource("1_rqqyk")
+rune_id = "bolt"
+display_name = "Bolt"
+recorded_at_unix_time = 1783580456
+strokes = Array[PackedVector2Array]([PackedVector2Array(0.027272727, 0.17299107, 0.027272727, 0.5145089), PackedVector2Array(0.02768595, 0.17410715, 0.30371904, 0.51676893), PackedVector2Array(0.028099174, 0.51227677, 0.3053719, 0.16807613), PackedVector2Array(0.3053719, 0.17633928, 0.3053719, 0.51227677)])

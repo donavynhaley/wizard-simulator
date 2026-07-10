@@ -8,6 +8,7 @@
 [ext_resource type="PackedScene" uid="uid://ciluq5r4ob1mh" path="res://assets/external/seal_-_animated_low_poly.glb" id="6_dcnth"]
 [ext_resource type="PackedScene" uid="uid://co3m3qd6y2ebq" path="res://assets/models/book_closed.glb" id="7_05xbg"]
 [ext_resource type="PackedScene" uid="uid://tykeeyopje2q" path="res://assets/models/book_open.glb" id="8_1jmjg"]
+[ext_resource type="Script" uid="uid://c1qo50j2sbr3q" path="res://scripts/components/storage_shelf.gd" id="9_1jmjg"]
 
 [sub_resource type="CylinderShape3D" id="CylinderShape3D_0jym3"]
 height = 0.1
@@ -20,6 +21,9 @@ size = Vector3(1, 0.96484375, 1)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_dcnth"]
 size = Vector3(0.6329956, 0.03515625, 0.3531494)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_bsfci"]
+size = Vector3(0.224823, 1, 0.8093262)
 
 [node name="CraftingTable" type="Node3D" unique_id=277921942]
 
@@ -65,12 +69,12 @@ shape = SubResource("BoxShape3D_0jym3")
 script = ExtResource("5_70f7w")
 
 [node name="Scroll" type="CSGBox3D" parent="SpellCrafter" unique_id=1146428071]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.06947002, 1.0257996, -0.02878812)
+transform = Transform3D(0.011697697, 0, 0.9999316, 0, 1, 0, -0.9999316, 0, 0.011697697, 0.16486797, 1.0257996, -0.02878812)
 size = Vector3(0.5, 0.002, 0.3)
 material = SubResource("ShaderMaterial_05xbg")
 
 [node name="ScribeCamera" type="Camera3D" parent="SpellCrafter" unique_id=79078189]
-transform = Transform3D(-4.371139e-08, -0.5284383, 0.8489717, 0, 0.8489717, 0.5284383, -1, 2.3098773e-08, -3.7109732e-08, 0.68941516, 1.546, 0.018)
+transform = Transform3D(1.3113416e-07, -1, 4.371139e-08, -3.821371e-15, 4.371139e-08, 1, -1, -1.3113416e-07, 1.9106853e-15, 0.173073, 1.4166055, -0.022771485)
 fov = 48.0
 
 [node name="InkWell" type="CSGCylinder3D" parent="SpellCrafter" unique_id=826901926]
@@ -123,3 +127,14 @@ transform = Transform3D(4, 0, 0, 0, 4, 0, 0, 0, 4, -0.601137, 1.236366, -0.32070
 
 [node name="book_open" parent="." unique_id=372880392 instance=ExtResource("8_1jmjg")]
 transform = Transform3D(-1.7484555e-07, 2.828427, -2.828427, 0, 2.828427, 2.828427, 4, 1.2363448e-07, -1.2363448e-07, -0.09072113, 0.875422, 0.03758949)
+
+[node name="Item1" type="Node3D" parent="book_open" unique_id=1124974478]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.41928232, 0.94358414, 0.07625982)
+script = ExtResource("9_1jmjg")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="book_open/Item1" unique_id=780809643]
+collision_layer = 2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="book_open/Item1/StaticBody3D" unique_id=1222481194]
+transform = Transform3D(0.24, 0, 0, 0, 0.24, 0, 0, 0, 0.24, -0.0021001697, 0, 0.00020507723)
+shape = SubResource("BoxShape3D_bsfci")
