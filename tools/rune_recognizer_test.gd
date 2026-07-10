@@ -4,13 +4,19 @@ const RuneTemplateResource := preload("res://scripts/spellcraft/rune_template.gd
 const RuneDefinitionResource := preload("res://scripts/spellcraft/rune_definition.gd")
 const RuneRecognizerResource := preload("res://scripts/spellcraft/rune_recognizer.gd")
 
+var _failed := false
+
 
 func _init() -> void:
 	_test_best_match_selects_closest_template()
 	_test_stroke_count_mismatch_lowers_confidence()
 	_test_directory_loading_groups_saved_templates()
-	print("RUNE RECOGNIZER TEST OK")
-	quit()
+	if _failed:
+		print("RUNE RECOGNIZER TEST FAILED")
+		quit(1)
+	else:
+		print("RUNE RECOGNIZER TEST OK")
+		quit()
 
 
 func _test_best_match_selects_closest_template() -> void:
@@ -50,7 +56,7 @@ func _test_stroke_count_mismatch_lowers_confidence() -> void:
 
 
 func _test_directory_loading_groups_saved_templates() -> void:
-	var directory_path := "user://rune_recognizer_templates"
+	var directory_path := "/tmp/wizard_rune_recognizer_templates_%d" % OS.get_process_id()
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(directory_path))
 
 	var template := _make_template("mend", "effect", _mend_strokes())
@@ -157,6 +163,6 @@ func _stroke(points: Array[Vector2]) -> PackedVector2Array:
 func _require(condition: bool, message: String) -> bool:
 	if condition:
 		return true
+	_failed = true
 	push_error(message)
-	quit(1)
 	return false

@@ -55,7 +55,7 @@ func _init() -> void:
 	if not _require(template.point_count() >= 20, "Template should store constructed curve points."):
 		return
 
-	var save_path := "user://test_rune_template.tres"
+	var save_path := "/tmp/wizard_test_rune_template_%d.tres" % OS.get_process_id()
 	var save_error := ResourceSaver.save(template, save_path)
 	if not _require(save_error == OK, "Template should save."):
 		return

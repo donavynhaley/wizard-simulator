@@ -114,6 +114,20 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "New Book"
 
+[node name="ThemeRow" type="HBoxContainer" parent="MarginContainer/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ThemeLabel" type="Label" parent="MarginContainer/Layout/ThemeRow"]
+layout_mode = 2
+text = "Page theme"
+
+[node name="ThemeLineEdit" type="LineEdit" parent="MarginContainer/Layout/ThemeRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Optional Theme resource path for font and typography"
+
 [node name="SpreadRow" type="HBoxContainer" parent="MarginContainer/Layout" unique_id=576532172]
 layout_mode = 2
 theme_override_constants/separation = 8

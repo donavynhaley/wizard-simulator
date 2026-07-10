@@ -12,6 +12,7 @@ const TEXT_OUTLINE_COLOR := Color(0, 0, 0, 0.8)
 var _prompt: Label
 var _held_line: Label
 var _toasts: VBoxContainer
+var _held_item: Node3D
 
 
 ## Canonical way for props and stations to surface a message. `from` is any
@@ -85,6 +86,10 @@ func _on_focus_changed(prompt: String) -> void:
 
 
 func _on_held_changed(item: Node3D) -> void:
+	_disconnect_held_hint()
+	_held_item = item
+	if _held_item != null and _held_item.has_signal(&"held_hint_changed"):
+		_held_item.connect(&"held_hint_changed", _on_held_hint_changed)
 	if item == null:
 		_held_line.text = ""
 	elif item.has_method("get_held_hint"):
@@ -96,6 +101,19 @@ func _on_held_changed(item: Node3D) -> void:
 		_held_line.text = "%s  [G release]" % str(item.call("get_display_name"))
 	else:
 		_held_line.text = "%s  [G drop]" % item.name
+
+
+func _on_held_hint_changed(hint: String) -> void:
+	_held_line.text = hint
+
+
+func _disconnect_held_hint() -> void:
+	if _held_item == null or not is_instance_valid(_held_item):
+		return
+	var callable := Callable(self, "_on_held_hint_changed")
+	if _held_item.has_signal(&"held_hint_changed") \
+		and _held_item.is_connected(&"held_hint_changed", callable):
+		_held_item.disconnect(&"held_hint_changed", callable)
 
 
 func show_toast(text: String) -> void:

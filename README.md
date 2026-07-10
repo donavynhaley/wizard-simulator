@@ -33,6 +33,7 @@ The tower itself is being hand-built in the editor; these scenes are self-contai
 | `scenes/props/spell_scroll.tscn` | A castable spell with charges (usually forged, not placed) |
 | `scenes/props/training_dummy.tscn` | Damageable target with HP label; respawns |
 | `scenes/props/tiny_demon.tscn` | The useless demon backfires summon |
+| `scripts/components/book.tscn` | Physical readable book with swappable visual and page-renderer scenes |
 | `scenes/characters/player.tscn` | FPS wizard: controller + interactor + hands + HUD |
 
 The player scene carries the look-to-focus `PlayerInteractor` (duck-typed contract: `focus_prompt(player, collider)` / `interact(player, collider)`), the `WizardHands` held-item component (`%HandAnchor`), and the `WizardHud` (prompts, held item, discovery toasts).
@@ -49,6 +50,10 @@ The first-person arms are a CC-BY model (`assets/external/polypizza/fps_arms.glb
 - `WASD` - move, `Mouse` - look, `Space` - jump
 - `E` - interact (take runes/scrolls, socket runes, channel the crystal)
 - `Left click` - cast the held scroll
+- `Left click` while holding a book - open or close its physical reading pose
+- `Left/Right arrows` - turn held-book pages while reading
+- `A/D` while scribing - turn pages in the open reference book on the table
+- `W/S` while scribing - look up at the reference book / return to the scroll
 - `G` - drop the held item
 - `Esc` - release mouse, `Left click` - recapture
 

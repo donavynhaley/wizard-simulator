@@ -87,7 +87,8 @@ func _run() -> void:
 	crafter.interact(player, null)
 	_check(hands.held_item == null, "placing book reference empties the hands")
 	_check(crafter._reference_book == book, "crafter keeps the reference book")
-	_check(book.get_node("book_open_table").visible, "reference book is open on the table")
+	_check((book.get_node("Visual/VisualRoot/OpenVisual") as Node3D).visible,
+		"reference book is open on the table")
 	var book_anchor := scene.find_child("OpenBookPlacement", true, false) as Node3D
 	var book_anchor_shape := book_anchor.get_node_or_null("StaticBody3D/CollisionShape3D") as Node3D if book_anchor else null
 	_check(book_anchor_shape != null, "tower has a reference book placement marker")
@@ -96,15 +97,40 @@ func _run() -> void:
 			"reference book is placed at the open book marker")
 		_check(_basis_matches(book.global_transform.basis, book_anchor_shape.global_transform.basis, 0.01),
 			"reference book matches the open book marker rotation")
-	_check(str(crafter.focus_prompt(player, null)) == "Take book reference",
-		"crafter prompts to retrieve the reference book")
+	_check(str(crafter.focus_prompt(player, null)) == crafter.prompt_text,
+		"crafter offers scribing while the table book stays open")
 	crafter.interact(player, null)
-	_check(hands.held_item == book, "player retrieves the reference book")
+	_check(crafter._active, "player can begin scribing with a placed reference book")
+	_check(not player.is_physics_processing(), "reference-book scribing freezes the player")
+	var scribe_camera := crafter.get_node_or_null("ScribeCamera") as Camera3D
+	var scroll_camera_pose := crafter.get_node_or_null("ScrollCameraPose") as Marker3D
+	var book_camera_pose := crafter.get_node_or_null("BookCameraPose") as Marker3D
+	_check(scribe_camera != null and scroll_camera_pose != null and book_camera_pose != null,
+		"crafting table authors both scribing camera poses in its scene")
+	if scribe_camera != null and scroll_camera_pose != null and book_camera_pose != null:
+		_check(_transform_matches(scribe_camera.transform, scroll_camera_pose.transform, 0.01),
+			"scribing starts focused on the scroll")
+		crafter._unhandled_input(_action_event(&"move_forward"))
+		for frame in 60:
+			await process_frame
+		_check(_transform_matches(scribe_camera.transform, book_camera_pose.transform, 0.01),
+			"W rotates the scribing camera up to the reference book")
+		crafter._unhandled_input(_action_event(&"move_backward"))
+		for frame in 60:
+			await process_frame
+		_check(_transform_matches(scribe_camera.transform, scroll_camera_pose.transform, 0.01),
+			"S rotates the scribing camera back down to the scroll")
+	crafter._end_scribing(false)
+	_check(player.is_physics_processing(), "leaving reference-book scribing restores movement")
+	if book_anchor != null:
+		book_anchor.interact(player, null)
+	_check(hands.held_item == book, "player retrieves the reference book from its placement")
 	if book_anchor != null and book_anchor_shape != null:
 		book_anchor.interact(player, null)
 		_check(hands.held_item == null, "book placement accepts a held book directly")
 		_check(crafter._reference_book == book, "crafter tracks a book placed through the placement node")
-		_check(book.get_node("book_open_table").visible, "directly placed book opens on the table")
+		_check((book.get_node("Visual/VisualRoot/OpenVisual") as Node3D).visible,
+			"directly placed book opens on the table")
 		_check(book.global_position.distance_to(book_anchor_shape.global_position) < 0.01,
 			"directly placed book uses the open book marker position")
 		book_anchor.interact(player, null)
@@ -278,6 +304,18 @@ func _basis_matches(left: Basis, right: Basis, tolerance: float) -> bool:
 	return left.x.normalized().distance_to(right.x.normalized()) <= tolerance \
 		and left.y.normalized().distance_to(right.y.normalized()) <= tolerance \
 		and left.z.normalized().distance_to(right.z.normalized()) <= tolerance
+
+
+func _transform_matches(left: Transform3D, right: Transform3D, tolerance: float) -> bool:
+	return left.origin.distance_to(right.origin) <= tolerance \
+		and _basis_matches(left.basis, right.basis, tolerance)
+
+
+func _action_event(action: StringName) -> InputEventAction:
+	var event := InputEventAction.new()
+	event.action = action
+	event.pressed = true
+	return event
 
 
 func _make_rune_template(rune_id: String, category: String, strokes: Array[PackedVector2Array]) -> Resource:
