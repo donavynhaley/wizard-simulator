@@ -4,6 +4,7 @@ extends Resource
 @export var id: String = ""
 @export var title: String = "Untitled Book"
 @export var display_name: String = ""
+@export var page_theme: Theme
 @export var spreads: Array[BookSpreadData] = []
 
 

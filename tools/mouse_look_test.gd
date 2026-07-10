@@ -14,6 +14,10 @@ func _init() -> void:
 
 
 func _run() -> void:
+	if DisplayServer.get_name() == "headless":
+		print("MOUSE LOOK TEST SKIPPED: a graphical display is required for mouse capture")
+		quit()
+		return
 	var scene := (load("res://scenes/levels/spellcraft_playground.tscn") as PackedScene).instantiate()
 	root.add_child(scene)
 	current_scene = scene

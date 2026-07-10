@@ -13,6 +13,7 @@ const BOOK_SCENE := preload("res://scripts/components/book.tscn")
 @onready var id_line_edit: LineEdit = %IdLineEdit
 @onready var title_line_edit: LineEdit = %TitleLineEdit
 @onready var display_name_line_edit: LineEdit = %DisplayNameLineEdit
+@onready var theme_line_edit: LineEdit = %ThemeLineEdit
 @onready var spread_spin_box: SpinBox = %SpreadSpinBox
 @onready var left_title_line_edit: LineEdit = %LeftTitleLineEdit
 @onready var left_body_edit: TextEdit = %LeftBodyEdit
@@ -45,6 +46,7 @@ func _wire_buttons() -> void:
 		id_line_edit,
 		title_line_edit,
 		display_name_line_edit,
+		theme_line_edit,
 		left_title_line_edit,
 		left_rune_line_edit,
 		right_title_line_edit,
@@ -82,7 +84,7 @@ func _load_book() -> void:
 	_set_status("Loaded %s." % path, false)
 
 
-func _save_book() -> void:
+func _save_book() -> Error:
 	_sync_resource_from_fields()
 	var path := path_line_edit.text.strip_edges()
 	if path.is_empty():
@@ -91,12 +93,13 @@ func _save_book() -> void:
 	var directory_error := _ensure_output_directory(path.get_base_dir())
 	if directory_error != OK:
 		_set_status("Could not create output directory: %s" % error_string(directory_error), true)
-		return
+		return directory_error
 	var save_error := ResourceSaver.save(book_data, path)
 	if save_error != OK:
 		_set_status("Save failed: %s" % error_string(save_error), true)
-		return
+		return save_error
 	_set_status("Saved %s." % path, false)
+	return OK
 
 
 func _add_spread() -> void:
@@ -133,6 +136,7 @@ func _sync_resource_from_fields() -> void:
 	book_data.id = id_line_edit.text.strip_edges()
 	book_data.title = title_line_edit.text.strip_edges()
 	book_data.display_name = display_name_line_edit.text.strip_edges()
+	book_data.page_theme = _load_theme(theme_line_edit.text.strip_edges())
 	var spread := _selected_spread()
 	spread.left_page = _page_from_fields(left_title_line_edit, left_body_edit, left_rune_line_edit)
 	spread.right_page = _page_from_fields(right_title_line_edit, right_body_edit, right_rune_line_edit)
@@ -145,6 +149,7 @@ func _sync_fields_from_resource() -> void:
 	id_line_edit.text = book_data.id
 	title_line_edit.text = book_data.title
 	display_name_line_edit.text = book_data.display_name
+	theme_line_edit.text = book_data.page_theme.resource_path if book_data.page_theme != null else ""
 	spread_spin_box.min_value = 1.0
 	spread_spin_box.max_value = maxf(float(book_data.spreads.size()), 1.0)
 	spread_spin_box.value = float(_active_spread_index + 1)
@@ -204,11 +209,17 @@ func _load_rune_template(path: String) -> RuneTemplate:
 	return resource as RuneTemplate
 
 
+func _load_theme(path: String) -> Theme:
+	if path.is_empty():
+		return null
+	return ResourceLoader.load(path) as Theme
+
+
 func _create_preview() -> void:
 	_preview_book = BOOK_SCENE.instantiate() as Book
 	preview_root.add_child(_preview_book)
 	_preview_book.position = Vector3.ZERO
-	_preview_book.rotation_degrees = Vector3(180,0,0)
+	_preview_book.rotation = Vector3.ZERO
 	_preview_book.set_stationed(true)
 	_preview_book.open_for_reference()
 

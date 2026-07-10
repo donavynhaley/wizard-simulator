@@ -19,7 +19,7 @@ const DEFAULT_SPELL_SCROLL_SCENE := preload("res://scenes/artifacts/spell_scroll
 
 @export var prompt_text := "Begin scribing"
 @export var held_item_prompt := "Empty your hands first"
-@export var active_prompt := "Scribing - draw runes / hold Space to seal"
+@export var active_prompt := "Scribing - W book / S scroll / hold Space to seal"
 @export var sealed_prompt := "Spell sealed"
 
 @export_group("Scribing")
@@ -57,6 +57,12 @@ const DEFAULT_SPELL_SCROLL_SCENE := preload("res://scenes/artifacts/spell_scroll
 @export_multiline var table_camera_notes := "Scribing requires this Camera3D. Move, rotate, and tune its FOV directly in the crafting table scene for exact composition."
 ## Required Camera3D in the crafting table scene. Move this camera in the editor for exact scribing composition.
 @export_node_path("Camera3D") var scribe_camera_path: NodePath = ^"ScribeCamera"
+## Camera pose used while drawing on the scroll. Author this marker in the crafting table scene.
+@export_node_path("Marker3D") var scroll_camera_pose_path: NodePath = ^"ScrollCameraPose"
+## Camera pose used while referring back to the open rune book. Author this marker in the crafting table scene.
+@export_node_path("Marker3D") var book_camera_pose_path: NodePath = ^"BookCameraPose"
+## Seconds used to ease between the scroll and reference-book camera poses.
+@export_range(0.05, 1.0, 0.01) var camera_transition_time: float = 0.28
 
 @export_group("Scribe Props")
 ## Existing quill node moved during scribing. Leave as Quill for the current crafting table scene.
@@ -93,6 +99,9 @@ var _sealed := false
 var _player: WizardPlayer
 var _original_camera: Camera3D
 var _scribe_camera: Camera3D
+var _scroll_camera_pose: Marker3D
+var _book_camera_pose: Marker3D
+var _camera_tween: Tween
 var _scribe_viewport: SubViewport
 var _scribe_surface: MeshInstance3D
 var _scribe_canvas: ScribeCanvas
@@ -114,6 +123,8 @@ var _has_cursor_point := false
 
 func _ready() -> void:
 	_reference_book_placement = get_node_or_null(reference_book_placement_path) as OpenBookPlacement
+	_scroll_camera_pose = get_node_or_null(scroll_camera_pose_path) as Marker3D
+	_book_camera_pose = get_node_or_null(book_camera_pose_path) as Marker3D
 	if _reference_book_placement != null:
 		_reference_book_placement.book_placed.connect(_on_reference_book_placed)
 		_reference_book_placement.book_taken.connect(_on_reference_book_taken)
@@ -134,17 +145,8 @@ func interact(player: WizardPlayer, _collider: Object) -> void:
 
 	if player == null or player.hands == null:
 		return
-	if _reference_book_placement != null:
-		var placement_prompt := _reference_book_placement.focus_prompt(player, _collider)
-		if not placement_prompt.is_empty():
-			_reference_book_placement.interact(player, _collider)
-			_reference_book = _reference_book_placement.placed_book
-			return
 	if player.hands.held_item is Book and _reference_book == null:
 		_place_reference_book(player.hands.held_item as Book, player)
-		return
-	if player.hands.held_item == null and _reference_book != null:
-		_take_reference_book(player)
 		return
 	if player.hands.held_item != null:
 		WizardHud.toast(self, held_item_prompt)
@@ -161,14 +163,8 @@ func focus_prompt(player: WizardPlayer, _collider: Object) -> String:
 
 	if player == null or player.hands == null:
 		return ""
-	if _reference_book_placement != null:
-		var placement_prompt := _reference_book_placement.focus_prompt(player, _collider)
-		if not placement_prompt.is_empty():
-			return placement_prompt
 	if player.hands.held_item is Book and _reference_book == null:
 		return "Place book reference"
-	if player.hands.held_item == null and _reference_book != null:
-		return "Take book reference"
 	if player.hands.held_item != null:
 		return held_item_prompt
 	return prompt_text
@@ -220,6 +216,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		_end_scribing(false)
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("interact"):
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed(&"move_forward"):
+		_move_scribe_camera_to_pose(_book_camera_pose)
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed(&"move_backward"):
+		_move_scribe_camera_to_pose(_scroll_camera_pose)
 		get_viewport().set_input_as_handled()
 	elif event is InputEventMouseButton:
 		var button_event := event as InputEventMouseButton
@@ -358,6 +360,9 @@ func _end_scribing(completed: bool, stroke_count: int = 0) -> void:
 	if _original_camera and is_instance_valid(_original_camera):
 		_original_camera.make_current()
 
+	if _camera_tween != null and _camera_tween.is_valid():
+		_camera_tween.kill()
+	_camera_tween = null
 	_scribe_camera = null
 	Input.mouse_mode = _previous_mouse_mode
 
@@ -455,8 +460,24 @@ func _activate_scribe_camera() -> bool:
 	if _scribe_camera == null:
 		push_error("SpellCrafter requires a Camera3D at scribe_camera_path.")
 		return false
+	_move_scribe_camera_to_pose(_scroll_camera_pose, true)
 	_scribe_camera.make_current()
 	return true
+
+
+func _move_scribe_camera_to_pose(pose: Node3D, immediate: bool = false) -> void:
+	if _scribe_camera == null or pose == null:
+		return
+	if _camera_tween != null and _camera_tween.is_valid():
+		_camera_tween.kill()
+	_camera_tween = null
+	if immediate or camera_transition_time <= 0.0:
+		_scribe_camera.transform = pose.transform
+		return
+	_camera_tween = create_tween()
+	_camera_tween.set_trans(Tween.TRANS_QUART)
+	_camera_tween.set_ease(Tween.EASE_IN_OUT)
+	_camera_tween.tween_property(_scribe_camera, "transform", pose.transform, camera_transition_time)
 
 
 func _configure_rune_recognizer() -> void:

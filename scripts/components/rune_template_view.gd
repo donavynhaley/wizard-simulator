@@ -1,15 +1,18 @@
 class_name RuneTemplateView
 extends Control
 
-const PAPER_COLOR := Color(0.74, 0.64, 0.45, 0.96)
-const BORDER_COLOR := Color(0.24, 0.15, 0.08, 0.72)
-const GRID_COLOR := Color(0.22, 0.14, 0.08, 0.12)
-const STROKE_GLOW := Color(0.22, 0.68, 1.0, 0.28)
-const STROKE_COLOR := Color(0.06, 0.16, 0.24, 0.92)
-const STROKE_GHOST := Color(0.06, 0.16, 0.24, 0.2)
-const ACTIVE_GLOW := Color(0.12, 0.62, 1.0, 0.42)
-const ACTIVE_COLOR := Color(0.02, 0.42, 0.92, 1.0)
-const TIP_COLOR := Color(0.82, 0.95, 1.0, 1.0)
+@export_group("Appearance")
+@export var paper_color := Color(0.80, 0.72, 0.56, 1.0)
+@export var border_color := Color(0.22, 0.12, 0.045, 0.78)
+@export var grid_color := Color(0.22, 0.12, 0.045, 0.13)
+@export var stroke_glow_color := Color(0.18, 0.62, 1.0, 0.32)
+@export var stroke_color := Color(0.035, 0.10, 0.16, 0.98)
+@export var stroke_ghost_color := Color(0.035, 0.10, 0.16, 0.22)
+@export var active_glow_color := Color(0.08, 0.55, 1.0, 0.46)
+@export var active_stroke_color := Color(0.01, 0.34, 0.88, 1.0)
+@export var tip_color := Color(0.86, 0.97, 1.0, 1.0)
+@export_range(1.0, 30.0, 0.5) var stroke_width := 7.0
+@export_range(1.0, 40.0, 0.5) var glow_width := 17.0
 
 @export_group("Playback")
 @export var playback_enabled := false:
@@ -71,8 +74,8 @@ func is_playback_active() -> bool:
 
 func _draw() -> void:
 	var rect := Rect2(Vector2.ZERO, size)
-	draw_rect(rect, PAPER_COLOR, true)
-	draw_rect(rect, BORDER_COLOR, false, 2.0)
+	draw_rect(rect, paper_color, true)
+	draw_rect(rect, border_color, false, 3.0)
 	_draw_grid()
 	if playback_enabled:
 		_draw_playback_strokes()
@@ -85,9 +88,9 @@ func _draw_grid() -> void:
 		return
 	for i in range(1, 4):
 		var x := size.x * float(i) / 4.0
-		draw_line(Vector2(x, 0.0), Vector2(x, size.y), GRID_COLOR, 1.0)
+		draw_line(Vector2(x, 0.0), Vector2(x, size.y), grid_color, 1.0)
 		var y := size.y * float(i) / 4.0
-		draw_line(Vector2(0.0, y), Vector2(size.x, y), GRID_COLOR, 1.0)
+		draw_line(Vector2(0.0, y), Vector2(size.x, y), grid_color, 1.0)
 
 
 func _draw_strokes() -> void:
@@ -97,10 +100,10 @@ func _draw_strokes() -> void:
 	for stroke in strokes:
 		if stroke.size() >= 2:
 			var points := _layout_stroke(stroke, bounds)
-			draw_polyline(points, STROKE_GLOW, 12.0, true)
-			draw_polyline(points, STROKE_COLOR, 5.0, true)
+			draw_polyline(points, stroke_glow_color, glow_width, true)
+			draw_polyline(points, stroke_color, stroke_width, true)
 		elif stroke.size() == 1:
-			draw_circle(_layout_point(stroke[0], bounds), 4.0, STROKE_COLOR)
+			draw_circle(_layout_point(stroke[0], bounds), stroke_width, stroke_color)
 
 
 func _draw_playback_strokes() -> void:
@@ -110,7 +113,7 @@ func _draw_playback_strokes() -> void:
 
 	for stroke in strokes:
 		if stroke.size() >= 2:
-			draw_polyline(_layout_stroke(stroke, bounds), STROKE_GHOST, 4.0, true)
+			draw_polyline(_layout_stroke(stroke, bounds), stroke_ghost_color, stroke_width, true)
 
 	var stroke_duration := maxf(playback_seconds_per_stroke, 0.01)
 	var step_duration := stroke_duration + playback_pause_between_strokes
@@ -135,11 +138,11 @@ func _draw_ordered_stroke(points: PackedVector2Array, index: int, complete: bool
 	if points.is_empty():
 		return
 	if points.size() >= 2:
-		draw_polyline(points, ACTIVE_GLOW, 13.0, true)
-		draw_polyline(points, ACTIVE_COLOR, 5.0, true)
+		draw_polyline(points, active_glow_color, glow_width, true)
+		draw_polyline(points, active_stroke_color, stroke_width, true)
 	var tip := points[points.size() - 1]
-	draw_circle(tip, 7.0 if complete else 9.0, TIP_COLOR if not complete else ACTIVE_COLOR)
-	draw_circle(tip, 3.5, ACTIVE_COLOR if not complete else TIP_COLOR)
+	draw_circle(tip, 8.0 if complete else 10.0, tip_color if not complete else active_stroke_color)
+	draw_circle(tip, 4.0, active_stroke_color if not complete else tip_color)
 	if points.size() > 0:
 		var start := points[0]
 		draw_circle(start, 11.0, Color(0.93, 0.86, 0.62, 0.9))

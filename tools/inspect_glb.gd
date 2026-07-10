@@ -4,15 +4,17 @@ extends SceneTree
 # mounted correctly. Edit PATH and run headless:
 #   godot --headless --path . -s tools/inspect_glb.gd
 
-const PATH := "res://assets/external/polypizza/fps_arms.glb"
+const DEFAULT_PATH := "res://assets/external/polypizza/fps_arms.glb"
 
 
 func _init() -> void:
-	if not ResourceLoader.exists(PATH):
-		print("MISSING: ", PATH)
+	var args := OS.get_cmdline_user_args()
+	var path := args[0] if not args.is_empty() else DEFAULT_PATH
+	if not ResourceLoader.exists(path):
+		print("MISSING: ", path)
 		quit()
 		return
-	var inst := (load(PATH) as PackedScene).instantiate()
+	var inst := (load(path) as PackedScene).instantiate()
 	print("=== node tree ===")
 	_walk(inst, 0)
 	var aabb := _merged_aabb(inst, Transform3D.IDENTITY)

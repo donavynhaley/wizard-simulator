@@ -21,7 +21,7 @@ size = Vector3(1, 0.96484375, 1)
 size = Vector3(0.6329956, 0.03515625, 0.3531494)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_bsfci"]
-size = Vector3(0.224823, 0.47924805, 0.38793945)
+size = Vector3(0.32, 0.04, 0.16)
 
 [node name="CraftingTable" type="Node3D" unique_id=277921942]
 
@@ -73,7 +73,13 @@ material = SubResource("ShaderMaterial_05xbg")
 
 [node name="ScribeCamera" type="Camera3D" parent="SpellCrafter" unique_id=79078189]
 transform = Transform3D(1.3113416e-07, -1, 4.371139e-08, -3.821371e-15, 4.371139e-08, 1, -1, -1.3113416e-07, 1.9106853e-15, 0.173073, 1.4166055, -0.022771485)
-fov = 48.0
+fov = 64.0
+
+[node name="ScrollCameraPose" type="Marker3D" parent="SpellCrafter"]
+transform = Transform3D(1.3113416e-07, -1, 4.371139e-08, -3.821371e-15, 4.371139e-08, 1, -1, -1.3113416e-07, 1.9106853e-15, 0.173073, 1.4166055, -0.022771485)
+
+[node name="BookCameraPose" type="Marker3D" parent="SpellCrafter"]
+transform = Transform3D(0, -0.731354, 0.681998, 0, 0.681998, 0.731354, -1, 0, 0, 0.173073, 1.4166055, -0.022771485)
 
 [node name="InkWell" type="CSGCylinder3D" parent="SpellCrafter" unique_id=826901926]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0835723, 1.0417287, -0.3371022)
@@ -121,7 +127,7 @@ inner_radius = 0.03
 outer_radius = 0.001
 
 [node name="OpenBookPlacement" type="Node3D" parent="." unique_id=1124974478]
-transform = Transform3D(-0.29295292, 3.2638097, 2.2938442, 0, 2.300021, -3.2725985, -3.9892578, -0.23967932, -0.16844946, -0.239, 1.213, 0)
+transform = Transform3D(0, 0.707107, 0.707107, 0, 0.707107, -0.707107, -1, 0, 0, -0.18, 1.06, -0.05)
 script = ExtResource("9_1jmjg")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="OpenBookPlacement" unique_id=780809643]
@@ -129,5 +135,4 @@ rotation_edit_mode = 1
 collision_layer = 2
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="OpenBookPlacement/StaticBody3D" unique_id=1222481194]
-transform = Transform3D(0.24000004, 0, 0, 0, 0.017994888, -0.23932445, 0, 0.23932447, 0.017994886, 0, 0, 0)
 shape = SubResource("BoxShape3D_bsfci")
