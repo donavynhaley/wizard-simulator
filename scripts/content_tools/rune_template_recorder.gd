@@ -1,5 +1,7 @@
 extends Control
 
+## Content authoring tool for creating RuneTemplate resources.
+
 const CATEGORIES: Array[String] = ["form", "effect", "modifier"]
 const RuneTemplateResource := preload("res://scripts/spellcraft/rune_template.gd")
 const CURVE_SAMPLE_COUNT := 24

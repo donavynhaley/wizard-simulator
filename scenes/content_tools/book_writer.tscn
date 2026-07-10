@@ -1,0 +1,235 @@
+[gd_scene format=3 uid="uid://w22wrhn00vfr"]
+
+[ext_resource type="Script" uid="uid://cun8a8vemkbff" path="res://scripts/content_tools/book_writer.gd" id="1_writer"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_root"]
+bg_color = Color(0.055, 0.047, 0.058, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.12, 0.1, 0.12, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.34, 0.29, 0.33, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="BookWriter" type="Control" unique_id=979808649]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_writer")
+
+[node name="Background" type="Panel" parent="." unique_id=1289963122]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_root")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=685915765]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 18.0
+offset_top = 18.0
+offset_right = -18.0
+offset_bottom = -18.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Layout" type="VBoxContainer" parent="MarginContainer" unique_id=2087625318]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="FileRow" type="HBoxContainer" parent="MarginContainer/Layout" unique_id=35874650]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="PathLabel" type="Label" parent="MarginContainer/Layout/FileRow" unique_id=784449284]
+layout_mode = 2
+text = "Book file"
+
+[node name="PathLineEdit" type="LineEdit" parent="MarginContainer/Layout/FileRow" unique_id=1109100558]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "res://data/books/new_book.tres"
+
+[node name="NewButton" type="Button" parent="MarginContainer/Layout/FileRow" unique_id=1190060402]
+unique_name_in_owner = true
+layout_mode = 2
+text = "New"
+
+[node name="LoadButton" type="Button" parent="MarginContainer/Layout/FileRow" unique_id=1677059960]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Load"
+
+[node name="SaveButton" type="Button" parent="MarginContainer/Layout/FileRow" unique_id=1587937084]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Save"
+
+[node name="MetaRow" type="HBoxContainer" parent="MarginContainer/Layout" unique_id=13141938]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="IdLabel" type="Label" parent="MarginContainer/Layout/MetaRow" unique_id=776407582]
+layout_mode = 2
+text = "ID"
+
+[node name="IdLineEdit" type="LineEdit" parent="MarginContainer/Layout/MetaRow" unique_id=1204798394]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+text = "new_book"
+
+[node name="TitleLabel" type="Label" parent="MarginContainer/Layout/MetaRow" unique_id=907640306]
+layout_mode = 2
+text = "Title"
+
+[node name="TitleLineEdit" type="LineEdit" parent="MarginContainer/Layout/MetaRow" unique_id=1249342143]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "New Book"
+
+[node name="DisplayNameLabel" type="Label" parent="MarginContainer/Layout/MetaRow" unique_id=1947615357]
+layout_mode = 2
+text = "Display"
+
+[node name="DisplayNameLineEdit" type="LineEdit" parent="MarginContainer/Layout/MetaRow" unique_id=1021571247]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "New Book"
+
+[node name="SpreadRow" type="HBoxContainer" parent="MarginContainer/Layout" unique_id=576532172]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SpreadLabel" type="Label" parent="MarginContainer/Layout/SpreadRow" unique_id=984853963]
+layout_mode = 2
+text = "Spread"
+
+[node name="SpreadSpinBox" type="SpinBox" parent="MarginContainer/Layout/SpreadRow" unique_id=1901789546]
+unique_name_in_owner = true
+layout_mode = 2
+min_value = 1.0
+max_value = 1.0
+value = 1.0
+
+[node name="AddSpreadButton" type="Button" parent="MarginContainer/Layout/SpreadRow" unique_id=702614125]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Add Spread"
+
+[node name="StatusLabel" type="Label" parent="MarginContainer/Layout/SpreadRow" unique_id=1817137161]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Ready"
+
+[node name="WorkArea" type="HSplitContainer" parent="MarginContainer/Layout" unique_id=1269910790]
+layout_mode = 2
+size_flags_vertical = 3
+split_offsets = PackedInt32Array(650)
+split_offset = 650
+
+[node name="EditorPanel" type="PanelContainer" parent="MarginContainer/Layout/WorkArea" unique_id=1398297051]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="PageColumns" type="HBoxContainer" parent="MarginContainer/Layout/WorkArea/EditorPanel" unique_id=2012879545]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="LeftPage" type="VBoxContainer" parent="MarginContainer/Layout/WorkArea/EditorPanel/PageColumns" unique_id=1108596589]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="LeftHeader" type="Label" parent="MarginContainer/Layout/WorkArea/EditorPanel/PageColumns/LeftPage" unique_id=932541631]
+layout_mode = 2
+text = "Left Page"
+
+[node name="LeftTitleLineEdit" type="LineEdit" parent="MarginContainer/Layout/WorkArea/EditorPanel/PageColumns/LeftPage" unique_id=259661617]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Page title"
+
+[node name="LeftBodyEdit" type="TextEdit" parent="MarginContainer/Layout/WorkArea/EditorPanel/PageColumns/LeftPage" unique_id=470700234]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 260)
+layout_mode = 2
+size_flags_vertical = 3
+placeholder_text = "Page body"
+
+[node name="LeftRuneLineEdit" type="LineEdit" parent="MarginContainer/Layout/WorkArea/EditorPanel/PageColumns/LeftPage" unique_id=161009242]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Optional RuneTemplate path"
+
+[node name="RightPage" type="VBoxContainer" parent="MarginContainer/Layout/WorkArea/EditorPanel/PageColumns" unique_id=259892152]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="RightHeader" type="Label" parent="MarginContainer/Layout/WorkArea/EditorPanel/PageColumns/RightPage" unique_id=1374738181]
+layout_mode = 2
+text = "Right Page"
+
+[node name="RightTitleLineEdit" type="LineEdit" parent="MarginContainer/Layout/WorkArea/EditorPanel/PageColumns/RightPage" unique_id=2566360]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Page title"
+
+[node name="RightBodyEdit" type="TextEdit" parent="MarginContainer/Layout/WorkArea/EditorPanel/PageColumns/RightPage" unique_id=1929286001]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 260)
+layout_mode = 2
+size_flags_vertical = 3
+placeholder_text = "Page body"
+
+[node name="RightRuneLineEdit" type="LineEdit" parent="MarginContainer/Layout/WorkArea/EditorPanel/PageColumns/RightPage" unique_id=1406458576]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Optional RuneTemplate path"
+
+[node name="PreviewPanel" type="PanelContainer" parent="MarginContainer/Layout/WorkArea" unique_id=577882109]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="PreviewViewport" type="SubViewportContainer" parent="MarginContainer/Layout/WorkArea/PreviewPanel" unique_id=209828900]
+layout_mode = 2
+stretch = true
+
+[node name="SubViewport" type="SubViewport" parent="MarginContainer/Layout/WorkArea/PreviewPanel/PreviewViewport" unique_id=921109065]
+handle_input_locally = false
+size = Vector2i(580, 559)
+render_target_update_mode = 4
+
+[node name="PreviewWorld" type="Node3D" parent="MarginContainer/Layout/WorkArea/PreviewPanel/PreviewViewport/SubViewport" unique_id=188886633]
+
+[node name="Camera3D" type="Camera3D" parent="MarginContainer/Layout/WorkArea/PreviewPanel/PreviewViewport/SubViewport/PreviewWorld" unique_id=1672832877]
+transform = Transform3D(1, 0, 0, 0, 0.8660254, 0.5, 0, -0.5, 0.8660254, 0, 0.16, 0.7)
+projection = 1
+current = true
+size = 0.85
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="MarginContainer/Layout/WorkArea/PreviewPanel/PreviewViewport/SubViewport/PreviewWorld" unique_id=996698854]
+transform = Transform3D(1, 0, 0, 0, 0.70710677, 0.70710677, 0, -0.70710677, 0.70710677, 0, 0.5, 0.4)
+light_energy = 2.0
+
+[node name="PreviewRoot" type="Node3D" parent="MarginContainer/Layout/WorkArea/PreviewPanel/PreviewViewport/SubViewport/PreviewWorld" unique_id=472459079]
+unique_name_in_owner = true

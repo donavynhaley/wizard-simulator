@@ -49,6 +49,7 @@ const DEFAULT_SPELL_SCROLL_SCENE := preload("res://scenes/artifacts/spell_scroll
 @export var default_ink_id: StringName = &"gilded"
 @export var default_seal_id: StringName = &"cast_on_use"
 @export var spell_scroll_scene: PackedScene = DEFAULT_SPELL_SCROLL_SCENE
+@export_node_path("Node3D") var reference_book_placement_path: NodePath = ^"../OpenBookPlacement"
 @export var reference_book_position := Vector3(-0.36, 0.12, 0.18)
 @export var reference_book_rotation_degrees := Vector3(0.0, 24.0, 0.0)
 
@@ -105,12 +106,17 @@ var _reference_book: Book
 var _seal_hold_elapsed := 0.0
 var _previous_mouse_mode := Input.MOUSE_MODE_VISIBLE
 var _scribe_arm: ScribeArm
+var _reference_book_placement: OpenBookPlacement
 var _quill_rest_transform := Transform3D.IDENTITY
 var _last_cursor_point := Vector2(0.5, 0.5)
 var _has_cursor_point := false
 
 
 func _ready() -> void:
+	_reference_book_placement = get_node_or_null(reference_book_placement_path) as OpenBookPlacement
+	if _reference_book_placement != null:
+		_reference_book_placement.book_placed.connect(_on_reference_book_placed)
+		_reference_book_placement.book_taken.connect(_on_reference_book_taken)
 	_configure_rune_recognizer()
 	if quill:
 		_quill_rest_transform = quill.transform
@@ -128,6 +134,12 @@ func interact(player: WizardPlayer, _collider: Object) -> void:
 
 	if player == null or player.hands == null:
 		return
+	if _reference_book_placement != null:
+		var placement_prompt := _reference_book_placement.focus_prompt(player, _collider)
+		if not placement_prompt.is_empty():
+			_reference_book_placement.interact(player, _collider)
+			_reference_book = _reference_book_placement.placed_book
+			return
 	if player.hands.held_item is Book and _reference_book == null:
 		_place_reference_book(player.hands.held_item as Book, player)
 		return
@@ -149,6 +161,10 @@ func focus_prompt(player: WizardPlayer, _collider: Object) -> String:
 
 	if player == null or player.hands == null:
 		return ""
+	if _reference_book_placement != null:
+		var placement_prompt := _reference_book_placement.focus_prompt(player, _collider)
+		if not placement_prompt.is_empty():
+			return placement_prompt
 	if player.hands.held_item is Book and _reference_book == null:
 		return "Place book reference"
 	if player.hands.held_item == null and _reference_book != null:
@@ -160,6 +176,10 @@ func focus_prompt(player: WizardPlayer, _collider: Object) -> String:
 
 func _place_reference_book(book: Book, player: WizardPlayer) -> void:
 	if book == null or player == null or player.hands == null:
+		return
+	if _reference_book_placement != null:
+		_reference_book_placement.place_book(book, player)
+		_reference_book = _reference_book_placement.placed_book
 		return
 	player.hands.release_item(book)
 	_reference_book = book
@@ -174,10 +194,23 @@ func _place_reference_book(book: Book, player: WizardPlayer) -> void:
 func _take_reference_book(player: WizardPlayer) -> void:
 	if _reference_book == null or player == null or player.hands == null:
 		return
+	if _reference_book_placement != null and _reference_book_placement.placed_book == _reference_book:
+		_reference_book_placement.take_book(player)
+		_reference_book = null
+		return
 	var book := _reference_book
 	_reference_book = null
 	book.set_stationed(false)
 	player.hands.pick_up(book)
+
+
+func _on_reference_book_placed(book: Book) -> void:
+	_reference_book = book
+
+
+func _on_reference_book_taken(book: Book) -> void:
+	if _reference_book == book:
+		_reference_book = null
 
 
 func _unhandled_input(event: InputEvent) -> void:

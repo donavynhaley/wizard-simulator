@@ -87,11 +87,29 @@ func _run() -> void:
 	crafter.interact(player, null)
 	_check(hands.held_item == null, "placing book reference empties the hands")
 	_check(crafter._reference_book == book, "crafter keeps the reference book")
-	_check(book.get_node("book_open").visible, "reference book is open on the table")
+	_check(book.get_node("book_open_table").visible, "reference book is open on the table")
+	var book_anchor := scene.find_child("OpenBookPlacement", true, false) as Node3D
+	var book_anchor_shape := book_anchor.get_node_or_null("StaticBody3D/CollisionShape3D") as Node3D if book_anchor else null
+	_check(book_anchor_shape != null, "tower has a reference book placement marker")
+	if book_anchor_shape != null:
+		_check(book.global_position.distance_to(book_anchor_shape.global_position) < 0.01,
+			"reference book is placed at the open book marker")
+		_check(_basis_matches(book.global_transform.basis, book_anchor_shape.global_transform.basis, 0.01),
+			"reference book matches the open book marker rotation")
 	_check(str(crafter.focus_prompt(player, null)) == "Take book reference",
 		"crafter prompts to retrieve the reference book")
 	crafter.interact(player, null)
 	_check(hands.held_item == book, "player retrieves the reference book")
+	if book_anchor != null and book_anchor_shape != null:
+		book_anchor.interact(player, null)
+		_check(hands.held_item == null, "book placement accepts a held book directly")
+		_check(crafter._reference_book == book, "crafter tracks a book placed through the placement node")
+		_check(book.get_node("book_open_table").visible, "directly placed book opens on the table")
+		_check(book.global_position.distance_to(book_anchor_shape.global_position) < 0.01,
+			"directly placed book uses the open book marker position")
+		book_anchor.interact(player, null)
+		_check(hands.held_item == book, "book placement returns the reference book")
+		_check(crafter._reference_book == null, "crafter clears a book taken through the placement node")
 	hands.drop()
 	await process_frame
 	_check(hands.held_item == null, "dropping book empties the hands")
@@ -254,6 +272,12 @@ func _find_by_type(node: Node, type_name: String) -> Node:
 		if found != null:
 			return found
 	return null
+
+
+func _basis_matches(left: Basis, right: Basis, tolerance: float) -> bool:
+	return left.x.normalized().distance_to(right.x.normalized()) <= tolerance \
+		and left.y.normalized().distance_to(right.y.normalized()) <= tolerance \
+		and left.z.normalized().distance_to(right.z.normalized()) <= tolerance
 
 
 func _make_rune_template(rune_id: String, category: String, strokes: Array[PackedVector2Array]) -> Resource:

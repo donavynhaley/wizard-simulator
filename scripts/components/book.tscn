@@ -4,12 +4,13 @@
 [ext_resource type="Script" uid="uid://b58drra8m8iw1" path="res://scripts/components/book.gd" id="2_book"]
 [ext_resource type="PackedScene" uid="uid://tykeeyopje2q" path="res://assets/models/book_open.glb" id="3_open"]
 [ext_resource type="Script" uid="uid://dn4cp6mr4ug0f" path="res://scripts/components/rune_template_view.gd" id="4_rune_view"]
+[ext_resource type="Resource" uid="uid://dwi4kltjsnjfk" path="res://data/books/bolt_rune_book.tres" id="5_bolt_book"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_book"]
 size = Vector3(0.224823, 0.24, 0.8093262)
 
 [sub_resource type="QuadMesh" id="QuadMesh_pages"]
-size = Vector2(0.58, 0.34)
+size = Vector2(0.096, 0.045)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_page"]
 bg_color = Color(0.76, 0.67, 0.48, 1)
@@ -40,9 +41,7 @@ collision_layer = 2
 mass = 0.32
 freeze = true
 script = ExtResource("2_book")
-book_title = "Rune Primer"
-is_rune_book = true
-rune_id = "bolt"
+book_data = ExtResource("5_bolt_book")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1254588339]
 transform = Transform3D(-0.0029313704, 0, -0.2399821, 0, 0.24, 0, 0.2399821, 0, -0.0029313704, -0.0021001697, 0, 0.00020507723)
@@ -50,16 +49,24 @@ shape = SubResource("BoxShape3D_book")
 
 [node name="book_closed" parent="." unique_id=383107399 instance=ExtResource("1_closed")]
 transform = Transform3D(5, 0, 0, 0, -2.1855695e-07, 5, 0, -5, -2.1855695e-07, 0, 0, 0)
+visible = false
 
 [node name="book_open" parent="." unique_id=1132256257 instance=ExtResource("3_open")]
+transform = Transform3D(-4.948602, 0.5140575, -0.4970696, -0.28097758, -4.59394, -1.9536555, -0.6575599, -1.9056399, 4.5756035, 0.155, -0.36, -0.405)
+
+[node name="PageContent" type="Node3D" parent="book_open" unique_id=2004552182]
+
+[node name="PageSurface" type="MeshInstance3D" parent="book_open/PageContent" unique_id=618543525]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0.0044, 0)
+mesh = SubResource("QuadMesh_pages")
+
+[node name="book_open_table" parent="." unique_id=2104457218 instance=ExtResource("3_open")]
 transform = Transform3D(5, 0, 0, 0, -2.1855695e-07, 5, 0, -5, -2.1855695e-07, 0, 0, 0)
-visible = false
 
-[node name="PageContent" type="Node3D" parent="." unique_id=2004552182]
+[node name="PageContent" type="Node3D" parent="book_open_table" unique_id=2087471525]
 
-[node name="PageSurface" type="MeshInstance3D" parent="PageContent" unique_id=618543525]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0.028, 0)
-visible = false
+[node name="PageSurface" type="MeshInstance3D" parent="book_open_table/PageContent" unique_id=78760813]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0.0044, 0)
 mesh = SubResource("QuadMesh_pages")
 
 [node name="BookPageViewport" type="SubViewport" parent="." unique_id=1167951276]
@@ -135,6 +142,14 @@ theme_override_font_sizes/font_size = 24
 text = "The pages are blank."
 autowrap_mode = 3
 
+[node name="RuneView" type="Control" parent="BookPageViewport/SpreadRoot/Pages/LeftPage/Margin/LeftColumn" unique_id=1682054091]
+visible = false
+custom_minimum_size = Vector2(0, 230)
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+script = ExtResource("4_rune_view")
+
 [node name="RightPage" type="PanelContainer" parent="BookPageViewport/SpreadRoot/Pages" unique_id=1306379066]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -163,6 +178,7 @@ text = "Rune"
 horizontal_alignment = 1
 
 [node name="RuneView" type="Control" parent="BookPageViewport/SpreadRoot/Pages/RightPage/Margin/RightColumn" unique_id=952062795]
+visible = false
 custom_minimum_size = Vector2(0, 230)
 layout_mode = 2
 size_flags_vertical = 3

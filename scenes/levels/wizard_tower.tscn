@@ -10,6 +10,7 @@
 [ext_resource type="PackedScene" uid="uid://ckttbfrao7whi" path="res://alchemy_lab.tscn" id="6_hxol8"]
 [ext_resource type="PackedScene" uid="uid://duigk3wthhukx" path="res://scripts/components/book_shelf.tscn" id="7_e4xuk"]
 [ext_resource type="PackedScene" uid="uid://bchhcoi8ov80b" path="res://scripts/components/flask_filled_storage_shelf.tscn" id="9_2r11s"]
+[ext_resource type="PackedScene" uid="uid://dpmk1jysfkho1" path="res://scripts/components/book.tscn" id="11_6wrrw"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_o6hnd"]
 sky_top_color = Color(0.24, 0.57, 1, 1)
@@ -372,3 +373,6 @@ transform = Transform3D(0.9140432, 0, 0.4056172, 0, 1, 0, -0.4056172, 0, 0.91404
 
 [node name="StorageShelf" parent="." unique_id=1373303997 instance=ExtResource("9_2r11s")]
 transform = Transform3D(-0.9247093, 0, 0.38067394, 0, 1, 0, -0.38067394, 0, -0.9247093, -3.4591055, 1.2903278, 4.52016)
+
+[node name="Book" parent="." unique_id=1211495710 instance=ExtResource("11_6wrrw")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.2777853, 1.0190182, 1.1335363)

@@ -1,6 +1,6 @@
 [gd_scene load_steps=6 format=3]
 
-[ext_resource type="Script" path="res://scripts/spellcraft/rune_template_recorder.gd" id="1_recorder"]
+[ext_resource type="Script" path="res://scripts/content_tools/rune_template_recorder.gd" id="1_recorder"]
 [ext_resource type="Script" path="res://scripts/artifacts/scribe_canvas.gd" id="2_canvas"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_root"]

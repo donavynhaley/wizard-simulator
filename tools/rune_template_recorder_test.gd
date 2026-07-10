@@ -1,6 +1,6 @@
 extends SceneTree
 
-const RECORDER_SCENE := preload("res://scenes/tools/rune_template_recorder.tscn")
+const RECORDER_SCENE := preload("res://scenes/content_tools/rune_template_recorder.tscn")
 const RuneTemplateResource := preload("res://scripts/spellcraft/rune_template.gd")
 
 
