@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://bfhastd33ceg6"
-path="res://.godot/imported/candle.blend-c1a68c2a1133d3dcbd5ff6c716db8c61.scn"
+uid="uid://ctvlfnlyja2mf"
+path="res://.godot/imported/mortar.blend-d8223038c7b11dcde6203871d9890457.scn"
 
 [deps]
 
-source_file="res://assets/source/blender/props/candle.blend"
-dest_files=["res://.godot/imported/candle.blend-c1a68c2a1133d3dcbd5ff6c716db8c61.scn"]
+source_file="res://assets/source/blender/props/mortar.blend"
+dest_files=["res://.godot/imported/mortar.blend-d8223038c7b11dcde6203871d9890457.scn"]
 
 [params]
 
