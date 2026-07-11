@@ -9,7 +9,7 @@ const CURVE_SAMPLE_COUNT := 24
 @export_dir var output_directory: String = "res://data/runes/templates"
 @export var default_canvas_size := Vector2i(1024, 768)
 @export_group("Measurements")
-@export var recorder_canvas_size_mm := Vector2(360.0, 290.0)
+@export var recorder_canvas_size_mm := Vector2(600.0, 300.0)
 @export var show_measurements: bool = true
 @export var major_tick_mm: float = 50.0
 @export var minor_tick_mm: float = 10.0

@@ -28,6 +28,96 @@ func _run() -> void:
 	var hands := player.hands
 	_check(hands != null, "player.hands resolves the typed hand anchor")
 	_check(player.interactor != null, "player.interactor resolves the typed interactor")
+	var grab_presentation := hands.get_grab_presentation() if hands != null else null
+	var body_rig := player.get_node_or_null("BodyRig") as WizardBodyRig
+	var first_person_rig := body_rig.get_first_person_rig() if body_rig else null
+	var grasp_animation_player := first_person_rig.get_grasp_animation_player() if first_person_rig else null
+	var right_arm_pose := first_person_rig.get_right_arm_pose() if first_person_rig else null
+	var wrist_control := first_person_rig.get_hand_control(&"Wrist") if first_person_rig else null
+	var beard := first_person_rig.get_beard() if first_person_rig else null
+	var wizard_model := body_rig.get_node_or_null("WizardModel") as Node3D if body_rig else null
+	_check(grab_presentation != null, "player has a reusable magical grab presentation")
+	_check(body_rig != null, "player has a viewmodel body rig for grasp posing")
+	_check(first_person_rig != null and right_arm_pose != null and wrist_control != null,
+		"player composes an editor-visible first-person arm rig with spatial pose controls")
+	_check(beard != null
+		and first_person_rig.scene_file_path.is_empty()
+		and beard.scene_file_path.is_empty()
+		and body_rig.get_node_or_null("WorldBodyModel") == null
+		and wizard_model != null
+		and wizard_model.get_parent() == body_rig,
+		"player scene owns one first-person wizard model and its beard authoring")
+	var arm_models := first_person_rig.get_node("ArmModels") if first_person_rig else null
+	_check(first_person_rig.get_arm_model_count() == 1
+		and arm_models.get_node_or_null("LeftArmModel") == null
+		and arm_models.get_node_or_null("RightArmModel") == null
+		and not player.get_node("Head/Camera3D").is_ancestor_of(wizard_model),
+		"one body-anchored wizard model supplies both first-person arms")
+	var wizard_skeleton := WizardModel.find_skeleton(wizard_model) if wizard_model else null
+	_check(wizard_skeleton != null
+		and wizard_skeleton.find_bone("DEF-HAT01") != -1
+		and wizard_skeleton.find_bone("DEF-SCARF01") != -1
+		and bool(wizard_model.get_meta(&"first_person_body_filtered", false)),
+		"first-person body retains its hat and beard while removing camera intersection geometry")
+	var camera := player.get_node("Head/Camera3D") as Camera3D
+	_check(camera.near <= 0.03
+		and is_equal_approx(wizard_model.position.y, -0.97)
+		and is_equal_approx(wizard_model.position.z, 0.13),
+		"camera and body use the authored eye alignment with a tight near plane")
+	_check(grasp_animation_player != null
+		and grasp_animation_player.has_animation(&"grab")
+		and grasp_animation_player.has_animation(&"hold")
+		and grasp_animation_player.has_animation(&"release"),
+		"viewmodel arm authors separate grab, hold, and release clips")
+	if grasp_animation_player != null:
+		var grab_animation := grasp_animation_player.get_animation(&"grab")
+		_check(grab_animation.find_track(
+			NodePath("ArmModels/RightArmPose:position"), Animation.TYPE_VALUE) != -1
+			and grab_animation.find_track(
+				NodePath("HandControls/Wrist:rotation"), Animation.TYPE_VALUE) != -1,
+			"grab clip directly keys visible spatial rig controls")
+	_check(beard != null
+		and beard.animation_player.has_animation(&"lift")
+		and beard.animation_player.has_animation(&"lower")
+		and beard.get_inventory_anchor().get_child_count() == 3,
+		"first-person rig includes a flexible beard with lift clips and inventory slots")
+	if beard != null:
+		var beard_bone := wizard_skeleton.find_bone("DEF-SCARF01") if wizard_skeleton else -1
+		var beard_bone_rest := wizard_skeleton.get_bone_pose_rotation(beard_bone) \
+			if beard_bone != -1 else Quaternion.IDENTITY
+		_check(beard.visible
+			and beard.get_parent().get_parent() == body_rig
+			and not player.get_node("Head/Camera3D").is_ancestor_of(beard),
+			"beard stays physically mounted to the player instead of toggling with the camera")
+		player.head.rotation.x = deg_to_rad(-40.0)
+		await process_frame
+		_check(beard.visible, "looking down keeps the physical beard rendered")
+		var beard_root := beard.get_node("BeardRoot") as Node3D
+		var beard_rest_position := beard_root.position
+		var left_arm_pose := first_person_rig.get_node("ArmModels/LeftArmPose") as Node3D
+		var left_arm_rest_position := left_arm_pose.position
+		var beard_input := InputEventAction.new()
+		beard_input.action = &"check_beard_inventory"
+		beard_input.pressed = true
+		first_person_rig._unhandled_input(beard_input)
+		for frame in 70:
+			await process_frame
+		_check(beard.lifted
+			and beard_root.position.distance_to(beard_rest_position) > 0.15
+			and left_arm_pose.position.distance_to(left_arm_rest_position) > 0.25
+			and (beard_bone == -1 or not wizard_skeleton.get_bone_pose_rotation(beard_bone).is_equal_approx(beard_bone_rest)),
+			"holding the beard inventory action lifts the model beard and the visible left hand")
+		beard_input.pressed = false
+		first_person_rig._unhandled_input(beard_input)
+		for frame in 70:
+			await process_frame
+		_check(not beard.lifted
+			and beard_root.position.distance_to(beard_rest_position) < 0.01
+			and left_arm_pose.position.distance_to(left_arm_rest_position) < 0.01,
+			"releasing the beard inventory action lowers the beard and hand to rest")
+		player.head.rotation.x = 0.0
+		await process_frame
+		_check(beard.visible, "looking forward does not visibility-toggle the physical beard")
 
 	var fountain := _find_by_type(scene, "FountainOfEndlessSpring") as FountainOfEndlessSpring
 	var torch := _find_by_type(scene, "TorchOfEternalFlame")
@@ -54,6 +144,30 @@ func _run() -> void:
 		"fountain prompts to cup water with empty hands")
 	fountain.interact(player, null)
 	_check(hands.held_item is HeldWater, "fountain fills the hands with spring water")
+	_check(bool(grab_presentation.get("active")), "pickup starts the magical levitation presentation")
+	_check(grab_presentation.has_item_aura(), "pickup applies the aura shader directly to the item")
+	_check(hands.held_item.get_parent() == grab_presentation.call("get_item_anchor"),
+		"held item floats from the presentation anchor")
+	for frame in 60:
+		await process_frame
+	_check(grab_presentation.has_magic_stream(), "visible shader stream rises from the hand toward the item")
+	_check(first_person_rig.get_grasp_amount() > 0.95,
+		"pickup moves the visible arm rig into its spell-manipulation pose")
+	for frame in 60:
+		if grasp_animation_player.current_animation == &"hold":
+			break
+		await process_frame
+	_check(grasp_animation_player.current_animation == &"hold",
+		"completed grab clip transitions into the looping hold clip")
+	var float_anchor := grab_presentation.get_item_anchor()
+	var bob_position := float_anchor.position
+	var arm_hold_position := right_arm_pose.position
+	for frame in 36:
+		await process_frame
+	_check(float_anchor.position.distance_to(bob_position) > 0.004,
+		"held item gently bobs and sways through the authored holding animation")
+	_check(right_arm_pose.position.distance_to(arm_hold_position) > 0.002,
+		"looping hold clip directly moves the visible viewmodel arm node")
 	_check(fountain.focus_prompt(player, null) == fountain.refresh_prompt,
 		"fountain offers a refresh while holding water")
 
@@ -62,12 +176,21 @@ func _run() -> void:
 		"holder prompts to place held water")
 	holder.interact(player, null)
 	_check(hands.held_item == null, "placing water empties the hands")
+	for frame in 60:
+		await process_frame
+	_check(not bool(grab_presentation.get("active")), "placing an item dismisses the levitation presentation")
+	_check(not grab_presentation.has_item_aura(), "placing an item removes its temporary aura shader")
+	_check(first_person_rig.get_grasp_amount() < 0.05, "placing an item relaxes the viewmodel hand")
+	_check(wrist_control.rotation.length() < 0.001,
+		"release clip restores the spatial hand controls to their reset pose")
 	_check(holder.placed_element is HeldWater, "holder keeps the placed water")
 	_check(holder.placed_element.get_parent() == holder, "water reparents to the holder")
 	_check(str(holder.focus_prompt(player, null)).begins_with("Take"),
 		"holder prompts to take the element back")
 	holder.interact(player, null)
 	_check(hands.held_item is HeldWater, "taking back returns the water to the hands")
+	_check(bool(grab_presentation.get("active")), "taking an item back restores levitation")
+	_check(grab_presentation.has_item_aura(), "taking an item back restores its aura shader")
 	_check(holder.placed_element == null, "holder is empty after take-back")
 
 	# Spell crafter refuses while hands are full, then locks the player.
@@ -77,8 +200,12 @@ func _run() -> void:
 	_check(not crafter._active, "crafter refuses to start with full hands")
 
 	hands.drop()
-	await process_frame
+	for frame in 60:
+		await process_frame
 	_check(hands.held_item == null, "dropping water empties the hands")
+	_check(not bool(grab_presentation.get("active")), "dropping an item dismisses levitation")
+	_check(not grab_presentation.has_item_aura(), "dropping an item removes its temporary aura shader")
+	_check(first_person_rig.get_grasp_amount() < 0.05, "dropping an item relaxes the grasp pose")
 
 	book.interact(player, null)
 	_check(hands.held_item == book, "player picks up a rune book")

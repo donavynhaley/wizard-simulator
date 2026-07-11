@@ -14,7 +14,6 @@ signal held_changed(item: Node3D)
 
 @export_group("Grab And Drop")
 @export var pickup_time: float = 0.18
-@export var grab_lift: float = 0.055
 @export var drop_forward_impulse: float = 1.5
 @export var drop_up_impulse: float = 0.5
 
@@ -22,16 +21,16 @@ signal held_changed(item: Node3D)
 @export var held_item_visual_layer: int = 1 << 0
 @export var world_item_visual_layer: int = 1 << 0
 
+@export_group("Magical Grab Presentation")
+@export_node_path("Node3D") var grab_presentation_path: NodePath = ^"MagicalGrabPresentation"
+
 var held_item: Node3D
 var _carry_tween: Tween
-var _pose_tween: Tween
-var _rest_position := Vector3.ZERO
-var _rest_rotation := Vector3.ZERO
+var _grab_presentation: MagicalGrabPresentation
 
 
 func _ready() -> void:
-	_rest_position = position
-	_rest_rotation = rotation
+	_grab_presentation = get_node_or_null(grab_presentation_path) as MagicalGrabPresentation
 
 
 func pick_up(item: Node3D) -> void:
@@ -39,7 +38,9 @@ func pick_up(item: Node3D) -> void:
 		drop()
 	_kill_carry_tween()
 	held_item = item
-	item.reparent(self)
+	var item_parent := _grab_presentation.get_item_anchor() \
+		if _grab_presentation != null else self
+	item.reparent(item_parent)
 	VisualLayers.apply_layer(item, held_item_visual_layer)
 	if item.has_method("set_held"):
 		item.set_held(true)
@@ -50,7 +51,8 @@ func pick_up(item: Node3D) -> void:
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	_carry_tween.parallel().tween_property(item, "rotation",
 		pose.rotation, pickup_time)
-	_play_grab_motion()
+	if _grab_presentation != null:
+		_grab_presentation.show_grab(item)
 	held_changed.emit(item)
 
 
@@ -61,6 +63,7 @@ func drop() -> void:
 		return
 	var item := held_item
 	held_item = null
+	_hide_grab_presentation()
 	item.reparent(get_tree().current_scene)
 	VisualLayers.apply_layer(item, world_item_visual_layer)
 	if item.has_method("set_held"):
@@ -81,6 +84,7 @@ func release_item(item: Node3D) -> void:
 	if held_item == item:
 		_kill_carry_tween()
 		held_item = null
+		_hide_grab_presentation()
 		VisualLayers.apply_layer(item, world_item_visual_layer)
 		held_changed.emit(null)
 
@@ -89,9 +93,6 @@ func _kill_carry_tween() -> void:
 	if _carry_tween and _carry_tween.is_valid():
 		_carry_tween.kill()
 	_carry_tween = null
-	if _pose_tween and _pose_tween.is_valid():
-		_pose_tween.kill()
-	_pose_tween = null
 
 
 func _held_pose_for(item: Node3D) -> Dictionary:
@@ -104,22 +105,21 @@ func _held_pose_for(item: Node3D) -> Dictionary:
 	}
 
 
-func _play_grab_motion() -> void:
-	if _pose_tween and _pose_tween.is_valid():
-		_pose_tween.kill()
-	position = _rest_position + Vector3(0.0, grab_lift, 0.0)
-	_pose_tween = create_tween()
-	_pose_tween.tween_property(self, "position", _rest_position, pickup_time) \
-		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	_pose_tween.parallel().tween_property(self, "rotation", _rest_rotation, pickup_time) \
-		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-
-
 ## Called by items that cease to exist while held (a spent scroll crumbling).
 func notify_item_gone(item: Node3D) -> void:
 	if held_item == item:
 		held_item = null
+		_hide_grab_presentation()
 		held_changed.emit(null)
+
+
+func get_grab_presentation() -> MagicalGrabPresentation:
+	return _grab_presentation
+
+
+func _hide_grab_presentation() -> void:
+	if _grab_presentation != null:
+		_grab_presentation.hide_grab()
 
 
 func _input(event: InputEvent) -> void:

@@ -7,6 +7,12 @@ Live as a wizard in your tower. Craft spells and potions, complete tasks for the
 **Design Pillar 1: Style Pays.** Solving a quest earns coin. Solving it with flair earns renown. Every system should offer a cheap path and a flashy path, and the flashy path should feed your name. (See Gilded Ink, multi-solution quests, storefront presentation, trophy decor.)
 
 **Design Pillar 2: The Tower Makes, The Valley Casts.** The tower is where spells are made; the valley is where the wizard happens. Crafting a fireball is not the fantasy. Standing on a hill throwing one in front of a cheering village is. Most quests require your presence and your casting, not just your product.
+
+## Visual Direction
+
+The default color palette is the Atari 2600 NTSC palette stored at [`assets/reference/palettes/atari-2600-palette-ntsc-version-1x.png`](../assets/reference/palettes/atari-2600-palette-ntsc-version-1x.png).
+Choose colors from this palette for new art, UI, materials, lighting, and visual effects unless a feature has an explicitly documented exception.
+Book page paper uses `#fce08c` as its standard background color.
  
 ## Core Gameplay Loop
 

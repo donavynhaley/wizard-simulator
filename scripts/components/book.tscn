@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://dpmk1jysfkho1"]
+[gd_scene format=3 uid="uid://dpmk1jysfkho1"]
 
 [ext_resource type="Script" uid="uid://b58drra8m8iw1" path="res://scripts/components/book.gd" id="1_book"]
 [ext_resource type="Resource" uid="uid://dwi4kltjsnjfk" path="res://data/books/bolt_rune_book.tres" id="2_book_data"]
@@ -18,6 +18,7 @@ book_data = ExtResource("2_book_data")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1254588339]
 shape = SubResource("BoxShape_book")
 
-[node name="Visual" parent="." instance=ExtResource("3_visual")]
+[node name="Visual" parent="." unique_id=1621676195 instance=ExtResource("3_visual")]
 
-[node name="PageRenderer" parent="." instance=ExtResource("4_renderer")]
+[node name="PageRenderer" parent="." unique_id=1865072364 instance=ExtResource("4_renderer")]
+size = Vector2i(1536, 768)

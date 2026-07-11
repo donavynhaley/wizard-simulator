@@ -124,11 +124,12 @@ region_rect = Rect2(0, 0, 512, 512)
 [node name="WorldPose" type="Marker3D" parent="."]
 
 [node name="HeldPose" type="Marker3D" parent="."]
+position = Vector3(-0.04, 0.025, -0.105)
 rotation = Vector3(1.08, 0, -0.12)
 scale = Vector3(1.15, 1.15, 1.15)
 
 [node name="ReadingPose" type="Marker3D" parent="."]
-position = Vector3(-0.34, 0.13, 0.1)
+position = Vector3(-0.34, 0.06, 0.1)
 rotation = Vector3(1.37, 0, 0)
 scale = Vector3(1.8, 1.8, 1.8)
 

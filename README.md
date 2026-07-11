@@ -52,6 +52,7 @@ The first-person arms are a CC-BY model (`assets/external/polypizza/fps_arms.glb
 - `Left click` - cast the held scroll
 - `Left click` while holding a book - open or close its physical reading pose
 - `Left/Right arrows` - turn held-book pages while reading
+- `B` - while looking down, hold to lift the beard and inspect beard inventory
 - `A/D` while scribing - turn pages in the open reference book on the table
 - `W/S` while scribing - look up at the reference book / return to the scroll
 - `G` - drop the held item

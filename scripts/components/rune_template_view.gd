@@ -27,6 +27,8 @@ extends Control
 @export_range(0.0, 1.0, 0.05) var playback_pause_between_strokes := 0.18
 @export_range(0.0, 2.0, 0.05) var playback_loop_pause := 0.65
 
+@export_group("Layout")
+@export var playback_canvas_size := Vector2(600.0, 300.0)
 var strokes: Array[PackedVector2Array] = []
 var _playback_time := 0.0
 
@@ -41,7 +43,13 @@ func set_strokes(value: Array[PackedVector2Array]) -> void:
 
 
 func _ready() -> void:
+	custom_minimum_size = playback_canvas_size
+
+	if not get_parent() is Container:
+		size = playback_canvas_size
+
 	set_process(playback_enabled)
+	queue_redraw()
 
 
 func _process(delta: float) -> void:

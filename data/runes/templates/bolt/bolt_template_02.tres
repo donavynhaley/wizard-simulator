@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="RuneTemplate" format=3]
+[gd_resource type="Resource" script_class="RuneTemplate" format=3 uid="uid://iq7iyh5vlqsv"]
 
-[ext_resource type="Script" path="res://scripts/spellcraft/rune_template.gd" id="1_rqqyk"]
+[ext_resource type="Script" uid="uid://cxw25ucjaqlv0" path="res://scripts/spellcraft/rune_template.gd" id="1_rqqyk"]
 
 [resource]
 script = ExtResource("1_rqqyk")

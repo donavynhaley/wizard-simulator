@@ -3,7 +3,7 @@ extends Node3D
 
 @export var held_position: Vector3 = Vector3(-0.045, 0.03, -0.085)
 @export var held_rotation: Vector3 = Vector3(-0.48, 0.18, -0.22)
-@export var held_scale: Vector3 = Vector3.ONE
+@export var held_scale: Vector3 = Vector3(0.5, 0.5, 0.5)
 
 const DROPLET_COUNT := 5
 const HOLDING_WATER_SOUND := preload("res://assets/sounds/holding_water.wav")

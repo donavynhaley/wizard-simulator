@@ -1,11 +1,10 @@
 class_name WizardModel
 
-## Shared helpers for the wizard character model
-## (assets/artifacts/player_wizard.tscn): skeleton lookup and filtering the
-## full-body mesh down to a bone subset. Used by WizardBodyRig for the
-## first-person viewmodel arms and by ScribeArm for the drawing arm.
+## Shared helpers for the imported wizard character model: skeleton lookup
+## and filtering the full-body mesh down to a bone subset. Player-owned models
+## are authored directly in player.tscn; ScribeArm uses this factory.
 
-const SCENE := preload("res://assets/artifacts/player_wizard.tscn")
+const SCENE := preload("res://assets/external/polypizza/Wizardus Maximus.glb")
 
 ## A triangle is kept only if all three vertices carry at least this much
 ## combined weight on the kept bones.
@@ -67,6 +66,18 @@ static func bone_indices(skeleton: Skeleton3D, bone_names: Array[String]) -> Dic
 	for bone_name in bone_names:
 		var bone := skeleton.find_bone(bone_name)
 		if bone != -1:
+			indices[bone] = true
+	return indices
+
+
+## Returns every skeleton bone except the named exclusions. This is useful for
+## first-person bodies that should retain their silhouette while omitting only
+## geometry that would surround the camera.
+static func bone_indices_except(skeleton: Skeleton3D, excluded_bone_names: Array[String]) -> Dictionary:
+	var excluded := bone_indices(skeleton, excluded_bone_names)
+	var indices := {}
+	for bone in skeleton.get_bone_count():
+		if not excluded.has(bone):
 			indices[bone] = true
 	return indices
 

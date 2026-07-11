@@ -9,6 +9,7 @@ extends CharacterBody3D
 @export var move_speed: float = 4.2
 @export var jump_velocity: float = 4.5
 @export var mouse_sensitivity: float = 0.0022
+@export_range(45.0, 80.0, 1.0) var look_pitch_limit_degrees: float = 75.0
 @export var acceleration: float = 16.0
 @export var deceleration: float = 12.0
 
@@ -108,7 +109,8 @@ func _input(event: InputEvent) -> void:
 func apply_mouse_look(relative: Vector2) -> void:
 	rotate_y(-relative.x * mouse_sensitivity)
 	head.rotate_x(-relative.y * mouse_sensitivity)
-	head.rotation.x = clamp(head.rotation.x, -PI * 0.48, PI * 0.48)
+	var pitch_limit := deg_to_rad(look_pitch_limit_degrees)
+	head.rotation.x = clamp(head.rotation.x, -pitch_limit, pitch_limit)
 	_look_sway_target = relative
 
 

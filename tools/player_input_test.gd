@@ -11,8 +11,13 @@ func _run() -> void:
 	var scene := (load("res://scenes/characters/player.tscn") as PackedScene).instantiate()
 	root.add_child(scene)
 	await process_frame
+	_check(scene is WizardPlayer, "player scene compiles as a WizardPlayer")
+	if scene is not WizardPlayer:
+		scene.queue_free()
+		quit(_fail)
+		return
 
-	var player := scene as Node3D
+	var player := scene as WizardPlayer
 	var before_yaw := player.rotation.y
 	var head := player.get_node("Head") as Node3D
 	var before_pitch := head.rotation.x

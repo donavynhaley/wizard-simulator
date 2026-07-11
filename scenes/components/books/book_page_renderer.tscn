@@ -5,7 +5,7 @@
 [ext_resource type="Theme" path="res://assets/themes/book_page_theme.tres" id="3_theme"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBox_page_left"]
-bg_color = Color(0.80, 0.72, 0.56, 1)
+bg_color = Color(0.988235, 0.878431, 0.54902, 1)
 border_width_left = 4
 border_width_top = 4
 border_width_right = 2
@@ -15,7 +15,7 @@ corner_radius_top_left = 10
 corner_radius_bottom_left = 10
 
 [sub_resource type="StyleBoxFlat" id="StyleBox_page_right"]
-bg_color = Color(0.83, 0.75, 0.59, 1)
+bg_color = Color(0.988235, 0.878431, 0.54902, 1)
 border_width_left = 2
 border_width_top = 4
 border_width_right = 4

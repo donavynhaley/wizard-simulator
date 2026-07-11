@@ -24,6 +24,20 @@ func _run() -> void:
 	_check(book.focus_prompt(player, null).begins_with("Pick up"), "book prompts pickup with empty hands")
 	book.interact(player, null)
 	_check(player.hands.held_item == book, "player can pick up the book")
+	var grab_presentation := player.hands.get_grab_presentation()
+	_check(grab_presentation != null and bool(grab_presentation.get("active")),
+		"closed held book uses the magical levitation presentation")
+	_check(grab_presentation.has_item_aura(), "closed held book receives the item aura shader")
+	for frame in 20:
+		await process_frame
+	var item_anchor := grab_presentation.get_item_anchor() as Node3D
+	var visual_root := book.get_node("Visual/VisualRoot") as Node3D
+	var held_pose := book.get_node("Visual/HeldPose") as Marker3D
+	_check(book.get_parent() == item_anchor, "held book uses the common floating item anchor")
+	_check(book.position.distance_to(Vector3.ZERO) < 0.001,
+		"held book root stays aligned with the common item anchor")
+	_check(visual_root.position.distance_to(held_pose.position) < 0.001,
+		"book visual scene owns the model-specific held offset")
 	_check(book.get_display_name() == "Bolt Rune Book", "rune book display name comes from the rune template")
 	_check(book.get_held_hint().contains("LMB read"), "held book explains read input")
 
@@ -35,7 +49,7 @@ func _run() -> void:
 	close_event.button_index = MOUSE_BUTTON_LEFT
 	close_event.pressed = true
 	Input.parse_input_event(close_event)
-	for frame in 20:
+	for frame in 30:
 		await process_frame
 	close_event.pressed = false
 	Input.parse_input_event(close_event)
@@ -50,10 +64,23 @@ func _run() -> void:
 	_check(open_visual.visible, "the reusable open visual shows while reading")
 	_check(page_surface.visible and page_surface.texture != null, "physical page surface shows rendered content")
 	_check(player.is_physics_processing(), "player can still move while reading")
+	var reading_pose := book.get_node("Visual/ReadingPose") as Marker3D
+	_check(visual_root.position.distance_to(reading_pose.position) < 0.01,
+		"book visual scene owns the model-specific reading offset")
+	_check(bool(grab_presentation.get("active")) and grab_presentation.has_item_aura(),
+		"open held book continues floating with its subtle aura shader")
 	var left_title := book.get_node("PageRenderer/SpreadRoot/Pages/LeftPage/Margin/Column/LeftTitle") as Label
 	var right_title := book.get_node("PageRenderer/SpreadRoot/Pages/RightPage/Margin/Column/RightTitle") as Label
 	var rune_view := book.get_node("PageRenderer/SpreadRoot/Pages/RightPage/Margin/Column/RightRuneView") as RuneTemplateView
 	var page_viewport := book.get_node("PageRenderer") as SubViewport
+	var left_page := book.get_node("PageRenderer/SpreadRoot/Pages/LeftPage") as PanelContainer
+	var right_page := book.get_node("PageRenderer/SpreadRoot/Pages/RightPage") as PanelContainer
+	var left_paper := left_page.get_theme_stylebox("panel") as StyleBoxFlat
+	var right_paper := right_page.get_theme_stylebox("panel") as StyleBoxFlat
+	var expected_paper_color := Color("#fce08c")
+	_check(left_paper.bg_color.is_equal_approx(expected_paper_color)
+		and right_paper.bg_color.is_equal_approx(expected_paper_color),
+		"both physical book pages use the authored palette paper color")
 	_check(left_title.text == "Bolt Rune", "book writes its authored left page title")
 	_check(right_title.text == "Scribing Pattern", "book writes its authored right page title")
 	_check(rune_view.visible, "rune book shows the rune template on its page")
@@ -112,8 +139,10 @@ func _run() -> void:
 	_check(not bool(rune_view.call("is_playback_active")), "closing stops rune stroke playback")
 	_check(page_viewport.render_target_update_mode == SubViewport.UPDATE_DISABLED,
 		"book page viewport stops rendering when closed")
+	_check(bool(grab_presentation.get("active")),
+		"closing a held book keeps the magical levitation presentation")
 
-	book.set_held(false)
+	player.hands.release_item(book)
 	book.set_stationed(true)
 	book.open_for_reference()
 	_check(open_visual.visible, "the same open visual shows for table reference reading")

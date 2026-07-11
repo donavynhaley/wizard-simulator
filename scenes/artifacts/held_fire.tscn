@@ -5,7 +5,7 @@
 
 [node name="HeldFire" type="Node3D"]
 script = ExtResource("1_ydt7k")
-held_scale = Vector3(0.7, 0.7, 0.7)
+held_scale = Vector3(0.38, 0.38, 0.38)
 
 [node name="MagicalFlame" parent="." instance=ExtResource("2_v2f4e")]
 transform = Transform3D(0.52, 0, 0, 0, 0.52, 0, 0, 0, 0.52, 0, 0.03, 0)
