@@ -5,8 +5,9 @@
 [ext_resource type="PackedScene" uid="uid://dya0xacrgn0y1" path="res://assets/external/kenney/fantasy-town-kit/Models/GLB format/overhang.glb" id="3_kisc1"]
 [ext_resource type="Script" uid="uid://lkmq4o6q51xo" path="res://scripts/artifacts/element_holder.gd" id="4_sooxi"]
 [ext_resource type="Script" uid="uid://5yuur3pjr7pd" path="res://scripts/artifacts/spell_crafter.gd" id="5_70f7w"]
+[ext_resource type="PackedScene" uid="uid://dffhnmtk06rxe" path="res://assets/models/scroll_open.glb" id="6_05xbg"]
 [ext_resource type="PackedScene" uid="uid://ciluq5r4ob1mh" path="res://assets/external/seal_-_animated_low_poly.glb" id="6_dcnth"]
-[ext_resource type="Script" path="res://scripts/artifacts/open_book_placement.gd" id="9_1jmjg"]
+[ext_resource type="Script" uid="uid://ds0dh8jivtsyr" path="res://scripts/artifacts/open_book_placement.gd" id="9_1jmjg"]
 
 [sub_resource type="CylinderShape3D" id="CylinderShape3D_0jym3"]
 height = 0.1
@@ -14,8 +15,6 @@ radius = 0.1
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_0jym3"]
 size = Vector3(1, 0.96484375, 1)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_05xbg"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_dcnth"]
 size = Vector3(0.6329956, 0.03515625, 0.3531494)
@@ -65,20 +64,20 @@ shape = SubResource("BoxShape3D_0jym3")
 
 [node name="SpellCrafter" type="Node3D" parent="." unique_id=713436920]
 script = ExtResource("5_70f7w")
+scribe_surface_size_m = Vector2(0.6, 0.3)
+scribe_surface_rotation_degrees = -90.0
 
-[node name="Scroll" type="CSGBox3D" parent="SpellCrafter" unique_id=1146428071]
-transform = Transform3D(0.011697697, 0, 0.9999316, 0, 1, 0, -0.9999316, 0, 0.011697697, 0.16486797, 1.0257996, -0.02878812)
-size = Vector3(0.5, 0.002, 0.3)
-material = SubResource("ShaderMaterial_05xbg")
+[node name="Scroll" parent="SpellCrafter" unique_id=215512039 instance=ExtResource("6_05xbg")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0.165, 1.0142212, -0.029)
 
 [node name="ScribeCamera" type="Camera3D" parent="SpellCrafter" unique_id=79078189]
 transform = Transform3D(1.3113416e-07, -1, 4.371139e-08, -3.821371e-15, 4.371139e-08, 1, -1, -1.3113416e-07, 1.9106853e-15, 0.173073, 1.4166055, -0.022771485)
 fov = 64.0
 
-[node name="ScrollCameraPose" type="Marker3D" parent="SpellCrafter"]
+[node name="ScrollCameraPose" type="Marker3D" parent="SpellCrafter" unique_id=1259852219]
 transform = Transform3D(1.3113416e-07, -1, 4.371139e-08, -3.821371e-15, 4.371139e-08, 1, -1, -1.3113416e-07, 1.9106853e-15, 0.173073, 1.4166055, -0.022771485)
 
-[node name="BookCameraPose" type="Marker3D" parent="SpellCrafter"]
+[node name="BookCameraPose" type="Marker3D" parent="SpellCrafter" unique_id=483888162]
 transform = Transform3D(0, -0.731354, 0.681998, 0, 0.681998, 0.731354, -1, 0, 0, 0.173073, 1.4166055, -0.022771485)
 
 [node name="InkWell" type="CSGCylinder3D" parent="SpellCrafter" unique_id=826901926]

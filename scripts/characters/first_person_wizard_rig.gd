@@ -5,11 +5,14 @@ extends Node3D
 const GRAB_ANIMATION := &"grab"
 const HOLD_ANIMATION := &"hold"
 const RELEASE_ANIMATION := &"release"
-const REST_ANIMATION := &"RESET"
+const IDLE_ANIMATION := &"idle"
 const RIGHT_ARM_REST_POSITION := Vector3(0.2, -1.72, -0.86)
-const RIGHT_ARM_HOLD_POSITION := Vector3(-0.09, -1.3, -1.08)
+const RIGHT_ARM_IDLE_POSITION := Vector3(0.2, -1.735, -0.86)
+const RIGHT_ARM_HOLD_POSITION := Vector3(0.2, -1.76, -0.86)
 const LEFT_ARM_REST_POSITION := Vector3(-0.2, -1.72, -0.86)
 const ARM_REST_ROTATION := Vector3(-0.488692, 3.141593, 0)
+const RIGHT_ARM_IDLE_ROTATION := Vector3(-0.488692, 3.141593, 0.1)
+const RIGHT_ARM_HOLD_ROTATION := Vector3(-0.5, 3.141593, 0.68)
 const LEFT_UPPER_ARM_BASE_ROTATION := Quaternion(
 	-0.023753023, -0.006342602, -0.48897812, 0.87194955)
 const LEFT_FOREARM_BASE_ROTATION := Quaternion(
@@ -18,7 +21,16 @@ const RIGHT_UPPER_ARM_BASE_ROTATION := Quaternion(
 	-0.023753023, 0.006342602, 0.48897812, 0.87194955)
 const RIGHT_FOREARM_BASE_ROTATION := Quaternion(
 	0.11957755, 0.34005535, 0.15658903, 0.9195344)
-const CAMERA_INTERSECTION_BONES: Array[String] = ["DEF-HEAD", "DEF-NECK"]
+const CAMERA_INTERSECTION_BONES: Array[String] = [
+	"DEF-HEAD",
+	"DEF-NECK",
+	"DEF-FOREARM-HANG01.L",
+	"DEF-FOREARM-HANG02.L",
+	"DEF-FOREARM-HANG03.L",
+	"DEF-FOREARM-HANG01.R",
+	"DEF-FOREARM-HANG02.R",
+	"DEF-FOREARM-HANG03.R",
+]
 const CONTROL_BONES := {
 	"Wrist": "DEF-HAND.R",
 	"Thumb01": "DEF-THUMB01.R",
@@ -40,7 +52,11 @@ const CONTROL_BONES := {
 @export_node_path("Node3D") var head_path: NodePath = ^"../../.."
 @export_range(0.5, 1.5, 0.01) var arm_control_translation_scale := 1.0
 @export_range(0.0, 1.0, 0.01) var arm_pitch_follow := 0.65
+@export_range(0.0, 60.0, 1.0) var upward_arm_follow_limit_degrees := 20.0
+@export_range(0.0, 60.0, 1.0) var hat_screen_lock_start_pitch_degrees := 12.0
+@export_range(0.0, 1.5, 0.01) var hat_screen_lock_strength := 1.0
 @export_range(-80.0, -5.0, 1.0) var beard_interaction_pitch_degrees := -22.0
+@export var preview_control_rig_in_editor := false
 
 @onready var arm_model := get_node_or_null(arm_model_path) as Node3D
 @onready var left_arm_pose := get_node_or_null(left_arm_pose_path) as Node3D
@@ -63,6 +79,7 @@ func _ready() -> void:
 	_prepare_model.call_deferred()
 	if animation_player != null and not animation_player.animation_finished.is_connected(_on_animation_finished):
 		animation_player.animation_finished.connect(_on_animation_finished)
+		animation_player.play(IDLE_ANIMATION)
 	set_process(true)
 	set_process_unhandled_input(not Engine.is_editor_hint())
 
@@ -70,15 +87,23 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if not _prepared:
 		_prepare_model()
+	if Engine.is_editor_hint() and not preview_control_rig_in_editor:
+		return
 	if _skeleton != null:
 		_apply_arm_pose(left_arm_pose, "DEF-SHOULDER.L", LEFT_ARM_REST_POSITION)
 		_apply_arm_pose(right_arm_pose, "DEF-SHOULDER.R", RIGHT_ARM_REST_POSITION)
 		_apply_authored_arm_base_pose()
+		_apply_hat_screen_lock()
 		_apply_hand_controls()
 		_place_control_markers()
 
 
 func set_holding_item(holding: bool) -> void:
+	if holding == _holding_item:
+		if not holding and animation_player != null \
+				and animation_player.current_animation != IDLE_ANIMATION:
+			animation_player.play(IDLE_ANIMATION, 0.1)
+		return
 	_holding_item = holding
 	if animation_player == null:
 		return
@@ -132,8 +157,15 @@ func is_in_holding_pose() -> bool:
 func get_grasp_amount() -> float:
 	if right_arm_pose == null:
 		return 0.0
-	var travel := RIGHT_ARM_REST_POSITION.distance_to(RIGHT_ARM_HOLD_POSITION)
-	return clampf(RIGHT_ARM_REST_POSITION.distance_to(right_arm_pose.position) / travel, 0.0, 1.0)
+	var position_travel := RIGHT_ARM_IDLE_POSITION.distance_to(RIGHT_ARM_HOLD_POSITION)
+	var position_amount := RIGHT_ARM_IDLE_POSITION.distance_to(right_arm_pose.position) \
+		/ maxf(position_travel, 0.001)
+	var rest_rotation := Quaternion.from_euler(RIGHT_ARM_IDLE_ROTATION)
+	var hold_rotation := Quaternion.from_euler(RIGHT_ARM_HOLD_ROTATION)
+	var rotation_travel := rest_rotation.angle_to(hold_rotation)
+	var rotation_amount := rest_rotation.angle_to(Quaternion.from_euler(right_arm_pose.rotation)) \
+		/ maxf(rotation_travel, 0.001)
+	return clampf(maxf(position_amount, rotation_amount), 0.0, 1.0)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -155,9 +187,7 @@ func _on_animation_finished(animation_name: StringName) -> void:
 	if animation_name == GRAB_ANIMATION and _holding_item:
 		animation_player.play(HOLD_ANIMATION, 0.1)
 	elif animation_name == RELEASE_ANIMATION and not _holding_item:
-		animation_player.play(REST_ANIMATION)
-		animation_player.advance(0.0)
-		animation_player.stop()
+		animation_player.play(IDLE_ANIMATION, 0.1)
 
 
 func _prepare_model() -> void:
@@ -166,16 +196,16 @@ func _prepare_model() -> void:
 	_skeleton = WizardModel.find_skeleton(arm_model)
 	if _skeleton == null:
 		return
-	if not arm_model.has_meta(&"first_person_body_filtered"):
+	if not Engine.is_editor_hint():
 		WizardModel.filter_to_bones(
 			arm_model,
 			WizardModel.bone_indices_except(_skeleton, CAMERA_INTERSECTION_BONES))
-		arm_model.set_meta(&"first_person_body_filtered", true)
 	_set_viewmodel_materials(arm_model)
 	for control_name in CONTROL_BONES:
 		_cache_bone(control_name, CONTROL_BONES[control_name])
 	_cache_bone("LeftShoulder", "DEF-SHOULDER.L")
 	_cache_bone("RightShoulder", "DEF-SHOULDER.R")
+	_cache_bone("ModelHead", "DEF-HEAD")
 	_prepared = true
 
 
@@ -236,7 +266,10 @@ func _apply_authored_arm_base_pose() -> void:
 	var left_forearm := _skeleton.find_bone("DEF-FOREARM.L")
 	var upper_arm := _skeleton.find_bone("DEF-ARM.R")
 	var forearm := _skeleton.find_bone("DEF-FOREARM.R")
-	var pitch := head.rotation.x * arm_pitch_follow if head != null else 0.0
+	var head_pitch := head.rotation.x if head != null else 0.0
+	if head_pitch > 0.0:
+		head_pitch = minf(head_pitch, deg_to_rad(upward_arm_follow_limit_degrees))
+	var pitch := head_pitch * arm_pitch_follow
 	var pitch_offset := Quaternion(Vector3.RIGHT, pitch)
 	if left_upper_arm != -1:
 		_skeleton.set_bone_pose_rotation(
@@ -254,6 +287,20 @@ func _apply_authored_arm_base_pose() -> void:
 		_skeleton.set_bone_pose_rotation(
 			forearm,
 			(pitch_offset * RIGHT_FOREARM_BASE_ROTATION).normalized())
+
+
+func _apply_hat_screen_lock() -> void:
+	var head_bone := _skeleton.find_bone("DEF-HEAD")
+	if head_bone == -1 or not _base_rotations.has("ModelHead"):
+		return
+	var upward_pitch := maxf(head.rotation.x, 0.0) if head != null else 0.0
+	var lock_start := deg_to_rad(hat_screen_lock_start_pitch_degrees)
+	var locked_pitch := -maxf(upward_pitch - lock_start, 0.0) * hat_screen_lock_strength
+	var pitch_offset := Quaternion(Vector3.RIGHT, locked_pitch)
+	var base_rotation := _base_rotations["ModelHead"] as Quaternion
+	_skeleton.set_bone_pose_rotation(
+		head_bone,
+		(pitch_offset * base_rotation).normalized())
 
 
 func _place_control_markers() -> void:

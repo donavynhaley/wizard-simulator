@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://bfsb71ceawsfi" path="res://scripts/components/book_data.gd" id="1_book_data"]
 [ext_resource type="Script" uid="uid://dqbhuio5lxao0" path="res://scripts/components/book_page_data.gd" id="2_page_data"]
 [ext_resource type="Script" uid="uid://dr7ronxaidf54" path="res://scripts/components/book_spread_data.gd" id="3_spread_data"]
-[ext_resource type="Resource" path="res://data/runes/templates/bolt/bolt_template_01.tres" id="4_eruoh"]
+[ext_resource type="Resource" uid="uid://r222a1ctob6i" path="res://data/runes/templates/bolt/bolt_template_01.tres" id="4_eruoh"]
 
 [sub_resource type="Resource" id="BookPageData_bolt_intro"]
 script = ExtResource("2_page_data")

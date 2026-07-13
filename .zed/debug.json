@@ -1,0 +1,17 @@
+[
+  {
+    "adapter": "godot",
+    "label": "Godot: Launch Project",
+    "request": "launch",
+    "scene": "main",
+    "host": "127.0.0.1",
+    "port": 6006
+  },
+  {
+    "adapter": "godot",
+    "label": "Godot: Attach",
+    "request": "attach",
+    "host": "127.0.0.1",
+    "port": 6006
+  }
+]

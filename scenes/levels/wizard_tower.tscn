@@ -201,25 +201,25 @@ transform = Transform3D(-0.9659258, 0, 0.25881904, 0, 1, 0, -0.25881904, 0, -0.9
 use_collision = true
 size = Vector3(0.75, 0.35, 1.5)
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1790471571]
+[node name="DayNightCycle" type="Node" parent="." unique_id=1992185705]
+script = ExtResource("2_daynight")
+sun_path = NodePath("Sun")
+moon_path = NodePath("Moon")
+world_environment_path = NodePath("WorldEnvironment")
+sun_energy_day = 1.0
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="DayNightCycle" unique_id=1790471571]
 environment = SubResource("Environment_0jym3")
 
-[node name="Sun" type="DirectionalLight3D" parent="." unique_id=1970567729]
-transform = Transform3D(0.4436071, -0.5982341, 0.6672251, 0, 0.7448014, 0.6672251, -0.8962219, -0.2961107, 0.3302595, 0, 0, 0)
-light_color = Color(1, 0.93, 0.78, 1)
-light_energy = 2.2
-shadow_enabled = true
-
-[node name="Moon" type="DirectionalLight3D" parent="." unique_id=548863263]
-transform = Transform3D(-0.44360673, -0.5981459, -0.6674086, 0, 0.7446916, -0.6674086, 0.8962212, -0.29606703, -0.3303503, 0, 0, 0)
+[node name="Moon" type="DirectionalLight3D" parent="DayNightCycle" unique_id=548863263]
+transform = Transform3D(-0.44360682, -0.5981459, -0.66740865, 0, 0.7446916, -0.66740865, 0.8962214, -0.29606703, -0.33035034, 0, 0, 0)
 light_color = Color(0.35, 0.48, 0.95, 1)
 light_energy = 0.0
 
-[node name="DayNightCycle" type="Node" parent="." unique_id=1992185705]
-script = ExtResource("2_daynight")
-sun_path = NodePath("../Sun")
-moon_path = NodePath("../Moon")
-world_environment_path = NodePath("../WorldEnvironment")
+[node name="Sun" type="DirectionalLight3D" parent="DayNightCycle" unique_id=1970567729]
+transform = Transform3D(0.44360685, -0.5981459, 0.66740865, 0, 0.7446916, 0.66740865, -0.8962214, -0.29606703, 0.33035034, 0, 0, 0)
+light_color = Color(1, 0.93, 0.78, 1)
+shadow_enabled = true
 
 [node name="Player" parent="." unique_id=1184757697 instance=ExtResource("1_y6bsx")]
 transform = Transform3D(0.7420006, 0, 0.67039925, 0, 1, 0, -0.67039925, 0, 0.7420006, -1.5217464, 1.5090332, 3.382835)
@@ -292,7 +292,10 @@ collision_mask = 0
 shape = SubResource("BoxShape3D_spring_interact")
 
 [node name="MoodLight" type="OmniLight3D" parent="Floor1/EndlessSpring" unique_id=1199807133]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.27585196, 0)
 light_color = Color(4.3317677e-06, 0.76190245, 0.7627682, 1)
+shadow_enabled = true
+shadow_bias = 0.79
 script = ExtResource("6_2r11s")
 metadata/_custom_type_script = "uid://duwe13r5kkl2m"
 

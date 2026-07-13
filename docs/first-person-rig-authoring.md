@@ -7,11 +7,16 @@ The wizard GLB remains an imported model asset, but there are no intermediate pl
 `BodyRig/WizardModel` is the player's only wizard model instance.
 It is anchored to the player instead of the camera, so looking up and down moves naturally beneath the hat and above the beard.
 The first-person mesh retains the hat, beard, robe, shoulders, and arms.
-Only triangles weighted to the head and neck are removed because those surfaces would surround the camera and intersect its near plane.
+Triangles weighted to the head and neck are removed because those surfaces would surround the camera and intersect its near plane.
+The loose `DEF-FOREARM-HANG` drape is also removed from the first-person mesh so raising an arm cannot cover the camera, while the fitted sleeve, shoulder, arm, and hand remain visible.
 The `LeftArmPose` and `RightArmPose` controls move the corresponding shoulder bones independently without duplicating the wizard model.
 
 The authored eye alignment is controlled by the `Head`, `Camera3D`, and `BodyRig/WizardModel` transforms in `player.tscn`.
 The camera uses a `0.03` meter near plane and the player's vertical look is limited to 75 degrees so the view cannot rotate into the hat crown or torso.
+The model is positioned so the brim is only a thin accent at the top of the neutral view and the beard enters the frame when looking down.
+When looking upward, the arms stop following camera pitch after the authored limit and naturally leave the frame.
+After the screen-lock threshold, the hidden head bone tilts the hat with the camera so the brim settles into a stable screen position.
+These values are editable on `Head/Camera3D/Viewmodel/FirstPersonWizardRig` as `upward_arm_follow_limit_degrees`, `hat_screen_lock_start_pitch_degrees`, and `hat_screen_lock_strength`.
 
 ## Preview the First-Person Camera
 
@@ -22,10 +27,22 @@ The camera uses a `0.03` meter near plane and the player's vertical look is limi
 
 Because this is the gameplay camera, its preview always matches the runtime field of view and player-relative composition.
 
-## Edit Grab, Hold, and Release
+## Animate the Full Skeleton
+
+1. Open `scenes/characters/player.tscn`.
+2. Expand `BodyRig/WizardModel/RootNode/Armature` and select `Skeleton3D`.
+3. Select `BodyRig/FullBodyAnimationPlayer` and create or choose a clip in the Animation panel.
+4. Return to `Skeleton3D`, enable bone editing in the 3D toolbar, and select the bone you want to pose.
+5. Move or rotate the bone with the viewport gizmo and insert its pose key into the active clip.
+
+`WizardModel` has editable children in the player scene, so the imported skeleton and every bone remain visible without opening or modifying the GLB.
+`FullBodyAnimationPlayer` is owned by `player.tscn`, so imported assets can be replaced without losing authored player animations.
+The procedural hand and beard controls do not overwrite bone poses while working in the editor unless `preview_control_rig_in_editor` is enabled on their controller.
+
+## Edit Idle, Grab, Hold, and Release
 
 1. Select `Head/Camera3D/Viewmodel/FirstPersonWizardRig/GraspAnimationPlayer`.
-2. Choose `grab`, `hold`, or `release` in the Animation panel.
+2. Choose `idle`, `grab`, `hold`, or `release` in the Animation panel.
 3. Move the timeline to the frame you want to change.
 4. Select `ArmModels/RightArmPose` and move or rotate the arm with the 3D viewport gizmo.
 5. Select a marker under `HandControls` and rotate it to pose the visible wrist, thumb, or fingers.
@@ -35,15 +52,17 @@ The hand controls are `Wrist`, `Thumb01`, `Thumb02`, `Thumb03`, `Finger01`, `Fin
 They are spatial controls positioned over their corresponding bones by the editor tool script.
 Their rotations are applied to the real wizard skeleton immediately, so the model remains visible while posing and scrubbing.
 
-The `RESET` animation defines the resting arm and open hand.
+The looping `idle` animation keeps both open hands at the lower edges of the first-person view and gives them subtle independent motion.
+The `RESET` animation remains the neutral editor reset pose.
 The `grab` animation reaches into the manipulation pose.
 The `hold` animation loops while an object floats above the hand.
-The `release` animation returns every keyed control to the resting pose.
+The `release` animation returns every keyed control to the visible idle pose and automatically resumes its loop.
 
 ## Edit the Beard Inventory Motion
 
-The visible beard comes from `BodyRig/WizardModel`.
-The four controls under `BodyRig/BeardAnchor/Beard` pose the imported model's ten beard bones without creating a second beard mesh.
+The imported wizard model does not contain beard geometry; its `DEF-SCARF` bones control the red collar.
+The visible beard is a flattened, tapered four-segment low-poly mesh authored directly under `BodyRig/BeardAnchor/Beard`.
+The four nested controls make the beard flexible without creating runtime geometry.
 The beard remains anchored to the player independently of camera pitch and naturally enters the view when the player looks down.
 
 Select `BodyRig/BeardAnchor/Beard/BeardAnimationPlayer` to edit the beard's `lift` and `lower` clips.

@@ -1,0 +1,16 @@
+{
+  "languages": {
+    "GDScript": {
+      "tab_size": 4,
+      "hard_tabs": true,
+      "format_on_save": "off"
+    }
+  },
+  "lsp": {
+    "gdscript": {
+      "binary": {
+        "arguments": ["127.0.0.1", "6005"]
+      }
+    }
+  }
+}

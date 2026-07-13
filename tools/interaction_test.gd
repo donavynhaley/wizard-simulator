@@ -56,21 +56,30 @@ func _run() -> void:
 	var wizard_skeleton := WizardModel.find_skeleton(wizard_model) if wizard_model else null
 	_check(wizard_skeleton != null
 		and wizard_skeleton.find_bone("DEF-HAT01") != -1
-		and wizard_skeleton.find_bone("DEF-SCARF01") != -1
-		and bool(wizard_model.get_meta(&"first_person_body_filtered", false)),
-		"first-person body retains its hat and beard while removing camera intersection geometry")
+		and FirstPersonWizardRig.CAMERA_INTERSECTION_BONES.has("DEF-HEAD")
+		and FirstPersonWizardRig.CAMERA_INTERSECTION_BONES.has("DEF-NECK"),
+		"first-person body retains its hat while removing camera intersection geometry")
 	var camera := player.get_node("Head/Camera3D") as Camera3D
 	_check(camera.near <= 0.03
-		and is_equal_approx(wizard_model.position.y, -0.97)
-		and is_equal_approx(wizard_model.position.z, 0.13),
+		and is_equal_approx(wizard_model.position.y, -0.88)
+		and is_equal_approx(wizard_model.position.z, 0.21),
 		"camera and body use the authored eye alignment with a tight near plane")
 	_check(grasp_animation_player != null
+		and grasp_animation_player.has_animation(&"idle")
 		and grasp_animation_player.has_animation(&"grab")
 		and grasp_animation_player.has_animation(&"hold")
 		and grasp_animation_player.has_animation(&"release"),
-		"viewmodel arm authors separate grab, hold, and release clips")
+		"viewmodel arm authors separate idle, grab, hold, and release clips")
 	if grasp_animation_player != null:
+		var idle_animation := grasp_animation_player.get_animation(&"idle")
 		var grab_animation := grasp_animation_player.get_animation(&"grab")
+		_check(grasp_animation_player.current_animation == &"idle"
+			and idle_animation.loop_mode == Animation.LOOP_LINEAR
+			and idle_animation.find_track(
+				NodePath("ArmModels/LeftArmPose:rotation"), Animation.TYPE_VALUE) != -1
+			and idle_animation.find_track(
+				NodePath("ArmModels/RightArmPose:rotation"), Animation.TYPE_VALUE) != -1,
+			"idle clip loops both visible hands in the lower frame")
 		_check(grab_animation.find_track(
 			NodePath("ArmModels/RightArmPose:position"), Animation.TYPE_VALUE) != -1
 			and grab_animation.find_track(
@@ -79,12 +88,11 @@ func _run() -> void:
 	_check(beard != null
 		and beard.animation_player.has_animation(&"lift")
 		and beard.animation_player.has_animation(&"lower")
+		and beard.get_node_or_null("BeardRoot/Segment01") is MeshInstance3D
+		and beard.get_node_or_null("BeardRoot/Joint02/Joint03/Joint04/Segment04") is MeshInstance3D
 		and beard.get_inventory_anchor().get_child_count() == 3,
-		"first-person rig includes a flexible beard with lift clips and inventory slots")
+		"first-person rig includes a visible flexible beard with lift clips and inventory slots")
 	if beard != null:
-		var beard_bone := wizard_skeleton.find_bone("DEF-SCARF01") if wizard_skeleton else -1
-		var beard_bone_rest := wizard_skeleton.get_bone_pose_rotation(beard_bone) \
-			if beard_bone != -1 else Quaternion.IDENTITY
 		_check(beard.visible
 			and beard.get_parent().get_parent() == body_rig
 			and not player.get_node("Head/Camera3D").is_ancestor_of(beard),
@@ -104,9 +112,8 @@ func _run() -> void:
 			await process_frame
 		_check(beard.lifted
 			and beard_root.position.distance_to(beard_rest_position) > 0.15
-			and left_arm_pose.position.distance_to(left_arm_rest_position) > 0.25
-			and (beard_bone == -1 or not wizard_skeleton.get_bone_pose_rotation(beard_bone).is_equal_approx(beard_bone_rest)),
-			"holding the beard inventory action lifts the model beard and the visible left hand")
+			and left_arm_pose.position.distance_to(left_arm_rest_position) > 0.25,
+			"holding the beard inventory action lifts the beard and the visible left hand")
 		beard_input.pressed = false
 		first_person_rig._unhandled_input(beard_input)
 		for frame in 70:
@@ -132,6 +139,14 @@ func _run() -> void:
 	_check(torch != null, "tower has the Torch of Eternal Flame")
 	_check(holder != null, "tower has an element holder")
 	_check(crafter != null, "tower has a spell crafter")
+	var scribe_surface := crafter.get_node_or_null("Scroll/ScribeInkSurface") as MeshInstance3D if crafter else null
+	_check(scribe_surface != null and is_equal_approx(scribe_surface.rotation_degrees.y, -90.0),
+		"crafting-table ink overlay turns clockwise across the imported scroll")
+	var scribe_surface_mesh := scribe_surface.mesh as PlaneMesh if scribe_surface else null
+	_check(scribe_surface_mesh != null and scribe_surface_mesh.size.is_equal_approx(Vector2(0.6, 0.3)),
+		"crafting-table ink overlay measures 600 mm wide by 300 mm tall")
+	_check(crafter._scribe_canvas.canvas_size_mm.is_equal_approx(Vector2(600.0, 300.0)),
+		"scribe measurements match the physical overlay dimensions")
 	_check(burner != null, "tower has a burner")
 	_check(flask != null, "tower has a flask")
 	_check(book != null, "tower has a readable book")
@@ -183,6 +198,8 @@ func _run() -> void:
 	_check(first_person_rig.get_grasp_amount() < 0.05, "placing an item relaxes the viewmodel hand")
 	_check(wrist_control.rotation.length() < 0.001,
 		"release clip restores the spatial hand controls to their reset pose")
+	_check(grasp_animation_player.current_animation == &"idle",
+		"release clip returns to the looping visible-hand idle")
 	_check(holder.placed_element is HeldWater, "holder keeps the placed water")
 	_check(holder.placed_element.get_parent() == holder, "water reparents to the holder")
 	_check(str(holder.focus_prompt(player, null)).begins_with("Take"),

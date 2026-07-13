@@ -72,7 +72,12 @@ check_beard_inventory={
 ]
 }
 
+[physics]
+
+3d/physics_engine="Jolt Physics"
+
 [rendering]
 
 textures/default_filters/use_nearest_mipmap_filter=true
+anti_aliasing/quality/msaa_3d=2
 anti_aliasing/quality/screen_space_aa=1

@@ -33,6 +33,11 @@ const DEFAULT_SPELL_SCROLL_SCENE := preload("res://scenes/artifacts/spell_scroll
 @export var ink_lift: float = 0.001
 ## Pixel size of the render texture that is projected onto the scroll surface.
 @export var scribe_texture_size := Vector2i(1024, 768)
+## Physical width and height of the projected ink plane in meters.
+## Leave either component at 0 to derive both dimensions from the scroll.
+@export var scribe_surface_size_m: Vector2 = Vector2.ZERO
+## Clockwise rotation of the projected ink plane around the scroll's surface normal.
+@export_range(-180.0, 180.0, 1.0) var scribe_surface_rotation_degrees: float = 0.0
 ## Draws the scroll's millimeter ruler/grid into the projected scribe texture.
 @export var show_scroll_measurements: bool = true
 ## Major ruler interval in millimeters.
@@ -502,11 +507,12 @@ func _create_scribe_surface() -> void:
 	add_child(_scribe_viewport)
 
 	var scroll_size := _scroll_size()
+	var surface_size := _scribe_surface_size()
 	_scribe_canvas = ScribeCanvas.new()
 	_scribe_canvas.name = "ScribeCanvas"
 	_scribe_canvas.initial_strokes = _duplicate_strokes(_saved_strokes)
 	_scribe_canvas.show_measurements = show_scroll_measurements
-	_scribe_canvas.canvas_size_mm = Vector2(scroll_size.x * 1000.0, scroll_size.z * 1000.0)
+	_scribe_canvas.canvas_size_mm = surface_size * 1000.0
 	_scribe_canvas.major_tick_mm = measurement_major_tick_mm
 	_scribe_canvas.minor_tick_mm = measurement_minor_tick_mm
 	_scribe_canvas.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -516,9 +522,10 @@ func _create_scribe_surface() -> void:
 	_scribe_surface = MeshInstance3D.new()
 	_scribe_surface.name = "ScribeInkSurface"
 	var mesh := PlaneMesh.new()
-	mesh.size = Vector2(scroll_size.x, scroll_size.z)
+	mesh.size = surface_size
 	_scribe_surface.mesh = mesh
 	_scribe_surface.position = Vector3(0.0, scroll_size.y * 0.5 + ink_lift, 0.0)
+	_scribe_surface.rotation_degrees.y = scribe_surface_rotation_degrees
 	_scribe_surface.material_override = _scribe_surface_material()
 	scroll.add_child(_scribe_surface)
 
@@ -592,12 +599,9 @@ func _update_scribe_props(delta: float) -> void:
 	if not _has_cursor_point:
 		return
 
-	var scroll_size := _scroll_size()
-	var top_y := scroll_size.y * 0.5 + ink_lift
-	var cursor_local := _scroll_point(_last_cursor_point, scroll_size, top_y)
-	var cursor_global := scroll.to_global(cursor_local)
+	var cursor_global := _scribe_surface.to_global(_scribe_surface_point(_last_cursor_point))
 	var prop_basis := _scribe_prop_basis()
-	var surface_normal := scroll.global_transform.basis.y.normalized()
+	var surface_normal := _scribe_surface.global_transform.basis.y.normalized()
 	var desired_origin := cursor_global + surface_normal * quill_hover_lift - prop_basis * quill_tip_local_offset
 	var weight := 1.0 if prop_follow_speed <= 0.0 else clampf(prop_follow_speed * delta, 0.0, 1.0)
 
@@ -617,21 +621,20 @@ func _scribe_prop_basis() -> Basis:
 	return prop_basis.orthonormalized()
 
 
-func _scroll_point(point: Vector2, scroll_size: Vector3, top_y: float) -> Vector3:
+func _scribe_surface_point(point: Vector2) -> Vector3:
+	var surface_size := _scribe_surface_size()
 	return Vector3(
-		(point.x - 0.5) * scroll_size.x,
-		top_y,
-		(point.y - 0.5) * scroll_size.z)
+		(point.x - 0.5) * surface_size.x,
+		0.0,
+		(point.y - 0.5) * surface_size.y)
 
 
 func _scroll_point_from_screen(screen_position: Vector2) -> Variant:
-	if _scribe_camera == null:
+	if _scribe_camera == null or _scribe_surface == null:
 		return null
 
-	var scroll_size := _scroll_size()
-	var top_y := scroll_size.y * 0.5 + ink_lift
-	var plane_point := scroll.to_global(Vector3(0.0, top_y, 0.0))
-	var plane_normal := scroll.global_transform.basis.y.normalized()
+	var plane_point := _scribe_surface.global_position
+	var plane_normal := _scribe_surface.global_transform.basis.y.normalized()
 	var plane := Plane(plane_normal, plane_point)
 	var ray_origin := _scribe_camera.project_ray_origin(screen_position)
 	var ray_direction := _scribe_camera.project_ray_normal(screen_position)
@@ -639,10 +642,11 @@ func _scroll_point_from_screen(screen_position: Vector2) -> Variant:
 	if intersection == null:
 		return null
 
-	var local_point := scroll.to_local(intersection)
-	var width := scroll_size.x 
-	var height := scroll_size.z
-	var point := Vector2(local_point.x / width + 0.5, local_point.z / height + 0.5)
+	var local_point := _scribe_surface.to_local(intersection)
+	var surface_size := _scribe_surface_size()
+	var point := Vector2(
+		local_point.x / surface_size.x + 0.5,
+		local_point.z / surface_size.y + 0.5)
 	if point.x < 0.0 or point.x > 1.0 or point.y < 0.0 or point.y > 1.0:
 		return null
 	return point
@@ -653,6 +657,13 @@ func _scroll_size() -> Vector3:
 	if size is Vector3:
 		return size as Vector3
 	return Vector3(0.36, 0.02, 0.29)
+
+
+func _scribe_surface_size() -> Vector2:
+	if scribe_surface_size_m.x > 0.0 and scribe_surface_size_m.y > 0.0:
+		return scribe_surface_size_m
+	var scroll_size := _scroll_size()
+	return Vector2(scroll_size.x, scroll_size.z)
 
 
 func _scribe_surface_material() -> StandardMaterial3D:

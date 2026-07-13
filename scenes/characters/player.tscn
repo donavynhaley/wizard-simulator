@@ -223,7 +223,7 @@ tracks/7/keys = {
 "times": PackedFloat32Array(0, 0.1, 0.29, 0.36),
 "transitions": PackedFloat32Array(1, 0.7, 1.3, 1),
 "update": 0,
-"values": [Vector3(0.2, -1.72, -0.86), Vector3(0.1478, -1.6694, -0.8876), Vector3(-0.09, -1.288, -1.088), Vector3(-0.09, -1.3, -1.08)]
+"values": [Vector3(0.2, -1.735, -0.86), Vector3(0.2, -1.735, -0.86), Vector3(0.2, -1.755, -0.86), Vector3(0.2, -1.76, -0.86)]
 }
 tracks/8/type = "value"
 tracks/8/imported = false
@@ -235,7 +235,7 @@ tracks/8/keys = {
 "times": PackedFloat32Array(0, 0.1, 0.29, 0.36),
 "transitions": PackedFloat32Array(1, 1, 1, 1),
 "update": 0,
-"values": [Vector3(-0.488692, 3.141593, 0), Vector3(-0.455182, 3.141593, 0.034907), Vector3(-0.619592, 3.141593, -0.017453), Vector3(-0.593412, 3.141593, 0)]
+"values": [Vector3(-0.488692, 3.141593, 0.1), Vector3(-0.5, 3.141593, 0.04), Vector3(-0.5, 3.141593, 0.64), Vector3(-0.5, 3.141593, 0.68)]
 }
 
 [sub_resource type="Animation" id="Animation_rig_hold"]
@@ -264,7 +264,7 @@ tracks/1/keys = {
 "times": PackedFloat32Array(0, 0.7, 1.45, 2.2),
 "transitions": PackedFloat32Array(1, 1, 1, 1),
 "update": 0,
-"values": [Vector3(-0.09, -1.3, -1.08), Vector3(-0.086, -1.288, -1.084), Vector3(-0.093, -1.304, -1.077), Vector3(-0.09, -1.3, -1.08)]
+"values": [Vector3(0.2, -1.76, -0.86), Vector3(0.206, -1.748, -0.866), Vector3(0.194, -1.772, -0.854), Vector3(0.2, -1.76, -0.86)]
 }
 tracks/2/type = "value"
 tracks/2/imported = false
@@ -276,7 +276,60 @@ tracks/2/keys = {
 "times": PackedFloat32Array(0, 0.7, 1.45, 2.2),
 "transitions": PackedFloat32Array(1, 1, 1, 1),
 "update": 0,
-"values": [Vector3(-0.593412, 3.141593, 0), Vector3(-0.607375, 3.150319, 0.020944), Vector3(-0.58294, 3.134611, -0.013963), Vector3(-0.593412, 3.141593, 0)]
+"values": [Vector3(-0.5, 3.141593, 0.68), Vector3(-0.515, 3.141593, 0.695), Vector3(-0.49, 3.141593, 0.665), Vector3(-0.5, 3.141593, 0.68)]
+}
+
+[sub_resource type="Animation" id="Animation_rig_idle"]
+resource_name = "idle"
+length = 3.2
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("ArmModels/LeftArmPose:position")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.9, 2.15, 3.2),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 0,
+"values": [Vector3(-0.2, -1.735, -0.86), Vector3(-0.194, -1.727, -0.864), Vector3(-0.205, -1.742, -0.856), Vector3(-0.2, -1.735, -0.86)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("ArmModels/LeftArmPose:rotation")
+tracks/1/interp = 2
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.9, 2.15, 3.2),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 0,
+"values": [Vector3(-0.488692, 3.141593, -0.1), Vector3(-0.48, 3.141593, -0.085), Vector3(-0.5, 3.141593, -0.12), Vector3(-0.488692, 3.141593, -0.1)]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("ArmModels/RightArmPose:position")
+tracks/2/interp = 2
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0, 1.15, 2.4, 3.2),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 0,
+"values": [Vector3(0.2, -1.735, -0.86), Vector3(0.205, -1.742, -0.856), Vector3(0.194, -1.727, -0.864), Vector3(0.2, -1.735, -0.86)]
+}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("ArmModels/RightArmPose:rotation")
+tracks/3/interp = 2
+tracks/3/loop_wrap = true
+tracks/3/keys = {
+"times": PackedFloat32Array(0, 1.15, 2.4, 3.2),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 0,
+"values": [Vector3(-0.488692, 3.141593, 0.1), Vector3(-0.5, 3.141593, 0.12), Vector3(-0.48, 3.141593, 0.085), Vector3(-0.488692, 3.141593, 0.1)]
 }
 
 [sub_resource type="Animation" id="Animation_rig_release"]
@@ -376,7 +429,7 @@ tracks/7/keys = {
 "times": PackedFloat32Array(0, 0.08, 0.28),
 "transitions": PackedFloat32Array(1, 1, 1),
 "update": 0,
-"values": [Vector3(-0.09, -1.3, -1.08), Vector3(-0.0262, -1.3804, -1.0416), Vector3(0.2, -1.72, -0.86)]
+"values": [Vector3(0.2, -1.76, -0.86), Vector3(0.2, -1.75, -0.86), Vector3(0.2, -1.735, -0.86)]
 }
 tracks/8/type = "value"
 tracks/8/imported = false
@@ -388,7 +441,7 @@ tracks/8/keys = {
 "times": PackedFloat32Array(0, 0.08, 0.28),
 "transitions": PackedFloat32Array(1, 1, 1),
 "update": 0,
-"values": [Vector3(-0.593412, 3.141593, 0), Vector3(-0.605978, 3.141593, 0.02618), Vector3(-0.488692, 3.141593, 0)]
+"values": [Vector3(-0.5, 3.141593, 0.68), Vector3(-0.52, 3.141593, 0.73), Vector3(-0.488692, 3.141593, 0.1)]
 }
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_rig"]
@@ -396,6 +449,7 @@ _data = {
 &"RESET": SubResource("Animation_rig_reset"),
 &"grab": SubResource("Animation_rig_grab"),
 &"hold": SubResource("Animation_rig_hold"),
+&"idle": SubResource("Animation_rig_idle"),
 &"release": SubResource("Animation_rig_release")
 }
 
@@ -412,7 +466,7 @@ tracks/0/keys = {
 "times": PackedFloat32Array(0),
 "transitions": PackedFloat32Array(1),
 "update": 0,
-"values": [Vector3(-0.2, -1.72, -0.86)]
+"values": [Vector3(-0.2, -1.735, -0.86)]
 }
 tracks/1/type = "value"
 tracks/1/imported = false
@@ -424,7 +478,7 @@ tracks/1/keys = {
 "times": PackedFloat32Array(0),
 "transitions": PackedFloat32Array(1),
 "update": 0,
-"values": [Vector3(-0.488692, 3.141593, 0)]
+"values": [Vector3(-0.488692, 3.141593, -0.1)]
 }
 
 [sub_resource type="Animation" id="Animation_beard_arm_lift"]
@@ -440,7 +494,7 @@ tracks/0/keys = {
 "times": PackedFloat32Array(0, 0.22, 0.55),
 "transitions": PackedFloat32Array(0.7, 0.85, 1),
 "update": 0,
-"values": [Vector3(-0.2, -1.72, -0.86), Vector3(-0.1, -1.42, -0.92), Vector3(0.06, -1.1, -0.98)]
+"values": [Vector3(-0.2, -1.735, -0.86), Vector3(-0.1, -1.42, -0.92), Vector3(0.06, -1.1, -0.98)]
 }
 tracks/1/type = "value"
 tracks/1/imported = false
@@ -452,7 +506,7 @@ tracks/1/keys = {
 "times": PackedFloat32Array(0, 0.22, 0.55),
 "transitions": PackedFloat32Array(0.7, 0.85, 1),
 "update": 0,
-"values": [Vector3(-0.488692, 3.141593, 0), Vector3(-0.59, 3.141593, 0.14), Vector3(-0.78, 3.141593, 0.32)]
+"values": [Vector3(-0.488692, 3.141593, -0.1), Vector3(-0.59, 3.141593, 0.14), Vector3(-0.78, 3.141593, 0.32)]
 }
 
 [sub_resource type="Animation" id="Animation_beard_arm_lower"]
@@ -468,7 +522,7 @@ tracks/0/keys = {
 "times": PackedFloat32Array(0, 0.42),
 "transitions": PackedFloat32Array(0.75, 1),
 "update": 0,
-"values": [Vector3(0.06, -1.1, -0.98), Vector3(-0.2, -1.72, -0.86)]
+"values": [Vector3(0.06, -1.1, -0.98), Vector3(-0.2, -1.735, -0.86)]
 }
 tracks/1/type = "value"
 tracks/1/imported = false
@@ -480,7 +534,7 @@ tracks/1/keys = {
 "times": PackedFloat32Array(0, 0.42),
 "transitions": PackedFloat32Array(0.75, 1),
 "update": 0,
-"values": [Vector3(-0.78, 3.141593, 0.32), Vector3(-0.488692, 3.141593, 0)]
+"values": [Vector3(-0.78, 3.141593, 0.32), Vector3(-0.488692, 3.141593, -0.1)]
 }
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_beard_arm"]
@@ -489,6 +543,59 @@ _data = {
 &"lift": SubResource("Animation_beard_arm_lift"),
 &"lower": SubResource("Animation_beard_arm_lower")
 }
+
+[sub_resource type="Animation" id="Animation_full_body_reset"]
+resource_name = "RESET"
+length = 0.001
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_full_body"]
+_data = {
+&"RESET": SubResource("Animation_full_body_reset")
+}
+
+[sub_resource type="StandardMaterial3D" id="Material_beard_light"]
+albedo_color = Color(0.82, 0.82, 0.78, 1)
+roughness = 0.92
+
+[sub_resource type="CylinderMesh" id="Cylinder_beard_01"]
+material = SubResource("Material_beard_light")
+top_radius = 0.075
+bottom_radius = 0.065
+height = 0.09
+radial_segments = 5
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Cylinder_beard_02"]
+material = SubResource("Material_beard_light")
+top_radius = 0.065
+bottom_radius = 0.052
+height = 0.085
+radial_segments = 5
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="Material_beard_mid"]
+albedo_color = Color(0.67, 0.68, 0.66, 1)
+roughness = 0.94
+
+[sub_resource type="CylinderMesh" id="Cylinder_beard_03"]
+material = SubResource("Material_beard_mid")
+top_radius = 0.052
+bottom_radius = 0.035
+height = 0.08
+radial_segments = 5
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="Material_beard_shadow"]
+albedo_color = Color(0.49, 0.5, 0.49, 1)
+roughness = 0.96
+
+[sub_resource type="CylinderMesh" id="Cylinder_beard_04"]
+material = SubResource("Material_beard_shadow")
+top_radius = 0.035
+bottom_radius = 0.008
+height = 0.075
+radial_segments = 5
+rings = 1
 
 [sub_resource type="Animation" id="Animation_beard_reset"]
 resource_name = "RESET"
@@ -503,7 +610,7 @@ tracks/0/keys = {
 "times": PackedFloat32Array(0),
 "transitions": PackedFloat32Array(1),
 "update": 0,
-"values": [Vector3(0, 0.38, -0.1)]
+"values": [Vector3(0, 0.56, -0.18)]
 }
 tracks/1/type = "value"
 tracks/1/imported = false
@@ -567,7 +674,7 @@ tracks/0/keys = {
 "times": PackedFloat32Array(0, 0.22, 0.55),
 "transitions": PackedFloat32Array(0.7, 0.85, 1),
 "update": 0,
-"values": [Vector3(0, 0.38, -0.1), Vector3(0.025, 0.47, -0.09), Vector3(0.04, 0.53, -0.08)]
+"values": [Vector3(0, 0.56, -0.18), Vector3(0.025, 0.65, -0.15), Vector3(0.04, 0.71, -0.12)]
 }
 tracks/1/type = "value"
 tracks/1/imported = false
@@ -631,7 +738,7 @@ tracks/0/keys = {
 "times": PackedFloat32Array(0, 0.42),
 "transitions": PackedFloat32Array(0.75, 1),
 "update": 0,
-"values": [Vector3(0.04, 0.53, -0.08), Vector3(0, 0.38, -0.1)]
+"values": [Vector3(0.04, 0.71, -0.12), Vector3(0, 0.56, -0.18)]
 }
 tracks/1/type = "value"
 tracks/1/imported = false
@@ -725,7 +832,7 @@ script = ExtResource("8_rig_script")
 [node name="ArmModels" type="Node3D" parent="Head/Camera3D/Viewmodel/FirstPersonWizardRig" unique_id=1471801280]
 
 [node name="LeftArmPose" type="Marker3D" parent="Head/Camera3D/Viewmodel/FirstPersonWizardRig/ArmModels" unique_id=871968928]
-transform = Transform3D(-1, 1.529732e-07, -2.8770089e-07, 0, 0.8829477, 0.4694714, 3.2584137e-07, 0.4694714, -0.8829477, -0.2, -1.72, -0.86)
+transform = Transform3D(-0.9950042, -0.09983327, -2.8770089e-07, -0.088147685, 0.87853664, 0.4694714, -0.04686861, 0.46712604, -0.8829477, -0.2, -1.735, -0.86)
 gizmo_extents = 0.08
 
 [node name="RightArmPose" type="Marker3D" parent="Head/Camera3D/Viewmodel/FirstPersonWizardRig/ArmModels" unique_id=1701205945]
@@ -775,16 +882,36 @@ script = ExtResource("4")
 script = ExtResource("5")
 
 [node name="WizardModel" parent="BodyRig" unique_id=1031650659 instance=ExtResource("7_model")]
-transform = Transform3D(-1, 0, -3.2584137e-07, 0, 1, 0, 3.2584137e-07, 0, -1, 0, -0.97, 0.13)
-metadata/first_person_body_filtered = true
+transform = Transform3D(-1, 0, -3.2584137e-07, 0, 1, 0, 3.2584137e-07, 0, -1, 0, -0.88, 0.21)
+
+[node name="Skeleton3D" parent="BodyRig/WizardModel/RootNode/Armature" parent_id_path=PackedInt32Array(1031650659, 1248369151) index="0" unique_id=527789645]
+bones/6/position = Vector3(6.120872e-09, -0.006156539, 0.008557604)
+bones/6/rotation = Quaternion(2.5468916e-07, 0.6506707, 0.7593601, -2.6604636e-07)
+bones/6/scale = Vector3(1, 1.0000001, 1.0000001)
+bones/7/position = Vector3(0.0044502784, -0.0051687327, 0.005761585)
+bones/7/rotation = Quaternion(0.3052519, 0.51550454, 0.7720364, -0.21221744)
+bones/7/scale = Vector3(1, 1, 0.99999994)
+
+[node name="Main_Mesh" parent="BodyRig/WizardModel/RootNode/Armature/Skeleton3D" index="0" unique_id=146200508]
+cast_shadow = 0
+
+[node name="FullBodyAnimationPlayer" type="AnimationPlayer" parent="BodyRig" unique_id=1655490929]
+libraries/ = SubResource("AnimationLibrary_full_body")
 
 [node name="BeardAnchor" type="Node3D" parent="BodyRig" unique_id=1753739222]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.22312102)
 
 [node name="Beard" type="Node3D" parent="BodyRig/BeardAnchor" unique_id=526079617]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, -0.5252302, 0.18284702)
 script = ExtResource("9_beard_script")
 
 [node name="BeardRoot" type="Node3D" parent="BodyRig/BeardAnchor/Beard" unique_id=2038791063]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.38, -0.1)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.56, -0.18)
+
+[node name="Segment01" type="MeshInstance3D" parent="BodyRig/BeardAnchor/Beard/BeardRoot" unique_id=1039819589]
+transform = Transform3D(1.25, 0, 0, 0, 1, 0, 0, 0, 0.28, 0, -0.045, 0)
+cast_shadow = 0
+mesh = SubResource("Cylinder_beard_01")
 
 [node name="BeardInventoryAnchor" type="Marker3D" parent="BodyRig/BeardAnchor/Beard/BeardRoot" unique_id=1863148522]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.13, -0.12)
@@ -802,13 +929,30 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.11, 0, 0)
 gizmo_extents = 0.035
 
 [node name="Joint02" type="Node3D" parent="BodyRig/BeardAnchor/Beard/BeardRoot" unique_id=133412061]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.12, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.09, 0)
+
+[node name="Segment02" type="MeshInstance3D" parent="BodyRig/BeardAnchor/Beard/BeardRoot/Joint02" unique_id=84664429]
+transform = Transform3D(1.25, 0, 0, 0, 1, 0, 0, 0, 0.28, 0, -0.0425, 0)
+cast_shadow = 0
+mesh = SubResource("Cylinder_beard_02")
 
 [node name="Joint03" type="Node3D" parent="BodyRig/BeardAnchor/Beard/BeardRoot/Joint02" unique_id=37841904]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.115, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.085, 0)
+
+[node name="Segment03" type="MeshInstance3D" parent="BodyRig/BeardAnchor/Beard/BeardRoot/Joint02/Joint03" unique_id=1587238416]
+transform = Transform3D(1.25, 0, 0, 0, 1, 0, 0, 0, 0.28, 0, -0.04, 0)
+cast_shadow = 0
+mesh = SubResource("Cylinder_beard_03")
 
 [node name="Joint04" type="Node3D" parent="BodyRig/BeardAnchor/Beard/BeardRoot/Joint02/Joint03" unique_id=137608624]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.11, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.08, 0)
+
+[node name="Segment04" type="MeshInstance3D" parent="BodyRig/BeardAnchor/Beard/BeardRoot/Joint02/Joint03/Joint04" unique_id=1791035873]
+transform = Transform3D(1.25, 0, 0, 0, 1, 0, 0, 0, 0.28, 0, -0.0375, 0)
+cast_shadow = 0
+mesh = SubResource("Cylinder_beard_04")
 
 [node name="BeardAnimationPlayer" type="AnimationPlayer" parent="BodyRig/BeardAnchor/Beard" unique_id=775922921]
 libraries/ = SubResource("AnimationLibrary_beard")
+
+[editable path="BodyRig/WizardModel"]

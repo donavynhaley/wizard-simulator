@@ -5,6 +5,7 @@ extends SceneTree
 ##   godot --path . -s tools/capture_magical_grab.gd
 
 const WATER_OUT := "/tmp/magical_grab_water.png"
+const IDLE_OUT := "/tmp/magical_grab_arm_idle.png"
 const GRAB_OUT := "/tmp/magical_grab_arm_grab.png"
 const HAND_POSE_OUT := "/tmp/magical_grab_hand_pose.png"
 const RELEASE_OUT := "/tmp/magical_grab_arm_release.png"
@@ -33,10 +34,19 @@ func _run() -> void:
 		push_error("Magical grab capture needs the tower player, fountain, torch, and book.")
 		quit(1)
 		return
+	await _settle(24)
+	var error := _save_viewport(IDLE_OUT)
+	if error != OK:
+		quit(error)
+		return
+	if OS.get_cmdline_user_args().has("--idle-only"):
+		print("saved=", IDLE_OUT)
+		quit()
+		return
 
 	fountain.call("interact", player, null)
 	await _settle(18)
-	var error := _save_viewport(GRAB_OUT)
+	error = _save_viewport(GRAB_OUT)
 	if error != OK:
 		quit(error)
 		return
@@ -78,7 +88,7 @@ func _run() -> void:
 	book.cast_from(player, player.get_viewport().get_camera_3d().global_transform)
 	await _settle(30)
 	error = _save_viewport(BOOK_READING_OUT)
-	print("saved=", GRAB_OUT, ", ", WATER_OUT, ", ", HAND_POSE_OUT, ", ", RELEASE_OUT, ", ", FIRE_OUT, ", ", BOOK_OUT, ", and ", BOOK_READING_OUT)
+	print("saved=", IDLE_OUT, ", ", GRAB_OUT, ", ", WATER_OUT, ", ", HAND_POSE_OUT, ", ", RELEASE_OUT, ", ", FIRE_OUT, ", ", BOOK_OUT, ", and ", BOOK_READING_OUT)
 	quit(error)
 
 
