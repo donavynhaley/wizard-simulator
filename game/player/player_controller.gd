@@ -53,6 +53,7 @@ var _stair_step_timer := 0.0
 var _stair_step_strength := 0.0
 var _head_rest_position := Vector3.ZERO
 var _head_step_offset := 0.0
+var _control_enabled := true
 
 
 func _ready() -> void:
@@ -66,6 +67,7 @@ func _ready() -> void:
 ## body idle motion. Stations that take over the camera (like the spell
 ## crafter) call this instead of poking the player's internals.
 func set_control_enabled(enabled: bool) -> void:
+	_control_enabled = enabled
 	set_physics_process(enabled)
 	set_process_input(enabled)
 	set_process_unhandled_input(enabled)
@@ -81,6 +83,8 @@ func _capture_mouse() -> void:
 
 
 func _notification(what: int) -> void:
+	if not _control_enabled:
+		return
 	match what:
 		NOTIFICATION_WM_MOUSE_ENTER:
 			if Input.mouse_mode != Input.MOUSE_MODE_VISIBLE:

@@ -7,6 +7,8 @@
 [ext_resource type="Script" uid="uid://5yuur3pjr7pd" path="res://game/scribing/station/rune_scribing_station.gd" id="5_70f7w"]
 [ext_resource type="PackedScene" uid="uid://dffhnmtk06rxe" path="res://assets/models/scroll_open.glb" id="6_05xbg"]
 [ext_resource type="PackedScene" uid="uid://dbmb51mgcsuq4" path="res://assets/third_party/seal/seal_animated_low_poly.glb" id="6_dcnth"]
+[ext_resource type="PackedScene" uid="uid://b01ikiyg5ddc1" path="res://assets/models/inkwell.glb" id="7_dmowl"]
+[ext_resource type="PackedScene" uid="uid://bjyvblqk8ej33" path="res://assets/models/quill.glb" id="7_quill"]
 [ext_resource type="Script" uid="uid://ds0dh8jivtsyr" path="res://game/scribing/station/open_book_placement.gd" id="9_1jmjg"]
 
 [sub_resource type="CylinderShape3D" id="CylinderShape3D_0jym3"]
@@ -80,10 +82,10 @@ transform = Transform3D(1.3113416e-07, -1, 4.371139e-08, -3.821371e-15, 4.371139
 [node name="BookCameraPose" type="Marker3D" parent="RuneScribingStation" unique_id=483888162]
 transform = Transform3D(0, -0.731354, 0.681998, 0, 0.681998, 0.731354, -1, 0, 0, 0.173073, 1.4166055, -0.022771485)
 
-[node name="InkWell" type="CSGCylinder3D" parent="RuneScribingStation" unique_id=826901926]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0835723, 1.0417287, -0.3371022)
-radius = 0.05
-height = 0.1
+[node name="InkWell" type="Node3D" parent="RuneScribingStation" unique_id=624443991]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0835723, 1.0129719, -0.3371022)
+
+[node name="inkwell" parent="RuneScribingStation/InkWell" unique_id=308087522 instance=ExtResource("7_dmowl")]
 
 [node name="StaticBody3D" type="StaticBody3D" parent="RuneScribingStation/InkWell" unique_id=1931572131]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.406273, -1.0605408, -0.4)
@@ -93,15 +95,21 @@ collision_layer = 2
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.41149908, 1.0664347, 0.39423445)
 shape = SubResource("CylinderShape3D_0jym3")
 
-[node name="Quill" type="CSGCylinder3D" parent="RuneScribingStation" unique_id=1867312045]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.084506005, 1.121171, -0.34022743)
-radius = 0.008
-height = 0.065
+[node name="Quill" type="Node3D" parent="RuneScribingStation" unique_id=1867312045]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.084506005, 1.0909141, -0.34022743)
 
-[node name="CSGTorus3D" type="CSGTorus3D" parent="RuneScribingStation/Quill" unique_id=98357361]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.007462144, 0)
-inner_radius = 0.001
-outer_radius = 0.022
+[node name="ModelFacing" type="Node3D" parent="RuneScribingStation/Quill" unique_id=1017554240]
+
+[node name="AxisConversion" type="Node3D" parent="RuneScribingStation/Quill/ModelFacing" unique_id=2030876244]
+transform = Transform3D(0.04, 0, 0, 0, -1.7484555e-09, -0.04, 0, 0.04, -1.7484555e-09, 0, 0, 0)
+
+[node name="Model" parent="RuneScribingStation/Quill/ModelFacing/AxisConversion" unique_id=1795308038 instance=ExtResource("7_quill")]
+
+[node name="WritingTip" type="Marker3D" parent="RuneScribingStation/Quill" unique_id=1195319435]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.01, 0)
+
+[node name="QuillScribePose" type="Marker3D" parent="RuneScribingStation" unique_id=1928006071]
+transform = Transform3D(0.809017, 0.47552827, -0.34549153, 0, 0.5877853, 0.809017, 0.58778524, -0.65450853, 0.4755283, -0.3100081, 1.0956728, -0.12188874)
 
 [node name="StaticBody3D" type="StaticBody3D" parent="RuneScribingStation" unique_id=88514684]
 collision_layer = 2

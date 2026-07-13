@@ -343,34 +343,70 @@ func _run() -> void:
 
 	_check(str(crafter.focus_prompt(player, null)) == crafter.prompt_text,
 		"crafter prompts to begin scribing with empty hands")
+	var mouse_mode_before_scribing := Input.mouse_mode
 	crafter.interact(player, null)
 	_check(crafter._active, "crafter enters scribing mode")
 	_check(not player.is_physics_processing(), "scribing freezes the player")
+	_check(not player._control_enabled,
+		"scribing prevents player focus events from recapturing the mouse")
 	var interactor := player.interactor
 	_check(not interactor.enabled, "scribing suspends the interactor")
 
-	# The rigged scribe arm follows the quill with IK while drawing.
-	var arm := crafter.get_node_or_null("ScribeArm") as ScribeArm
-	_check(arm != null, "crafter has a rigged scribe arm")
-	_check(arm.visible, "scribe arm shows while scribing")
+	# The authored quill replaces the system cursor while drawing.
+	_check(crafter.get_node_or_null("ScribeArm") == null,
+		"scribing no longer depends on a hand or arm rig")
+	if DisplayServer.get_name() == "headless":
+		print("[SKIP] system cursor hiding requires a graphical display")
+	else:
+		_check(Input.mouse_mode == Input.MOUSE_MODE_HIDDEN,
+			"scribing hides the system cursor so the quill becomes the pointer")
 	var quill := crafter.get_node("Quill") as Node3D
+	var quill_model := quill.get_node_or_null("ModelFacing/AxisConversion/Model") as Node3D
+	var quill_tip := quill.get_node_or_null("WritingTip") as Marker3D
+	var quill_scribe_pose := crafter.get_node_or_null("QuillScribePose") as Marker3D
+	_check(quill_model != null
+		and quill_model.scene_file_path == "res://assets/models/quill.glb",
+		"scribing uses the authored quill model instead of placeholder geometry")
+	_check(quill_tip != null, "authored quill tip drives mouse alignment")
+	_check(quill_scribe_pose != null
+		and is_equal_approx(quill_scribe_pose.rotation_degrees.y, -36.0),
+		"scene-authored quill pose points the nib toward the left side of the scroll")
 	for i in 5:
 		await process_frame
-	var grip: Vector3 = quill.global_transform * crafter.hand_grip_offset
-	var reach_error: float = arm.hand_position().distance_to(arm._target.global_position)
-	_check(reach_error < 0.02, "scribe hand reaches its IK target (err=%.4f m)" % reach_error)
-	_check(arm._target.global_position.distance_to(grip) < 0.12,
-		"IK target stays at the quill grip (wrist set-back included)")
+	var cursor_global: Vector3 = crafter._scribe_surface.to_global(
+		crafter._scribe_surface_point(crafter._last_cursor_point))
+	var quill_surface_normal: Vector3 = (
+		crafter._scribe_surface.global_transform.basis.y.normalized())
+	_check(quill_tip.global_position.distance_to(
+		cursor_global + quill_surface_normal * crafter.quill_hover_lift) < 0.002,
+		"authored quill nib tracks the scroll cursor")
 
-	crafter._last_cursor_point = Vector2(0.35, 0.35)
-	for i in 5:
-		await process_frame
-	var moved_grip: Vector3 = quill.global_transform * crafter.hand_grip_offset
-	_check(moved_grip.distance_to(grip) > 0.05, "quill moves with the cursor")
-	var follow_error: float = arm.hand_position().distance_to(arm._target.global_position)
-	_check(follow_error < 0.02, "scribe hand follows the quill (err=%.4f m)" % follow_error)
-	_check(arm._target.global_position.distance_to(moved_grip) < 0.12,
-		"IK target tracks the moved quill")
+	# Disable mouse polling so it cannot overwrite the corner samples.
+	crafter.set_process(false)
+	var original_tip_position := quill_tip.global_position
+	crafter._set_cursor_point(Vector2(0.35, 0.35))
+	crafter._update_scribe_props(1.0)
+	_check(quill_tip.global_position.distance_to(original_tip_position) > 0.05,
+		"quill moves directly with the cursor")
+	var max_corner_tip_error := 0.0
+	for corner: Vector2 in [
+		Vector2(0.0, 0.0),
+		Vector2(1.0, 0.0),
+		Vector2(0.0, 1.0),
+		Vector2(1.0, 1.0),
+	]:
+		crafter._set_cursor_point(corner)
+		crafter._update_scribe_props(1.0)
+		var surface_point: Vector3 = crafter._scribe_surface.to_global(
+			crafter._scribe_surface_point(corner))
+		var expected_tip: Vector3 = (
+			surface_point + quill_surface_normal * crafter.quill_hover_lift)
+		max_corner_tip_error = maxf(
+			max_corner_tip_error,
+			quill_tip.global_position.distance_to(expected_tip))
+	crafter.set_process(true)
+	_check(max_corner_tip_error < 0.002,
+		"quill nib reaches every scroll corner (max err=%.4f m)" % max_corner_tip_error)
 
 	var recognizer := RuneRecognizerResource.new()
 	recognizer.rune_definitions = [
@@ -400,7 +436,10 @@ func _run() -> void:
 	crafter.scribing_completed.connect(_on_scribing_completed, CONNECT_ONE_SHOT)
 	crafter._end_scribing(true, 2)
 	_check(not crafter._active, "sealing leaves scribing mode")
+	_check(Input.mouse_mode == mouse_mode_before_scribing,
+		"leaving scribing restores the previous system cursor mode")
 	_check(player.is_physics_processing(), "sealing unfreezes the player")
+	_check(player._control_enabled, "sealing restores player mouse capture handling")
 	_check(interactor.enabled, "sealing reactivates the interactor")
 	_check(crafter._sealed, "sealing preserves the finished physical scroll")
 	_check(crafter._scribe_canvas.has_ink(), "sealing preserves authored rune ink")

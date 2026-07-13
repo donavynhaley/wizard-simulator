@@ -2,7 +2,7 @@ class_name WizardModel
 
 ## Shared helpers for the imported wizard character model: skeleton lookup
 ## and filtering the full-body mesh down to a bone subset. Player-owned models
-## are authored directly in player.tscn; ScribeArm uses this factory.
+## are authored directly in the player body scene.
 
 const SCENE := preload("res://assets/third_party/polypizza/Wizardus Maximus.glb")
 

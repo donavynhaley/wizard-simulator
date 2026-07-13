@@ -63,34 +63,22 @@ const ScribingSessionState := preload("res://game/scribing/session/scribing_sess
 @export_range(0.05, 1.0, 0.01) var camera_transition_time: float = 0.28
 
 @export_group("Scribe Props")
-## Existing quill node moved during scribing. Leave as Quill for the current crafting table scene.
+## Root of the authored quill prop that moves during scribing.
 @export_node_path("Node3D") var quill_path: NodePath = ^"Quill"
+## Marker authored at the nib of the imported quill model.
+@export_node_path("Marker3D") var quill_tip_path: NodePath = ^"Quill/WritingTip"
+## Scene-authored orientation used while the quill follows the scroll cursor.
+@export_node_path("Marker3D") var quill_scribe_pose_path: NodePath = ^"QuillScribePose"
 ## 0 locks directly to the mouse. Higher values add catch-up smoothing.
 @export var prop_follow_speed: float = 0.0
 ## How far above the scroll surface the quill body rides while the tip follows the cursor.
 @export var quill_hover_lift: float = 0.002
-## Local offset from the quill origin to the writing tip.
-@export var quill_tip_local_offset := Vector3(0.0, -0.038, 0.0)
-## How much the quill leans forward over the scroll.
-@export var quill_pitch_degrees: float = -54.0
-## Rotates the quill around the scroll surface normal.
-@export var quill_yaw_degrees: float = -36.0
-
-@export_group("Scribe Arm")
-## Shoulder anchor of the drawing arm, in station space. The ScribeArm
-## node's origin is the shoulder joint; the whole scroll must stay within
-## roughly 0.5 m (the wizard's arm reach) of this point.
-@export var arm_shoulder_position := Vector3(0.38, 1.18, -0.38)
-## Orientation of the arm anchor. Tune with the shoulder position for composition.
-@export var arm_rotation_degrees := Vector3.ZERO
-## Where the hand grips, relative to the quill origin (quill space).
-@export var hand_grip_offset := Vector3(0.0, 0.005, 0.0)
-## How far the wrist sits back from the grip toward the shoulder, so the
-## fingers (not the wrist joint) land on the quill.
-@export var wrist_back_distance: float = 0.06
 
 @onready var scroll: Node3D = $Scroll
 @onready var quill: Node3D = get_node_or_null(quill_path) as Node3D
+@onready var quill_tip: Marker3D = get_node_or_null(quill_tip_path) as Marker3D
+@onready var quill_scribe_pose: Marker3D = (
+	get_node_or_null(quill_scribe_pose_path) as Marker3D)
 
 var _active := false
 var _sealed := false
@@ -108,7 +96,6 @@ var _session: ScribingSession = ScribingSessionState.new()
 var _reference_book: Book
 var _seal_hold_elapsed := 0.0
 var _previous_mouse_mode := Input.MOUSE_MODE_VISIBLE
-var _scribe_arm: ScribeArm
 var _reference_book_placement: OpenBookPlacement
 var _quill_rest_transform := Transform3D.IDENTITY
 var _last_cursor_point := Vector2(0.5, 0.5)
@@ -126,8 +113,12 @@ func _ready() -> void:
 	if quill:
 		_quill_rest_transform = quill.transform
 	_create_scribe_surface()
-	_create_scribe_arm()
-	_ensure_quill_tip()
+	if quill == null:
+		push_error("RuneScribingStation requires an authored quill at quill_path.")
+	elif quill_tip == null:
+		push_error("RuneScribingStation requires a WritingTip marker on its quill.")
+	if quill_scribe_pose == null:
+		push_error("RuneScribingStation requires a scene-authored QuillScribePose marker.")
 
 
 func interact(player: WizardPlayer, _collider: Object) -> void:
@@ -321,13 +312,11 @@ func _begin_scribing(player: WizardPlayer) -> void:
 		_active = false
 		return
 	player.set_control_enabled(false)
-	if _scribe_arm:
-		_scribe_arm.set_active(true)
 	_create_scribe_surface()
 	_update_scribe_props(1.0)
 	if _reference_book != null:
 		_reference_book.set_reference_page_turn_enabled(true)
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
 	scribing_started.emit()
 
 
@@ -349,8 +338,6 @@ func _end_scribing(completed: bool, stroke_count: int = 0) -> void:
 
 	if _player and is_instance_valid(_player):
 		_player.set_control_enabled(true)
-		if _scribe_arm:
-			_scribe_arm.set_active(false)
 		if quill:
 			quill.transform = _quill_rest_transform
 		if completed:
@@ -468,61 +455,24 @@ func _result_rune_name(result: Resource) -> String:
 	return "rune"
 
 
-func _create_scribe_arm() -> void:
-	if _scribe_arm:
-		return
-	_scribe_arm = ScribeArm.new()
-	_scribe_arm.name = "ScribeArm"
-	_scribe_arm.position = arm_shoulder_position
-	_scribe_arm.rotation_degrees = arm_rotation_degrees
-	add_child(_scribe_arm)
-
-
-func _ensure_quill_tip() -> void:
-	if quill == null or quill.get_node_or_null("WritingTip") != null:
-		return
-
-	var tip_material := StandardMaterial3D.new()
-	tip_material.albedo_color = Color(0.04, 0.025, 0.035)
-	tip_material.roughness = 0.38
-
-	var tip_mesh := CylinderMesh.new()
-	tip_mesh.bottom_radius = 0.009
-	tip_mesh.top_radius = 0.0
-	tip_mesh.height = 0.03
-	var tip := MeshInstance3D.new()
-	tip.name = "WritingTip"
-	tip.mesh = tip_mesh
-	tip.material_override = tip_material
-	tip.position = quill_tip_local_offset
-	tip.rotation_degrees = Vector3(180.0, 0.0, 0.0)
-	quill.add_child(tip)
-
-
 func _update_scribe_props(delta: float) -> void:
-	if not _has_cursor_point:
+	if not _has_cursor_point or quill == null or quill_tip == null \
+			or quill_scribe_pose == null:
 		return
 
 	var cursor_global := _scribe_surface.to_global(_scribe_surface_point(_last_cursor_point))
 	var prop_basis := _scribe_prop_basis()
 	var surface_normal := _scribe_surface.global_transform.basis.y.normalized()
-	var desired_origin := cursor_global + surface_normal * quill_hover_lift - prop_basis * quill_tip_local_offset
+	var tip_local := quill.to_local(quill_tip.global_position)
+	var desired_origin := cursor_global + surface_normal * quill_hover_lift - prop_basis * tip_local
 	var weight := 1.0 if prop_follow_speed <= 0.0 else clampf(prop_follow_speed * delta, 0.0, 1.0)
 
-	if quill:
-		var current_origin := quill.global_position
-		quill.global_transform = Transform3D(prop_basis, current_origin.lerp(desired_origin, weight))
-		if _scribe_arm:
-			var grip: Vector3 = quill.global_transform * hand_grip_offset
-			var toward_shoulder := (_scribe_arm.global_position - grip).normalized()
-			_scribe_arm.track(grip + toward_shoulder * wrist_back_distance)
+	var current_origin := quill.global_position
+	quill.global_transform = Transform3D(prop_basis, current_origin.lerp(desired_origin, weight))
 
 
 func _scribe_prop_basis() -> Basis:
-	var prop_basis := scroll.global_transform.basis.orthonormalized()
-	prop_basis = prop_basis.rotated(scroll.global_transform.basis.y.normalized(), deg_to_rad(quill_yaw_degrees))
-	prop_basis = prop_basis.rotated(prop_basis.x.normalized(), deg_to_rad(quill_pitch_degrees))
-	return prop_basis.orthonormalized()
+	return quill_scribe_pose.global_transform.basis.orthonormalized()
 
 
 func _scribe_surface_point(point: Vector2) -> Vector3:
@@ -578,4 +528,3 @@ func _scribe_surface_material() -> StandardMaterial3D:
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	return material
-
