@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="RuneTemplate" format=3]
+
+[ext_resource type="Script" path="res://game/scribing/runes/rune_template.gd" id="1_03auk"]
+
+[resource]
+script = ExtResource("1_03auk")
+rune_id = "font"
+display_name = "Font"
+recorded_at_unix_time = 1783752956
+canvas_size_mm = Vector2(600, 300)
+strokes = Array[PackedVector2Array]([PackedVector2Array(0.08305785, 0.33370537, 0.08305785, 0.66629463), PackedVector2Array(0.08264463, 0.6629464, 0.25, 0.6629464), PackedVector2Array(0.24958678, 0.66852677, 0.24958678, 0.33482143), PackedVector2Array(0.16652893, 0.16852678, 0.16652893, 0.32924107), PackedVector2Array(0.24793388, 0.16517857, 0.21652892, 0.26339287), PackedVector2Array(0.08305785, 0.16294643, 0.11694215, 0.26339287)])

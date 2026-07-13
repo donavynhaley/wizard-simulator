@@ -1,0 +1,37 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/player/player_controller.gd" id="1"]
+[ext_resource type="Script" path="res://game/player/interaction/player_interactor.gd" id="2"]
+[ext_resource type="PackedScene" path="res://game/player/viewmodel/first_person_viewmodel.tscn" id="3_anr75"]
+[ext_resource type="PackedScene" path="res://game/player/hud/wizard_hud.tscn" id="4_epvkq"]
+[ext_resource type="PackedScene" path="res://game/player/body/wizard_body.tscn" id="6_5ghna"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
+radius = 0.35
+height = 1.7
+
+[node name="Player" type="CharacterBody3D" unique_id=1184757697 groups=["player"]]
+floor_block_on_wall = false
+script = ExtResource("1")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=541500586]
+shape = SubResource("CapsuleShape3D_player")
+
+[node name="Head" type="Node3D" parent="." unique_id=1427366907]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.72, 0)
+
+[node name="Camera3D" type="Camera3D" parent="Head" unique_id=45727693]
+current = true
+fov = 78.0
+near = 0.03
+
+[node name="Interactor" type="RayCast3D" parent="Head/Camera3D" unique_id=614184027]
+unique_name_in_owner = true
+script = ExtResource("2")
+
+[node name="Viewmodel" type="Node3D" parent="Head/Camera3D" unique_id=378493421 instance=ExtResource("3_anr75")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, -0.55)
+
+[node name="WizardHud" type="CanvasLayer" parent="." unique_id=506628545 instance=ExtResource("4_epvkq")]
+
+[node name="BodyRig" type="Node3D" parent="." unique_id=636929919 instance=ExtResource("6_5ghna")]

@@ -1,0 +1,178 @@
+[gd_scene format=3 uid="uid://ctdxvb3i28u5n"]
+
+[ext_resource type="Script" uid="uid://c8rmpbxw2ophq" path="res://tools/authoring/rune_template_recorder.gd" id="1_recorder"]
+[ext_resource type="Script" uid="uid://coguqppqiyr05" path="res://game/scribing/station/scribe_canvas.gd" id="2_canvas"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_root"]
+bg_color = Color(0.055, 0.047, 0.058, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.12, 0.1, 0.12, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.34, 0.29, 0.33, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_scroll"]
+bg_color = Color(0.78, 0.69, 0.52, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.34, 0.23, 0.14, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="RuneTemplateRecorder" type="Control" unique_id=1296763989]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_recorder")
+
+[node name="Background" type="Panel" parent="." unique_id=617274787]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_root")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1885462012]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 18.0
+offset_top = 18.0
+offset_right = -18.0
+offset_bottom = -18.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Layout" type="VBoxContainer" parent="MarginContainer" unique_id=1901169554]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Header" type="HBoxContainer" parent="MarginContainer/Layout" unique_id=1542362331]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="RuneIdLabel" type="Label" parent="MarginContainer/Layout/Header" unique_id=1751246178]
+layout_mode = 2
+text = "Rune ID"
+
+[node name="RuneIdLineEdit" type="LineEdit" parent="MarginContainer/Layout/Header" unique_id=1345805142]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "bolt"
+
+[node name="DisplayNameLabel" type="Label" parent="MarginContainer/Layout/Header" unique_id=327151937]
+layout_mode = 2
+text = "Name"
+
+[node name="DisplayNameLineEdit" type="LineEdit" parent="MarginContainer/Layout/Header" unique_id=2141341167]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Bolt"
+
+[node name="CategoryOption" type="OptionButton" parent="MarginContainer/Layout/Header" unique_id=1484610634]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(130, 0)
+layout_mode = 2
+
+[node name="StatusLabel" type="Label" parent="MarginContainer/Layout" unique_id=1422611171]
+unique_name_in_owner = true
+layout_mode = 2
+text = "0 stroke(s), 0 point(s)"
+
+[node name="Toolbar" type="HBoxContainer" parent="MarginContainer/Layout" unique_id=274170814]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ModeLabel" type="Label" parent="MarginContainer/Layout/Toolbar" unique_id=29167044]
+layout_mode = 2
+text = "Mode"
+
+[node name="ModeOption" type="OptionButton" parent="MarginContainer/Layout/Toolbar" unique_id=937814656]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(130, 0)
+layout_mode = 2
+
+[node name="DrawingFrame" type="PanelContainer" parent="MarginContainer/Layout" unique_id=1370592353]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="DrawingSurface" type="Control" parent="MarginContainer/Layout/DrawingFrame" unique_id=1013739614]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(720, 480)
+clip_contents = true
+layout_mode = 2
+
+[node name="ScrollPanel" type="Panel" parent="MarginContainer/Layout/DrawingFrame/DrawingSurface" unique_id=1952303005]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_scroll")
+
+[node name="ScribeCanvas" type="Control" parent="MarginContainer/Layout/DrawingFrame/DrawingSurface" unique_id=1589196027]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("2_canvas")
+
+[node name="NotesEdit" type="TextEdit" parent="MarginContainer/Layout" unique_id=856781219]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+placeholder_text = "Notes"
+
+[node name="Buttons" type="HBoxContainer" parent="MarginContainer/Layout" unique_id=1705465166]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SaveButton" type="Button" parent="MarginContainer/Layout/Buttons" unique_id=452301423]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Save Template"
+
+[node name="UndoButton" type="Button" parent="MarginContainer/Layout/Buttons" unique_id=1760852173]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Undo Stroke"
+
+[node name="ClearButton" type="Button" parent="MarginContainer/Layout/Buttons" unique_id=368237451]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Clear"

@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="BookData" format=3 uid="uid://dwi4kltjsnjfk"]
+
+[ext_resource type="Script" uid="uid://bfsb71ceawsfi" path="res://game/books/resources/book_data.gd" id="1_book_data"]
+[ext_resource type="Script" uid="uid://dqbhuio5lxao0" path="res://game/books/resources/book_page_data.gd" id="2_page_data"]
+[ext_resource type="Script" uid="uid://dr7ronxaidf54" path="res://game/books/resources/book_spread_data.gd" id="3_spread_data"]
+[ext_resource type="Resource" uid="uid://r222a1ctob6i" path="res://content/runes/templates/bolt/bolt_template_01.tres" id="4_eruoh"]
+
+[sub_resource type="Resource" id="BookPageData_bolt_intro"]
+script = ExtResource("2_page_data")
+title = "Bolt Rune"
+body = "Category: Form
+
+Trace the strokes shown on the facing page in order.
+Use this form when a spell should travel outward from the caster as a direct projectile."
+
+[sub_resource type="Resource" id="BookPageData_bolt_rune"]
+script = ExtResource("2_page_data")
+title = "Scribing Pattern"
+body = "Watch the glowing tip, then copy each stroke in order on the form section of the scroll."
+rune_template = ExtResource("4_eruoh")
+
+[sub_resource type="Resource" id="BookSpreadData_bolt_first"]
+script = ExtResource("3_spread_data")
+left_page = SubResource("BookPageData_bolt_intro")
+right_page = SubResource("BookPageData_bolt_rune")
+
+[resource]
+script = ExtResource("1_book_data")
+id = "bolt_rune_book"
+title = "Bolt Rune Book"
+display_name = "Bolt Rune Book"
+spreads = Array[ExtResource("3_spread_data")]([SubResource("BookSpreadData_bolt_first")])

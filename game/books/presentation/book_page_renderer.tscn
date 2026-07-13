@@ -1,0 +1,178 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://game/books/presentation/book_page_renderer.gd" id="1_renderer"]
+[ext_resource type="Script" path="res://game/scribing/runes/rune_template_view.gd" id="2_rune_view"]
+[ext_resource type="Theme" path="res://assets/themes/book_page_theme.tres" id="3_theme"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_page_left"]
+bg_color = Color(0.988235, 0.878431, 0.54902, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 2
+border_width_bottom = 4
+border_color = Color(0.24, 0.13, 0.045, 0.55)
+corner_radius_top_left = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_page_right"]
+bg_color = Color(0.988235, 0.878431, 0.54902, 1)
+border_width_left = 2
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.24, 0.13, 0.045, 0.55)
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+
+[node name="BookPageRenderer" type="SubViewport"]
+disable_3d = true
+transparent_bg = true
+size = Vector2i(1024, 512)
+render_target_update_mode = 0
+script = ExtResource("1_renderer")
+default_page_theme = ExtResource("3_theme")
+
+[node name="SpreadRoot" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = ExtResource("3_theme")
+
+[node name="Pages" type="HBoxContainer" parent="SpreadRoot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 12.0
+offset_right = -16.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="LeftPage" type="PanelContainer" parent="SpreadRoot/Pages"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBox_page_left")
+
+[node name="Margin" type="MarginContainer" parent="SpreadRoot/Pages/LeftPage"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 26
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 22
+theme_override_constants/margin_bottom = 18
+
+[node name="Column" type="VBoxContainer" parent="SpreadRoot/Pages/LeftPage/Margin"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="LeftTitle" type="Label" parent="SpreadRoot/Pages/LeftPage/Margin/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+text = "Rune Book"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Rule" type="HSeparator" parent="SpreadRoot/Pages/LeftPage/Margin/Column"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="LeftBody" type="Label" parent="SpreadRoot/Pages/LeftPage/Margin/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 30
+text = "The pages are blank."
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="LeftRuneView" type="Control" parent="SpreadRoot/Pages/LeftPage/Margin/Column"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 240)
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+script = ExtResource("2_rune_view")
+stroke_width = 5.5
+glow_width = 13.0
+
+[node name="LeftPageNumber" type="Label" parent="SpreadRoot/Pages/LeftPage/Margin/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.18, 0.10, 0.035, 0.82)
+theme_override_font_sizes/font_size = 18
+text = "1"
+horizontal_alignment = 0
+
+[node name="RightPage" type="PanelContainer" parent="SpreadRoot/Pages"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBox_page_right")
+
+[node name="Margin" type="MarginContainer" parent="SpreadRoot/Pages/RightPage"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 22
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 26
+theme_override_constants/margin_bottom = 18
+
+[node name="Column" type="VBoxContainer" parent="SpreadRoot/Pages/RightPage/Margin"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 11
+
+[node name="RightTitle" type="Label" parent="SpreadRoot/Pages/RightPage/Margin/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+text = "Rune"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Rule" type="HSeparator" parent="SpreadRoot/Pages/RightPage/Margin/Column"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="RightRuneView" type="Control" parent="SpreadRoot/Pages/RightPage/Margin/Column"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 240)
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+script = ExtResource("2_rune_view")
+stroke_width = 5.5
+glow_width = 13.0
+
+[node name="RightBody" type="Label" parent="SpreadRoot/Pages/RightPage/Margin/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 27
+text = "Category"
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="RightPageNumber" type="Label" parent="SpreadRoot/Pages/RightPage/Margin/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.18, 0.10, 0.035, 0.82)
+theme_override_font_sizes/font_size = 18
+text = "2 / 2"
+horizontal_alignment = 2

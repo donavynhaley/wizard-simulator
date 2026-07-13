@@ -1,0 +1,12 @@
+[gd_scene format=3 uid="uid://tm5xwqdakrc0"]
+
+[ext_resource type="PackedScene" path="res://game/player/player.tscn" id="2"]
+
+[node name="SpellcraftPlayground" type="Node3D" unique_id=1216443978]
+
+[node name="Player" parent="." unique_id=1247227830 instance=ExtResource("2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4692383, 4)
+
+[node name="CSGBox3D" type="CSGBox3D" parent="." unique_id=917293633]
+transform = Transform3D(20, 0, 0, 0, 0.26, 0, 0, 0, 20, 0, 0, 0)
+use_collision = true

@@ -1,0 +1,80 @@
+[gd_scene format=3 uid="uid://bchhcoi8ov80b"]
+
+[ext_resource type="Script" uid="uid://c1qo50j2sbr3q" path="res://game/alchemy/storage/storage_shelf.gd" id="1_vsfa3"]
+[ext_resource type="PackedScene" uid="uid://btdn0g25o1dya" path="res://game/alchemy/flask.tscn" id="2_65hq3"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_0jym3"]
+
+[node name="StorageShelf" type="Node3D" unique_id=1339605367]
+
+[node name="CSGBox3D" type="CSGBox3D" parent="." unique_id=221120418]
+use_collision = true
+size = Vector3(1.2, 0.1, 0.5)
+
+[node name="Item1" type="Node3D" parent="." unique_id=731560777]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.41928232, 0.022207752, 0.07625982)
+script = ExtResource("1_vsfa3")
+
+[node name="Flask" parent="Item1" unique_id=138964369 instance=ExtResource("2_65hq3")]
+disable_mode = 1
+collision_layer = 3
+active_collision_layer = 3
+_is_stationed = true
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Item1" unique_id=726520949]
+collision_layer = 2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Item1/StaticBody3D" unique_id=1502762102]
+transform = Transform3D(0.24, 0, 0, 0, 0.24, 0, 0, 0, 0.24, 0, 0, 0)
+shape = SubResource("BoxShape3D_0jym3")
+
+[node name="Item2" type="Node3D" parent="." unique_id=1201877677]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.12589622, 0.022207752, 0.07625982)
+script = ExtResource("1_vsfa3")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Item2" unique_id=527343993]
+collision_layer = 2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Item2/StaticBody3D" unique_id=1069847005]
+transform = Transform3D(0.24, 0, 0, 0, 0.24, 0, 0, 0, 0.24, 0, 0, 0)
+shape = SubResource("BoxShape3D_0jym3")
+
+[node name="Flask" parent="Item2" unique_id=452545527 instance=ExtResource("2_65hq3")]
+disable_mode = 1
+collision_layer = 3
+active_collision_layer = 3
+_is_stationed = true
+
+[node name="Item3" type="Node3D" parent="." unique_id=1799989246]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.17432085, 0.022207752, 0.07625982)
+script = ExtResource("1_vsfa3")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Item3" unique_id=1136677756]
+collision_layer = 2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Item3/StaticBody3D" unique_id=1820339632]
+transform = Transform3D(0.24, 0, 0, 0, 0.24, 0, 0, 0, 0.24, 0, 0, 0)
+shape = SubResource("BoxShape3D_0jym3")
+
+[node name="Flask" parent="Item3" unique_id=1044968348 instance=ExtResource("2_65hq3")]
+disable_mode = 1
+collision_layer = 3
+active_collision_layer = 3
+_is_stationed = true
+
+[node name="Item4" type="Node3D" parent="." unique_id=670621091]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4390112, 0.022207752, 0.07625982)
+script = ExtResource("1_vsfa3")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Item4" unique_id=789911715]
+collision_layer = 2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Item4/StaticBody3D" unique_id=343777744]
+transform = Transform3D(0.24, 0, 0, 0, 0.24, 0, 0, 0, 0.24, 0, 0, 0)
+shape = SubResource("BoxShape3D_0jym3")
+
+[node name="Flask" parent="Item4" unique_id=628011343 instance=ExtResource("2_65hq3")]
+disable_mode = 1
+collision_layer = 3
+active_collision_layer = 3
+_is_stationed = true

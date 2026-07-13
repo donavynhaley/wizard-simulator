@@ -1,179 +1,245 @@
-# Blender Pipeline
+# Blender Modeling Pipeline
 
-This project uses Blender for 3D source assets and Godot for game-ready scene setup.
+This document is the source of truth for where project-authored 3D models belong.
+The short version is that every model has an editable source, a Godot-importable export, and usually a feature-owned scene wrapper.
 
-The recommended handoff format is **glTF Binary (`.glb`)**.
+## Where Each File Goes
 
-## Folder Layout
+| File | Purpose | Location |
+| --- | --- | --- |
+| `.blend` | Editable modeling source | `source_assets/blender/<category>/` |
+| `.glb` | Runtime export imported by Godot | `assets/models/<category>/` |
+| Texture used by the export | Runtime texture imported by Godot | `assets/textures/<category>/` or beside the model when relative paths require it |
+| `.tscn` | Game-ready wrapper with collision and behavior | The owning `game/<feature>/` folder |
+| `.gd` | Runtime behavior | Beside the owning feature scene |
+| `.glb.import` and texture `.import` | Godot import settings | Generated beside the imported runtime asset |
 
-Use this structure for source files and exported game assets:
+Do not put `.blend` files under `assets/`.
+Godot imports files under `assets/`, while `source_assets/` is intentionally excluded from Godot imports with `.gdignore`.
+
+Do not put gameplay scenes or scripts under `assets/models/`.
+The `assets/` tree contains importable runtime files, while `game/` owns gameplay composition and behavior.
+
+## Category Names
+
+Use the same category for the Blender source and exported model whenever possible.
 
 ```text
-assets/
-  source/
-    blender/
-      props/
-        cauldron.blend
-        tower_door.blend
-  models/
-    props/
-      cauldron.glb
-      tower_door.glb
+source_assets/blender/
+  characters/
+  environments/
+  props/
+
+assets/models/
+  characters/
+  environments/
+  props/
 ```
 
-The `.blend` file is the editable source file.
+Most standalone objects belong in `props/`.
+Characters and rigged creatures belong in `characters/`.
+Large architectural modules, terrain, and reusable environment sets belong in `environments/`.
 
-The `.glb` file is the exported model that Godot imports.
+Existing project exports at the root of `assets/models/` are valid legacy paths and do not need to move solely for consistency.
+Place new exports in a category folder so the runtime model library remains navigable as it grows.
 
-The Godot scene is the game-ready wrapper that adds collisions, scripts, lights, interaction areas, and other runtime behavior.
+## Complete Placement Examples
 
-Recommended Godot structure:
+An alchemy cauldron should use:
 
 ```text
+source_assets/blender/props/cauldron.blend
 assets/models/props/cauldron.glb
-scenes/props/cauldron.tscn
-scripts/props/cauldron.gd
+game/alchemy/props/cauldron.tscn
+game/alchemy/props/cauldron.gd        # Only when behavior is needed
 ```
 
-## Blender Authoring Rules
+A generic furniture barrel should use:
 
-Build at real-world scale.
+```text
+source_assets/blender/props/barrel.blend
+assets/models/props/barrel.glb
+game/world/props/furniture/barrel.tscn
+```
 
-Godot units are meters.
+A physical book model should use:
 
-Before exporting, apply transforms in Blender with `Ctrl+A -> Rotation & Scale`.
+```text
+source_assets/blender/props/book.blend
+assets/models/props/book.glb
+game/books/presentation/book_visual.tscn
+```
 
-Set the asset origin/pivot to a useful location.
+A scribing prop such as an inkwell should use:
 
-For props, bottom center is usually the best default.
+```text
+source_assets/blender/props/inkwell.blend
+assets/models/props/inkwell.glb
+game/scribing/station/inkwell.tscn     # Only if it needs its own wrapper
+```
 
-Use clean object and material names.
+A player body model should use:
 
-Good examples:
+```text
+source_assets/blender/characters/wizard.blend
+assets/models/characters/wizard.glb
+game/player/body/wizard_body.tscn
+```
+
+The feature wrapper may instance several raw models when they form one gameplay object.
+For example, `game/scribing/station/crafting_table.tscn` can instance separate table, scroll, quill, and inkwell exports.
+
+## Choosing the Scene Owner
+
+Put the `.tscn` wrapper under the feature that owns its behavior.
+
+| Asset use | Scene location |
+| --- | --- |
+| Alchemy equipment or ingredients | `game/alchemy/` |
+| Books, page presentation, or book furniture | `game/books/` |
+| Player body or first-person model | `game/player/body/` or `game/player/viewmodel/` |
+| Rune-scribing equipment | `game/scribing/station/` |
+| Level-specific or generic world prop | `game/world/props/` |
+| Generic furniture | `game/world/props/furniture/` |
+| Presentation shared by unrelated features | `shared/` |
+
+If ownership is unclear, choose the feature that controls the object's interaction or lifecycle.
+Do not create a new top-level folder for one model.
+
+## Third-Party Models
+
+Do not mix downloaded packs with project-authored Blender files.
+
+Keep complete downloaded packs and their original documentation under:
+
+```text
+source_assets/third_party_packs/<pack_name>/
+```
+
+Copy only runtime files that an actual scene references into:
+
+```text
+assets/third_party/<creator_or_pack>/<asset_name>/
+```
+
+Preserve licenses, attribution, shared textures, and other required dependencies with the runtime copy.
+Document new third-party runtime assets in `assets/third_party/README.md` and `CREDITS.md`.
+
+## Naming Rules
+
+Use lowercase `snake_case` for filenames and Blender object names.
+
+Good filenames:
+
+```text
+cauldron.blend
+cauldron.glb
+tower_door.glb
+wizard_body.glb
+```
+
+Good Blender object and material names:
 
 ```text
 cauldron_body
 cauldron_liquid
 tower_door_frame
 tower_door_planks
+iron_dark
+wood_weathered
 ```
 
-Avoid temporary names like `Cube.003`, `Material.001`, or `new_mesh_final_final`.
+Avoid names such as `Cube.003`, `Material.001`, `new_mesh_final`, or `export_2`.
+Keep one main asset or one intentionally reusable set per exported `.glb`.
 
-Keep one main prop per exported `.glb` unless the asset is naturally a set.
+## Blender Authoring Rules
+
+Build at real-world scale because one Godot unit equals one meter.
+Apply rotation and scale before export with `Ctrl+A`, then `Rotation & Scale`.
+Place the origin intentionally before export.
+Bottom center is the default for objects placed on floors or tables, while handheld props should use a grip-friendly origin.
+Make forward orientation consistent and verify it in Godot before final handoff.
+Keep material slots and object hierarchy as simple as the asset allows.
 
 ## Export Settings
 
-In Blender, use:
-
-```text
-File -> Export -> glTF 2.0
-```
-
-Set the format to:
-
-```text
-glTF Binary (.glb)
-```
-
-Export selected objects when exporting a single prop from a larger Blender scene.
-
+Use `File -> Export -> glTF 2.0` in Blender.
+Choose `glTF Binary (.glb)` as the export format.
+Export selected objects when the Blender file contains work that should not be part of the runtime model.
 Keep materials enabled.
+Use the default glTF transform settings unless the first Godot import demonstrates an orientation or scale problem.
 
-Use Blender's default glTF transform settings unless the first Godot import shows a scale or orientation problem.
-
-If textures are simple and stable, packing them into the `.glb` is fine.
-
-If textures need to be shared across many assets, keep them as separate files in a clear texture folder.
+Pack unique textures into the `.glb` when that keeps the model self-contained.
+Use separate runtime textures when multiple models share them or artists need to revise them independently.
+Keep relative texture dependencies in a stable folder beside the exported model when the GLB references external files.
 
 ## Godot Import Flow
 
-Place exported models under `assets/models/`.
+1. Save the editable Blender source under `source_assets/blender/<category>/`.
+2. Export the `.glb` under `assets/models/<category>/`.
+3. Let Godot import the file and generate its `.glb.import` sidecar.
+4. Select the `.glb` in Godot's FileSystem dock and review its Import settings.
+5. Use Advanced Import Settings when the model contains animation, a skeleton, generated collision, or per-node overrides.
+6. Create the game-ready `.tscn` under the owning feature.
+7. Instance the raw `.glb` inside the wrapper instead of editing the imported scene directly.
+8. Add simple collision, interaction areas, scripts, audio, VFX, and feature-specific presentation to the wrapper.
+9. Run the relevant scene or integration test before handoff.
 
-Godot will auto-import the `.glb` and create a matching `.glb.import` file.
-
-Commit both the `.glb` and `.glb.import` files.
-
-Create a `.tscn` scene for anything that needs gameplay setup.
-
-The `.glb` should remain the raw imported model.
-
-The `.tscn` should be the game-ready object.
-
-For example, a cauldron scene may include:
-
-- The imported model.
-- Collision shapes.
-- An interaction area.
-- A script.
-- Smoke, glow, or liquid effects.
-- Audio emitters.
+Never edit files under `.godot/imported/` because Godot regenerates them.
+Do not hand-edit `.import` files when the Import dock can make the change safely.
+Commit `.import` sidecars because they preserve import settings and resource UIDs across machines.
 
 ## Collision
 
-Prefer creating collision in Godot for most props.
+Prefer simple collision authored in the feature-owned Godot scene for most props.
 
-Use simple collision shapes whenever possible.
+- Use `BoxShape3D` for crates, doors, shelves, and blocky props.
+- Use `CylinderShape3D` for barrels, pots, columns, and cauldrons.
+- Use `SphereShape3D` for round objects.
+- Use convex collision only when primitive shapes cannot represent the gameplay silhouette.
 
-Good defaults:
+When imported collision is appropriate, use Godot's recognized Blender suffixes.
 
-- `BoxShape3D` for crates, doors, shelves, and blocky props.
-- `CylinderShape3D` for barrels, pots, columns, and cauldrons.
-- `SphereShape3D` for round objects.
-- Convex collision only when simple shapes are not accurate enough.
+| Blender object suffix | Godot result |
+| --- | --- |
+| `-col` | Static body collision |
+| `-convcol` | Convex collision shape |
+| `-rigid` | Rigid body |
+| `-navmesh` | Navigation region |
+| `-occluder` | Occluder instance |
 
-If a model needs custom collision from Blender, name the collision mesh clearly.
+Keep collision meshes low-detail.
+Never use a high-detail visual mesh directly as physics collision unless profiling and gameplay requirements justify it.
 
-Example:
+## Version-Control Handoff
 
-```text
-collision_cauldron
-collision_tower_door
-```
+The modeling handoff should normally include:
 
-Keep collision meshes simple.
+- The editable `.blend` source under `source_assets/blender/`.
+- The exported `.glb` under `assets/models/`.
+- Any separate runtime textures.
+- Generated `.import` sidecars after Godot has imported the asset.
+- The feature-owned `.tscn` wrapper when the model is already integrated.
+- Any license or attribution updates for third-party work.
 
-Do not use high-detail visual meshes as physics collision.
+Do not commit `.godot/` because it is a generated local cache.
+Do not place temporary renders, reference screenshots, autosaves, or abandoned exports in runtime asset folders.
+Remove superseded exports once no scene or resource references them.
 
-## Git Workflow
+## Modeling Handoff Checklist
 
-The asset creator should commit Blender source files and exported `.glb` files.
+Before handing off a model, confirm:
 
-The Godot integrator should commit `.tscn`, `.import`, and script changes.
-
-If the repo starts growing too large, move large binary assets to Git LFS.
-
-Do not add Git LFS until repo size becomes a real problem.
-
-Always pull the latest `main` before adding or exporting new assets.
-
-Use short, clear commit messages.
-
-Examples:
-
-```text
-Add cauldron model
-Add tower door model
-Set up cauldron prop scene
-```
-
-## Handoff Checklist
-
-Before handing off a Blender asset, confirm:
-
+- The `.blend` is in `source_assets/blender/<category>/`.
+- The `.glb` is in the matching `assets/models/<category>/` folder.
+- The source and export use clear `snake_case` names.
 - Scale is correct in meters.
 - Rotation and scale are applied.
-- Origin is placed intentionally.
-- Object names are clean.
-- Material names are clean.
-- The exported `.glb` opens in Godot.
-- The `.blend` and `.glb` are in the expected folders.
-
-Before using an asset in gameplay, confirm:
-
-- The model appears at the correct size.
-- The model faces the expected direction.
-- Materials import correctly.
-- Collision feels correct.
-- The game-ready `.tscn` is committed.
-- The `.glb.import` file is committed.
+- The origin is placed intentionally.
+- Object and material names are clean.
+- Required textures are packed or copied with stable relative paths.
+- The `.glb` imports in Godot without errors or missing dependencies.
+- The `.glb.import` and texture `.import` sidecars are included.
+- The game-ready wrapper is under the owning feature rather than under `assets/`.
+- Collision uses simple shapes unless the asset genuinely needs imported collision.
+- Materials, orientation, animation, and rigging look correct in the wrapper scene.

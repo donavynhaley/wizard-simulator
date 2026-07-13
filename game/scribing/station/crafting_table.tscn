@@ -1,0 +1,137 @@
+[gd_scene format=3 uid="uid://5fyhxou04dxg"]
+
+[ext_resource type="PackedScene" uid="uid://b7nqbl45lv7lv" path="res://assets/third_party/kenney/fantasy_town/pillar-wood.glb" id="1_aa1pw"]
+[ext_resource type="PackedScene" uid="uid://cnvv5285s107" path="res://assets/third_party/kenney/fantasy_town/planks.glb" id="2_kisc1"]
+[ext_resource type="PackedScene" uid="uid://d20kofg2vneul" path="res://assets/third_party/kenney/fantasy_town/overhang.glb" id="3_kisc1"]
+[ext_resource type="Script" uid="uid://lkmq4o6q51xo" path="res://game/scribing/station/element_holder.gd" id="4_sooxi"]
+[ext_resource type="Script" uid="uid://5yuur3pjr7pd" path="res://game/scribing/station/rune_scribing_station.gd" id="5_70f7w"]
+[ext_resource type="PackedScene" uid="uid://dffhnmtk06rxe" path="res://assets/models/scroll_open.glb" id="6_05xbg"]
+[ext_resource type="PackedScene" uid="uid://dbmb51mgcsuq4" path="res://assets/third_party/seal/seal_animated_low_poly.glb" id="6_dcnth"]
+[ext_resource type="Script" uid="uid://ds0dh8jivtsyr" path="res://game/scribing/station/open_book_placement.gd" id="9_1jmjg"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_0jym3"]
+height = 0.1
+radius = 0.1
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_0jym3"]
+size = Vector3(1, 0.96484375, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_dcnth"]
+size = Vector3(0.6329956, 0.03515625, 0.3531494)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_bsfci"]
+size = Vector3(0.32, 0.04, 0.16)
+
+[node name="CraftingTable" type="Node3D" unique_id=277921942]
+
+[node name="leg" parent="." unique_id=1764407051 instance=ExtResource("1_aa1pw")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4309538, 0, 0.43087792)
+
+[node name="top" parent="." unique_id=1788029138 instance=ExtResource("2_kisc1")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95352715, 0)
+
+[node name="leg2" parent="." unique_id=1838177468 instance=ExtResource("1_aa1pw")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.42858392, 0, 0.43087792)
+
+[node name="leg3" parent="." unique_id=1912969644 instance=ExtResource("1_aa1pw")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.42858392, 0, -0.4142344)
+
+[node name="leg4" parent="." unique_id=244929068 instance=ExtResource("1_aa1pw")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4289881, 0, -0.4142344)
+
+[node name="overhang2" parent="." unique_id=129384261 instance=ExtResource("3_kisc1")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.87747264, 0.20729518, -0.0068775713)
+
+[node name="ElementHolder" type="CSGCylinder3D" parent="." unique_id=1639004423]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6003406, 1.2425802, 0.4)
+radius = 0.049
+height = 0.099
+script = ExtResource("4_sooxi")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="ElementHolder" unique_id=130180570]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.406273, -1.0605408, -0.4)
+collision_layer = 2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ElementHolder/StaticBody3D" unique_id=576345703]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.41149908, 1.0664347, 0.37862968)
+shape = SubResource("CylinderShape3D_0jym3")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="." unique_id=944163110]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D" unique_id=1919803288]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.49902344, 0)
+shape = SubResource("BoxShape3D_0jym3")
+
+[node name="RuneScribingStation" type="Node3D" parent="." unique_id=713436920]
+script = ExtResource("5_70f7w")
+scribe_surface_size_m = Vector2(0.6, 0.3)
+scribe_surface_rotation_degrees = -90.0
+
+[node name="Scroll" parent="RuneScribingStation" unique_id=215512039 instance=ExtResource("6_05xbg")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0.165, 1.0142212, -0.029)
+
+[node name="ScribeCamera" type="Camera3D" parent="RuneScribingStation" unique_id=79078189]
+transform = Transform3D(1.3113416e-07, -1, 4.371139e-08, -3.821371e-15, 4.371139e-08, 1, -1, -1.3113416e-07, 1.9106853e-15, 0.173073, 1.4166055, -0.022771485)
+fov = 64.0
+
+[node name="ScrollCameraPose" type="Marker3D" parent="RuneScribingStation" unique_id=1259852219]
+transform = Transform3D(1.3113416e-07, -1, 4.371139e-08, -3.821371e-15, 4.371139e-08, 1, -1, -1.3113416e-07, 1.9106853e-15, 0.173073, 1.4166055, -0.022771485)
+
+[node name="BookCameraPose" type="Marker3D" parent="RuneScribingStation" unique_id=483888162]
+transform = Transform3D(0, -0.731354, 0.681998, 0, 0.681998, 0.731354, -1, 0, 0, 0.173073, 1.4166055, -0.022771485)
+
+[node name="InkWell" type="CSGCylinder3D" parent="RuneScribingStation" unique_id=826901926]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0835723, 1.0417287, -0.3371022)
+radius = 0.05
+height = 0.1
+
+[node name="StaticBody3D" type="StaticBody3D" parent="RuneScribingStation/InkWell" unique_id=1931572131]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.406273, -1.0605408, -0.4)
+collision_layer = 2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RuneScribingStation/InkWell/StaticBody3D" unique_id=1206103088]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.41149908, 1.0664347, 0.39423445)
+shape = SubResource("CylinderShape3D_0jym3")
+
+[node name="Quill" type="CSGCylinder3D" parent="RuneScribingStation" unique_id=1867312045]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.084506005, 1.121171, -0.34022743)
+radius = 0.008
+height = 0.065
+
+[node name="CSGTorus3D" type="CSGTorus3D" parent="RuneScribingStation/Quill" unique_id=98357361]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.007462144, 0)
+inner_radius = 0.001
+outer_radius = 0.022
+
+[node name="StaticBody3D" type="StaticBody3D" parent="RuneScribingStation" unique_id=88514684]
+collision_layer = 2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RuneScribingStation/StaticBody3D" unique_id=1480621867]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.14770561, 1.0292742, -0.016662598)
+shape = SubResource("BoxShape3D_dcnth")
+
+[node name="Seal" type="Node3D" parent="." unique_id=186659016]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.060479954, 1.0560905, 0.27169758)
+
+[node name="Sketchfab_Scene" parent="Seal" unique_id=1035655518 instance=ExtResource("6_dcnth")]
+transform = Transform3D(-0.0010935115, 0, 0.044986714, 0, 0.045, 0, -0.044986714, 0, -0.0010935115, 0.0023997128, 0.045892, 0.0008189678)
+
+[node name="CSGCylinder3D" type="CSGCylinder3D" parent="Seal" unique_id=1142474081]
+radius = 0.01
+height = 0.09954834
+
+[node name="CSGTorus3D" type="CSGTorus3D" parent="Seal/CSGCylinder3D" unique_id=1564651313]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.039970756, 0)
+inner_radius = 0.03
+outer_radius = 0.001
+
+[node name="OpenBookPlacement" type="Node3D" parent="." unique_id=1124974478]
+transform = Transform3D(0, 0.707107, 0.707107, 0, 0.707107, -0.707107, -1, 0, 0, -0.18, 1.06, -0.05)
+script = ExtResource("9_1jmjg")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="OpenBookPlacement" unique_id=780809643]
+rotation_edit_mode = 1
+collision_layer = 2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="OpenBookPlacement/StaticBody3D" unique_id=1222481194]
+shape = SubResource("BoxShape3D_bsfci")

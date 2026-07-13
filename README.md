@@ -1,62 +1,51 @@
 # Wizard Simulator
 
-First-person 3D wizard game built in Godot 4.7.
+Wizard Simulator is a first-person 3D game built with Godot 4.7.
+The current playable tower focuses on physical interaction, rune scribing, readable books, and an early alchemy loop.
 
-## Premise
+## Current Features
 
-The wizard has lost his memories and does not know why he is trapped in his own tower.
-He watches over the local village kingdom and takes quests to help it, plus timed decrees from the king that must be completed on a deadline.
-Fulfilling them means diving into the library, discovering and crafting spells and potions, and casting them; success grows the wizard's renown and coffers.
+- A hand-authored wizard tower with day and night lighting.
+- A composed first-person player with movement, interaction, visible arms, beard inventory presentation, magical item handling, and HUD feedback.
+- Physical rune scribing with a scroll, ink, quill, reference book, camera poses, stroke recognition, rune glow, sealing, and completion signals.
+- Physical books with page data, page rendering, placement, opening, and page turning.
+- Early alchemy interactions for gathering elements, filling and heating a flask, and breaking a dropped flask.
 
-Four core mechanics are planned: **spell crafting** (in progress), potion alchemy, kingdom monitoring/quests, and royal decrees.
+The previous compiled-spell, castable-scroll, spell-delivery, and spell-effect implementation has been removed intentionally.
+Sealing a scribed scroll currently preserves the ink and recognition results, restores player control, and emits `scribing_completed` without creating an inventory item.
 
-## Spell crafting
+## Project Layout
 
-Planned design - spells are forged from modular **rune stones** at a physical **spell bench** (no menus):
+```text
+game/
+  alchemy/       Alchemy scenes, ingredients, props, and storage
+  books/         Book runtime, presentation, resources, and props
+  player/        Player root, body, viewmodel, interaction, and HUD
+  scribing/      Rune data, recognition, session state, and station
+  world/         Levels, environmental systems, and world props
+shared/          Cross-feature item, presentation, and VFX code
+content/         Authored book and rune resources
+tests/           Headless integration tests and test fixtures
+tools/           Authoring, capture, inspection, and verification tools
+assets/          Runtime-ready project and curated third-party assets
+source_assets/   Godot-ignored Blender sources and complete asset packs
+docs/            Design notes, specifications, and architecture records
+```
 
-- Categories: one **Element** (fire, ice, lightning, shadow, wind, earth), one **Shape** (beam, orb, wave, trap, shield, chain, aura), up to two **Behaviors** (bounce, split, linger, home, explode, pierce), one **Trigger** (on impact, on timer, on death, when touched, when recast), up to two **Modifiers** (bigger, faster, cheaper, unstable, silent, delayed, charged, precise, raging).
-- Carry stones to the bench's floating sockets, then channel the focus crystal.
-- A successful forge rolls a **scroll** onto the tray; holding a scroll is the only way to cast, each cast spends a charge, and a spent scroll crumbles.
-- Every rune adds **instability**: past 35% the spell gains deterministic quirks (wild aim, kickback, screaming, sputter); past 55% the forge can backfire; past 85% it always does. Backfires are comedy: frog curse, launch-everyone blast, a tiny useless demon, or the runes scattering across the room.
-- The same runes always forge the same spell, so experiments are worth logging: the **Spellbook** autoload journals every combination to `user://spellbook.json` (named recipes, hidden rares, and known-bad combos alike).
-- Spells wear their recipe: element sets the color, `precise` runs thin, `raging`/`unstable` grow jagged flickering spikes.
-
-## Drop-in assets
-
-The tower itself is being hand-built in the editor; these scenes are self-contained and can be placed anywhere:
-
-| Scene | What it does |
-| --- | --- |
-| `assets/artifacts/crafting-table.tscn` | The crafting table: element holder socket + scribing station |
-| `scenes/props/rune_cabinet.tscn` | Shelf stocked with one stone per rune; restocks itself |
-| `scenes/props/rune_stone.tscn` | One rune (set `rune_id`); pick up with E |
-| `scenes/props/spell_scroll.tscn` | A castable spell with charges (usually forged, not placed) |
-| `scenes/props/training_dummy.tscn` | Damageable target with HP label; respawns |
-| `scenes/props/tiny_demon.tscn` | The useless demon backfires summon |
-| `scripts/components/book.tscn` | Physical readable book with swappable visual and page-renderer scenes |
-| `scenes/characters/player.tscn` | FPS wizard: controller + interactor + hands + HUD |
-
-The player scene carries the look-to-focus `PlayerInteractor` (duck-typed contract: `focus_prompt(player, collider)` / `interact(player, collider)`), the `WizardHands` held-item component (`%HandAnchor`), and the `WizardHud` (prompts, held item, discovery toasts).
-Spell runtime lives in `scripts/spellcraft/` (rune catalog, forge, journal) and `scripts/spellcraft/casting/` (per-shape effects and backfires).
-Levels are editor-authored scenes.
-
-## External assets
-
-Downloaded CC0 assets live in `assets/external/kenney` (see its `ASSET_MANIFEST.md`).
-The first-person arms are a CC-BY model (`assets/external/polypizza/fps_arms.glb`; see `CREDITS.md`).
+See [docs/project-organization.md](docs/project-organization.md) for ownership rules and placement guidance.
 
 ## Controls
 
-- `WASD` - move, `Mouse` - look, `Space` - jump
-- `E` - interact (take runes/scrolls, socket runes, channel the crystal)
-- `Left click` - cast the held scroll
-- `Left click` while holding a book - open or close its physical reading pose
-- `Left/Right arrows` - turn held-book pages while reading
-- `B` - while looking down, hold to lift the beard and inspect beard inventory
-- `A/D` while scribing - turn pages in the open reference book on the table
-- `W/S` while scribing - look up at the reference book / return to the scroll
-- `G` - drop the held item
-- `Esc` - release mouse, `Left click` - recapture
+- `WASD` moves and the mouse looks.
+- `Space` jumps during normal play and seals a scroll when held during scribing.
+- `E` interacts with focused objects.
+- `Left click` opens or closes a held book and draws while scribing.
+- `Left` and `Right` turn held-book pages while reading.
+- `B` lifts the beard while looking down.
+- `A` and `D` turn reference-book pages while scribing.
+- `W` and `S` move between the reference book and scroll camera poses while scribing.
+- `G` drops the held item.
+- `Esc` releases the mouse and `Left click` recaptures it.
 
 ## Run
 
@@ -64,30 +53,34 @@ The first-person arms are a CC-BY model (`assets/external/polypizza/fps_arms.glb
 godot --path .
 ```
 
-Main scene is `scenes/levels/wizard_tower.tscn`.
-Use the Godot editor to build and arrange level geometry directly.
+The main scene is `game/world/levels/wizard_tower.tscn`.
+Levels and visual composition are authored directly in the Godot editor.
 
 ## Verify
 
-End-to-end interaction test (fountain -> hands -> element holder -> scribing lock; headless):
+Run the full physical-interaction and rune-scribing flow:
 
 ```sh
-godot --headless --path . -s tools/interaction_test.gd
+godot --headless --path . -s tests/integration/interaction_test.gd
 ```
 
-Verify external CC0 asset packs and licenses:
+Run every headless integration test:
 
 ```sh
-godot --headless --path . -s tools/verify_assets.gd
+for test in tests/integration/*_test.gd; do
+  godot --headless --path . -s "$test" || exit 1
+done
 ```
 
-## Status
+Verify curated runtime assets and the Kenney license:
 
-In place:
+```sh
+godot --headless --path . -s tools/verification/verify_assets.gd
+```
 
-- Hand-built wizard tower as the main scene, with a day/night cycle and the Fountain of Endless Spring.
-- Crafting table with an element holder socket and the scroll-scribing station (draw strokes, hold Space to seal).
-- Player components: look-to-focus interaction, held-item hands, HUD with toasts.
-- First-person arms viewmodel (CC-BY, see `CREDITS.md`) with idle sway and a recurring gesture.
+## Assets
 
-Next: Donavyn builds levels in the editor from these assets; then potion alchemy, kingdom monitoring/quests, and royal decrees.
+Runtime assets belong under `assets/`.
+Only third-party files referenced by runtime scenes are kept under `assets/third_party/`.
+Editable Blender sources and complete downloaded packs are retained under `source_assets/`, where `.gdignore` prevents Godot from importing them.
+See [CREDITS.md](CREDITS.md) and [assets/third_party/README.md](assets/third_party/README.md) for provenance notes.

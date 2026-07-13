@@ -1,8 +1,8 @@
 # First-Person Rig Authoring
 
-The first-person arms, hand controls, beard, gameplay camera, and animation players are all authored in [`scenes/characters/player.tscn`](../scenes/characters/player.tscn).
-This is the only editable player scene.
-The wizard GLB remains an imported model asset, but there are no intermediate player, arm-rig, or beard wrapper scenes.
+The player is composed from [`game/player/player.tscn`](../game/player/player.tscn), [`game/player/body/wizard_body.tscn`](../game/player/body/wizard_body.tscn), and [`game/player/viewmodel/first_person_viewmodel.tscn`](../game/player/viewmodel/first_person_viewmodel.tscn).
+The root scene owns movement, the gameplay camera, and interaction wiring.
+The body scene owns the imported wizard model and physical beard, while the viewmodel scene owns arm pose controls and first-person animation players.
 
 `BodyRig/WizardModel` is the player's only wizard model instance.
 It is anchored to the player instead of the camera, so looking up and down moves naturally beneath the hat and above the beard.
@@ -11,7 +11,7 @@ Triangles weighted to the head and neck are removed because those surfaces would
 The loose `DEF-FOREARM-HANG` drape is also removed from the first-person mesh so raising an arm cannot cover the camera, while the fitted sleeve, shoulder, arm, and hand remain visible.
 The `LeftArmPose` and `RightArmPose` controls move the corresponding shoulder bones independently without duplicating the wizard model.
 
-The authored eye alignment is controlled by the `Head`, `Camera3D`, and `BodyRig/WizardModel` transforms in `player.tscn`.
+The authored eye alignment is controlled by the `Head` and `Camera3D` transforms in `player.tscn` plus the `BodyRig/WizardModel` transform in `wizard_body.tscn`.
 The camera uses a `0.03` meter near plane and the player's vertical look is limited to 75 degrees so the view cannot rotate into the hat crown or torso.
 The model is positioned so the brim is only a thin accent at the top of the neutral view and the beard enters the frame when looking down.
 When looking upward, the arms stop following camera pitch after the authored limit and naturally leave the frame.
@@ -20,7 +20,7 @@ These values are editable on `Head/Camera3D/Viewmodel/FirstPersonWizardRig` as `
 
 ## Preview the First-Person Camera
 
-1. Open `scenes/characters/player.tscn`.
+1. Open `game/player/player.tscn`.
 2. Select `Head/Camera3D`.
 3. Enable the camera preview in the 3D viewport.
 4. Keep that preview visible while scrubbing or playing an animation in the Animation panel.
@@ -29,14 +29,14 @@ Because this is the gameplay camera, its preview always matches the runtime fiel
 
 ## Animate the Full Skeleton
 
-1. Open `scenes/characters/player.tscn`.
-2. Expand `BodyRig/WizardModel/RootNode/Armature` and select `Skeleton3D`.
-3. Select `BodyRig/FullBodyAnimationPlayer` and create or choose a clip in the Animation panel.
+1. Open `game/player/body/wizard_body.tscn`.
+2. Expand `WizardModel/RootNode/Armature` and select `Skeleton3D`.
+3. Select `FullBodyAnimationPlayer` and create or choose a clip in the Animation panel.
 4. Return to `Skeleton3D`, enable bone editing in the 3D toolbar, and select the bone you want to pose.
 5. Move or rotate the bone with the viewport gizmo and insert its pose key into the active clip.
 
-`WizardModel` has editable children in the player scene, so the imported skeleton and every bone remain visible without opening or modifying the GLB.
-`FullBodyAnimationPlayer` is owned by `player.tscn`, so imported assets can be replaced without losing authored player animations.
+The body scene instances the imported `WizardModel` without persisting modified copies of its internal children.
+`FullBodyAnimationPlayer` is owned by `wizard_body.tscn`, so imported assets can be replaced without losing authored player animations.
 The procedural hand and beard controls do not overwrite bone poses while working in the editor unless `preview_control_rig_in_editor` is enabled on their controller.
 
 ## Edit Idle, Grab, Hold, and Release
@@ -61,11 +61,11 @@ The `release` animation returns every keyed control to the visible idle pose and
 ## Edit the Beard Inventory Motion
 
 The imported wizard model does not contain beard geometry; its `DEF-SCARF` bones control the red collar.
-The visible beard is a flattened, tapered four-segment low-poly mesh authored directly under `BodyRig/BeardAnchor/Beard`.
+The visible beard is a flattened, tapered four-segment low-poly mesh authored directly under `BeardAnchor/Beard` in `wizard_body.tscn`.
 The four nested controls make the beard flexible without creating runtime geometry.
 The beard remains anchored to the player independently of camera pitch and naturally enters the view when the player looks down.
 
-Select `BodyRig/BeardAnchor/Beard/BeardAnimationPlayer` to edit the beard's `lift` and `lower` clips.
+Select `BeardAnchor/Beard/BeardAnimationPlayer` in `wizard_body.tscn` to edit the beard's `lift` and `lower` clips.
 Select `BeardRoot`, `Joint02`, `Joint03`, or `Joint04` and manipulate those controls directly in the 3D viewport.
 
 Select `Head/Camera3D/Viewmodel/FirstPersonWizardRig/BeardInteractionAnimationPlayer` to edit the left arm that reaches up with the beard.

@@ -48,8 +48,8 @@ Book (RigidBody3D)
 | --- | --- | --- | --- |
 | `page_turn_midpoint_reached` | `BookVisual` | `Book` | Commit the target spread while the animated leaf hides the swap. |
 | `page_turn_finished` | `BookVisual` | `Book` | Unlock input and restart rune stroke playback. |
-| `book_placed` | `OpenBookPlacement` | `SpellCrafter` | Track the physical table reference. |
-| `book_taken` | `OpenBookPlacement` | `SpellCrafter` | Clear the physical table reference. |
+| `book_placed` | `OpenBookPlacement` | `RuneScribingStation` | Track the physical table reference. |
+| `book_taken` | `OpenBookPlacement` | `RuneScribingStation` | Clear the physical table reference. |
 
 ## Model replacement contract
 

@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/player/hud/wizard_hud.gd" id="1_4aowg"]
+
+[node name="WizardHud" type="CanvasLayer" unique_id=506628545]
+script = ExtResource("1_4aowg")

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="RuneTemplate" format=3]
+
+[ext_resource type="Script" path="res://game/scribing/runes/rune_template.gd" id="1_bpisg"]
+
+[resource]
+script = ExtResource("1_bpisg")
+rune_id = "rend"
+display_name = "Rend"
+category = "effect"
+recorded_at_unix_time = 1783583656
+strokes = Array[PackedVector2Array]([PackedVector2Array(0.13884297, 0.16517857, 0.13884297, 0.85379463), PackedVector2Array(0.14132231, 0.16294643, 0.27797908, 0.3325893), PackedVector2Array(0.2747934, 0.34263393, 0.13813666, 0.51227677), PackedVector2Array(0.13801652, 0.5066964, 0.27644628, 0.85491073)])

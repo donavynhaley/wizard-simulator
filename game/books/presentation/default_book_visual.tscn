@@ -1,0 +1,140 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://game/books/presentation/book_visual.gd" id="1_visual"]
+[ext_resource type="PackedScene" path="res://assets/models/book_closed.glb" id="2_closed"]
+[ext_resource type="PackedScene" path="res://assets/models/book_open.glb" id="3_open"]
+
+[sub_resource type="Animation" id="Animation_reset"]
+resource_name = "RESET"
+length = 0.0
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("VisualRoot/OpenVisual/PageTurnPivot:rotation")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(0, 0, 0)]
+}
+
+[sub_resource type="Animation" id="Animation_turn_page"]
+resource_name = "turn_page"
+length = 0.44
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("VisualRoot/OpenVisual/PageTurnPivot:rotation")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.44),
+"transitions": PackedFloat32Array(0.65, 1),
+"update": 0,
+"values": [Vector3(0, 0, 0), Vector3(0, 0, 3.141593)]
+}
+tracks/1/type = "method"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath(".")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0.22),
+"transitions": PackedFloat32Array(1),
+"values": [{
+"args": [],
+"method": &"_emit_page_turn_midpoint"
+}]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_book"]
+_data = {
+&"RESET": SubResource("Animation_reset"),
+&"turn_page": SubResource("Animation_turn_page")
+}
+
+[sub_resource type="StandardMaterial3D" id="Material_cover_backing"]
+shading_mode = 0
+albedo_color = Color(0.16, 0.055, 0.045, 1)
+roughness = 0.88
+
+[sub_resource type="BoxMesh" id="BoxMesh_cover_backing"]
+material = SubResource("Material_cover_backing")
+size = Vector3(0.41, 0.018, 0.21)
+
+[node name="DefaultBookVisual" type="Node3D"]
+script = ExtResource("1_visual")
+
+[node name="VisualRoot" type="Node3D" parent="."]
+
+[node name="ClosedVisual" type="Node3D" parent="VisualRoot"]
+
+[node name="Model" parent="VisualRoot/ClosedVisual" instance=ExtResource("2_closed")]
+
+[node name="OpenVisual" type="Node3D" parent="VisualRoot"]
+visible = false
+
+[node name="Model" parent="VisualRoot/OpenVisual" instance=ExtResource("3_open")]
+
+[node name="CoverBacking" type="MeshInstance3D" parent="VisualRoot/OpenVisual"]
+position = Vector3(0, 0.004, 0)
+mesh = SubResource("BoxMesh_cover_backing")
+
+[node name="PageSurface" type="Sprite3D" parent="VisualRoot/OpenVisual"]
+position = Vector3(0, 0.0175, 0)
+rotation = Vector3(-1.570796, 0, 0)
+cast_shadow = 0
+pixel_size = 0.000348
+double_sided = false
+alpha_cut = 2
+texture_filter = 1
+
+[node name="PageTurnPivot" type="Node3D" parent="VisualRoot/OpenVisual"]
+position = Vector3(0, 0.0205, 0)
+visible = false
+
+[node name="Front" type="Sprite3D" parent="VisualRoot/OpenVisual/PageTurnPivot"]
+position = Vector3(0.089, 0, 0)
+rotation = Vector3(-1.570796, 0, 0)
+cast_shadow = 0
+pixel_size = 0.000348
+double_sided = false
+alpha_cut = 2
+texture_filter = 1
+region_enabled = true
+region_rect = Rect2(512, 0, 512, 512)
+
+[node name="Back" type="Sprite3D" parent="VisualRoot/OpenVisual/PageTurnPivot"]
+position = Vector3(0.089, -0.0005, 0)
+rotation = Vector3(1.570796, 0, 0)
+cast_shadow = 0
+pixel_size = 0.000348
+double_sided = false
+alpha_cut = 2
+texture_filter = 1
+flip_h = true
+flip_v = true
+region_enabled = true
+region_rect = Rect2(0, 0, 512, 512)
+
+[node name="WorldPose" type="Marker3D" parent="."]
+
+[node name="HeldPose" type="Marker3D" parent="."]
+position = Vector3(-0.04, 0.025, -0.105)
+rotation = Vector3(1.08, 0, -0.12)
+scale = Vector3(1.15, 1.15, 1.15)
+
+[node name="ReadingPose" type="Marker3D" parent="."]
+position = Vector3(-0.34, 0.06, 0.1)
+rotation = Vector3(1.37, 0, 0)
+scale = Vector3(1.8, 1.8, 1.8)
+
+[node name="TablePose" type="Marker3D" parent="."]
+scale = Vector3(0.85, 0.85, 0.85)
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries/ = SubResource("AnimationLibrary_book")

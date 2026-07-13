@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://d1qvabx7jx1qs"]
+
+[ext_resource type="Script" path="res://game/alchemy/ingredients/held_fire.gd" id="1_ydt7k"]
+[ext_resource type="PackedScene" uid="uid://bykwrxhkq5qhr" path="res://shared/vfx/magical_flame.tscn" id="2_v2f4e"]
+
+[node name="HeldFire" type="Node3D"]
+script = ExtResource("1_ydt7k")
+held_scale = Vector3(0.38, 0.38, 0.38)
+
+[node name="MagicalFlame" parent="." instance=ExtResource("2_v2f4e")]
+transform = Transform3D(0.52, 0, 0, 0, 0.52, 0, 0, 0, 0.52, 0, 0.03, 0)
+light_energy = 0.28
+light_range = 0.9
+flicker_strength = 0.1
