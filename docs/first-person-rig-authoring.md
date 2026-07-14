@@ -5,18 +5,25 @@ The root scene owns movement, the gameplay camera, and interaction wiring.
 The body scene owns the imported wizard model and physical beard, while the viewmodel scene owns arm pose controls and first-person animation players.
 
 `BodyRig/WizardModel` is the player's only wizard model instance.
-It is anchored to the player instead of the camera, so looking up and down moves naturally beneath the hat and above the beard.
+It is anchored to the player instead of the camera, preserving connected shoulders, a physical torso, the hat, and the beard.
 The first-person mesh retains the hat, beard, robe, shoulders, and arms.
 Triangles weighted to the head and neck are removed because those surfaces would surround the camera and intersect its near plane.
 The loose `DEF-FOREARM-HANG` drape is also removed from the first-person mesh so raising an arm cannot cover the camera, while the fitted sleeve, shoulder, arm, and hand remain visible.
 The `LeftArmPose` and `RightArmPose` controls move the corresponding shoulder bones independently without duplicating the wizard model.
+After those authored poses are applied, a `TwoBoneIK3D` modifier moves each wrist toward its complete camera-local transform.
+The solver keeps the hands at a stable screen position and depth while preserving fixed bone lengths and connected shoulders.
+The elbow pole follows the authored forearm pose in the same camera-local frame, so idle, grab, hold, release, and beard-lift animations retain their intended bends.
+A following `CopyTransformModifier3D` restores each authored hand's camera-local orientation without changing its IK position.
 
 The authored eye alignment is controlled by the `Head` and `Camera3D` transforms in `player.tscn` plus the `BodyRig/WizardModel` transform in `wizard_body.tscn`.
 The camera uses a `0.03` meter near plane and the player's vertical look is limited to 75 degrees so the view cannot rotate into the hat crown or torso.
 The model is positioned so the brim is only a thin accent at the top of the neutral view and the beard enters the frame when looking down.
-When looking upward, the arms stop following camera pitch after the authored limit and naturally leave the frame.
+Looking up and down rotates the connected arms procedurally so the resting hands remain at the lower edges of the frame.
 After the screen-lock threshold, the hidden head bone tilts the hat with the camera so the brim settles into a stable screen position.
-These values are editable on `Head/Camera3D/Viewmodel/FirstPersonWizardRig` as `upward_arm_follow_limit_degrees`, `hat_screen_lock_start_pitch_degrees`, and `hat_screen_lock_strength`.
+The hand target and elbow pole markers are authored under `Head/Camera3D/Viewmodel/CameraLocalArmTargets`.
+The `camera_hand_horizontal_scale` property pulls the original wide arm pose inward far enough to keep both wrist targets reachable throughout vertical look.
+The `camera_hand_vertical_offset` property keeps the resting fingertips in the lower third instead of crowding the crosshair.
+The hat values remain editable on `Head/Camera3D/Viewmodel/FirstPersonWizardRig` as `hat_screen_lock_start_pitch_degrees` and `hat_screen_lock_strength`.
 
 ## Preview the First-Person Camera
 

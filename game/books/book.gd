@@ -8,11 +8,15 @@ signal page_changed(spread_index: int)
 signal page_turn_started(from_spread: int, to_spread: int)
 signal page_turn_finished(spread_index: int)
 signal held_hint_changed(hint: String)
+signal reading_started(book: Book)
+signal reading_finished(book: Book)
+signal close_focus_changed(enabled: bool)
 
 @export var book_data: BookData:
 	set(value):
 		book_data = value
 		if is_node_ready():
+			_apply_visual_profile()
 			_update_page_content()
 
 @export_group("Composed Scenes")
@@ -47,6 +51,7 @@ func _ready() -> void:
 	if _visual != null:
 		_visual.page_turn_midpoint_reached.connect(_on_page_turn_midpoint)
 		_visual.page_turn_finished.connect(_on_page_turn_finished)
+	_apply_visual_profile()
 	if _visual != null and _page_renderer != null:
 		_visual.set_page_texture(_page_renderer.get_texture())
 	_update_page_content()
@@ -74,7 +79,7 @@ func get_display_name() -> String:
 
 func get_held_hint() -> String:
 	if _is_reading:
-		return "%s  [Arrows pages / LMB close / G drop]" % get_display_name()
+		return "%s  [Arrows pages / hold RMB focus / LMB close / G drop]" % get_display_name()
 	return "%s  [LMB read / G drop]" % get_display_name()
 
 
@@ -86,7 +91,18 @@ func get_held_pose() -> Dictionary:
 	}
 
 
+func is_reading() -> bool:
+	return _is_reading
+
+
+func get_reading_hand_grips() -> Array[Transform3D]:
+	return _visual.get_hand_grip_transforms() if _visual != null else []
+
+
 func set_held(value: bool) -> void:
+	var was_reading := _is_reading
+	if was_reading:
+		_set_close_focus(false)
 	_is_held = value
 	if _is_held:
 		_is_stationed = false
@@ -101,9 +117,14 @@ func set_held(value: bool) -> void:
 		_set_physics_active(true)
 	_refresh_visual_state()
 	_emit_held_hint_changed()
+	if was_reading and not _is_reading:
+		reading_finished.emit(self)
 
 
 func set_stationed(value: bool) -> void:
+	var was_reading := _is_reading
+	if was_reading:
+		_set_close_focus(false)
 	_is_stationed = value
 	if _is_stationed:
 		_is_held = false
@@ -117,6 +138,8 @@ func set_stationed(value: bool) -> void:
 		if not _is_held:
 			_set_physics_active(true)
 	_refresh_visual_state()
+	if was_reading and not _is_reading:
+		reading_finished.emit(self)
 
 
 func cast_from(_caster: Node, _camera_transform: Transform3D) -> String:
@@ -130,11 +153,16 @@ func cast_from(_caster: Node, _camera_transform: Transform3D) -> String:
 
 
 func open_for_reference() -> void:
+	var was_reading := _is_reading
+	if was_reading:
+		_set_close_focus(false)
 	_is_reference_open = true
 	_is_reading = false
 	_cancel_page_turn()
 	_update_page_content()
 	_refresh_visual_state()
+	if was_reading:
+		reading_finished.emit(self)
 
 
 func set_reference_page_turn_enabled(value: bool) -> void:
@@ -150,6 +178,14 @@ func is_page_turning() -> bool:
 
 
 func _input(event: InputEvent) -> void:
+	if _is_reading and event.is_action_pressed(&"book_focus"):
+		_set_close_focus(true)
+		get_viewport().set_input_as_handled()
+		return
+	if _is_reading and event.is_action_released(&"book_focus"):
+		_set_close_focus(false)
+		get_viewport().set_input_as_handled()
+		return
 	if _page_turning:
 		return
 	if not _is_reading and not (_is_stationed and _is_reference_open and _reference_page_turn_enabled):
@@ -171,9 +207,13 @@ func _open_reading() -> void:
 	_update_page_content()
 	_refresh_visual_state()
 	_emit_held_hint_changed()
+	reading_started.emit(self)
 
 
 func _close_reading() -> void:
+	if not _is_reading:
+		return
+	_set_close_focus(false)
 	_is_reading = false
 	_cancel_page_turn()
 	if _page_renderer != null:
@@ -183,6 +223,14 @@ func _close_reading() -> void:
 	else:
 		_refresh_visual_state()
 	_emit_held_hint_changed()
+	reading_finished.emit(self)
+
+
+func _set_close_focus(enabled: bool) -> void:
+	if _visual == null or _visual.is_close_focused() == enabled:
+		return
+	_visual.set_close_focus(enabled)
+	close_focus_changed.emit(enabled)
 
 
 func _previous_page_pressed(event: InputEvent) -> bool:
@@ -200,8 +248,17 @@ func _next_page_pressed(event: InputEvent) -> bool:
 func _update_page_content() -> void:
 	var spread_count := _spread_count()
 	current_page = clampi(current_page, 0, maxi(spread_count - 1, 0))
+	if _visual != null:
+		_visual.set_page_progress(current_page, spread_count)
 	if _page_renderer != null:
 		_page_renderer.show_spread(book_data, get_display_name(), current_page)
+
+
+func _apply_visual_profile() -> void:
+	if _visual == null:
+		return
+	var profile := book_data.visual_profile if book_data != null else null
+	_visual.apply_profile(profile)
 
 
 func _next_page() -> void:
@@ -254,6 +311,8 @@ func _on_page_turn_finished() -> void:
 func _cancel_page_turn() -> void:
 	_pending_page = -1
 	_page_turning = false
+	if _visual != null:
+		_visual.cancel_page_turn()
 	if _page_renderer != null:
 		_page_renderer.set_rune_playback_enabled(true)
 

@@ -4,8 +4,8 @@ extends RayCast3D
 ## Look-to-focus interaction. Lives under the player camera; whatever the
 ## crosshair rests on gets focused, and E interacts with it.
 ##
-## Interactable contract (dispatched by method name, on the collider or any
-## ancestor):
+## Interactable contract (dispatched by method name, on the collider, an
+## ancestor, or a direct component child of either):
 ##   focus_prompt(player: WizardPlayer, collider) -> String   what the HUD shows
 ##   interact(player: WizardPlayer, collider)                 do the thing
 ## The player is the typed WizardPlayer, so implementers get player.hands
@@ -71,7 +71,17 @@ func clear_focus() -> void:
 func _find_interactable(from: Object) -> Node:
 	var node := from as Node
 	while node:
-		if node.has_method("interact") and node.has_method("focus_prompt"):
-			return node
+		var interactable := _interaction_target_on(node)
+		if interactable != null:
+			return interactable
 		node = node.get_parent()
+	return null
+
+
+func _interaction_target_on(node: Node) -> Node:
+	if node.has_method("interact") and node.has_method("focus_prompt"):
+		return node
+	for child in node.get_children():
+		if child.has_method("interact") and child.has_method("focus_prompt"):
+			return child
 	return null

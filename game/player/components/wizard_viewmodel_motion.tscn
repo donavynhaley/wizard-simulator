@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/player/components/wizard_viewmodel_motion.gd" id="1_motion"]
+
+[node name="ViewmodelMotion" type="Node"]
+script = ExtResource("1_motion")

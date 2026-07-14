@@ -548,6 +548,20 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.075, 0, 0)
 [node name="FirstPersonWizardRig" type="Node3D" parent="." unique_id=1446232012]
 script = ExtResource("6_urkom")
 
+[node name="CameraLocalArmTargets" type="Node3D" parent="." unique_id=1073057742]
+
+[node name="LeftHandTarget" type="Marker3D" parent="CameraLocalArmTargets" unique_id=1437048291]
+gizmo_extents = 0.045
+
+[node name="LeftElbowPole" type="Marker3D" parent="CameraLocalArmTargets" unique_id=714945013]
+gizmo_extents = 0.035
+
+[node name="RightHandTarget" type="Marker3D" parent="CameraLocalArmTargets" unique_id=1659618595]
+gizmo_extents = 0.045
+
+[node name="RightElbowPole" type="Marker3D" parent="CameraLocalArmTargets" unique_id=1947517575]
+gizmo_extents = 0.035
+
 [node name="ArmModels" type="Node3D" parent="FirstPersonWizardRig" unique_id=1471801280]
 
 [node name="LeftArmPose" type="Marker3D" parent="FirstPersonWizardRig/ArmModels" unique_id=871968928]

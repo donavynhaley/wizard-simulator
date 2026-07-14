@@ -4,7 +4,9 @@
 [ext_resource type="PackedScene" path="res://game/player/player.tscn" id="1_y6bsx"]
 [ext_resource type="Script" uid="uid://ivvjr42yf0nn" path="res://game/world/day_night_cycle.gd" id="2_daynight"]
 [ext_resource type="PackedScene" uid="uid://b04q02fhf6uk8" path="res://assets/third_party/kenney/fantasy_town/fountain-square-detail.glb" id="3_o6hnd"]
-[ext_resource type="Script" uid="uid://cdpjhe0jk65iv" path="res://game/world/props/fountain_of_endless_spring.gd" id="4_spring"]
+[ext_resource type="PackedScene" path="res://game/player/interaction/held_item_source.tscn" id="4_source"]
+[ext_resource type="PackedScene" path="res://game/alchemy/ingredients/held_water.tscn" id="4_water"]
+[ext_resource type="Script" uid="uid://daw4oadycailp" path="res://game/alchemy/ingredients/held_water.gd" id="4_water_script"]
 [ext_resource type="PackedScene" uid="uid://5fyhxou04dxg" path="res://game/scribing/station/crafting_table.tscn" id="5_r62g1"]
 [ext_resource type="Script" uid="uid://duwe13r5kkl2m" path="res://game/world/props/mood_light.gd" id="6_2r11s"]
 [ext_resource type="PackedScene" uid="uid://ckttbfrao7whi" path="res://game/alchemy/alchemy_lab.tscn" id="6_hxol8"]
@@ -281,7 +283,14 @@ sides = 64
 
 [node name="EndlessSpring" parent="Floor1" unique_id=302023470 instance=ExtResource("3_o6hnd")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.9559164, 0, -3.0570374)
-script = ExtResource("4_spring")
+
+[node name="HeldItemSource" parent="Floor1/EndlessSpring" instance=ExtResource("4_source")]
+item_scene = ExtResource("4_water")
+accepted_item_script = ExtResource("4_water_script")
+item_name = "Held Water"
+gather_prompt = "Cup water from the Endless Spring"
+refresh_prompt = "Refresh the water in your hands"
+gathered_message = "Cold spring water gathers in your hands."
 
 [node name="InteractionBody" type="StaticBody3D" parent="Floor1/EndlessSpring" unique_id=1978418761]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)

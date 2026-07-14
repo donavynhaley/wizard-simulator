@@ -65,6 +65,66 @@ func _run() -> void:
 		and is_equal_approx(wizard_model.position.y, -0.88)
 		and is_equal_approx(wizard_model.position.z, 0.21),
 		"camera and body use the authored eye alignment with a tight near plane")
+	var camera_hand_ik := wizard_skeleton.find_child("CameraLocalHandIK", false, false) \
+		as TwoBoneIK3D if wizard_skeleton else null
+	var camera_hand_orientation := wizard_skeleton.find_child(
+		"CameraLocalHandOrientation", false, false) as CopyTransformModifier3D \
+		if wizard_skeleton else null
+	var final_arm_modifier := camera_hand_orientation as SkeletonModifier3D \
+		if camera_hand_orientation != null else camera_hand_ik as SkeletonModifier3D
+	var left_hand_bone := wizard_skeleton.find_bone("DEF-HAND.L") if wizard_skeleton else -1
+	var right_hand_bone := wizard_skeleton.find_bone("DEF-HAND.R") if wizard_skeleton else -1
+	var neutral_hand_screen_positions: Array[Vector2] = []
+	var neutral_hand_camera_depths: Array[float] = []
+	var neutral_hand_camera_rotations: Array[Quaternion] = []
+	var max_hand_screen_drift := 0.0
+	var max_hand_depth_drift := 0.0
+	var max_hand_rotation_drift := 0.0
+	for pitch_degrees in [0.0, -60.0, 60.0]:
+		player.head.rotation.x = deg_to_rad(pitch_degrees)
+		if final_arm_modifier != null:
+			await final_arm_modifier.modification_processed
+		else:
+			await process_frame
+		var hand_screen_positions: Array[Vector2] = []
+		var hand_camera_depths: Array[float] = []
+		var hand_camera_rotations: Array[Quaternion] = []
+		for hand_bone in [left_hand_bone, right_hand_bone]:
+			var hand_world_transform := wizard_skeleton.global_transform \
+				* wizard_skeleton.get_bone_global_pose(hand_bone)
+			var hand_world_position := hand_world_transform.origin
+			hand_screen_positions.append(camera.unproject_position(hand_world_position))
+			hand_camera_depths.append(camera.to_local(hand_world_position).z)
+			hand_camera_rotations.append(
+				(camera.global_basis.inverse() * hand_world_transform.basis).get_rotation_quaternion())
+		if neutral_hand_screen_positions.is_empty():
+			neutral_hand_screen_positions = hand_screen_positions
+			neutral_hand_camera_depths = hand_camera_depths
+			neutral_hand_camera_rotations = hand_camera_rotations
+		else:
+			for hand_index in 2:
+				max_hand_screen_drift = maxf(
+					max_hand_screen_drift,
+					hand_screen_positions[hand_index].distance_to(
+						neutral_hand_screen_positions[hand_index]))
+				max_hand_depth_drift = maxf(
+					max_hand_depth_drift,
+					absf(hand_camera_depths[hand_index]
+						- neutral_hand_camera_depths[hand_index]))
+				max_hand_rotation_drift = maxf(
+					max_hand_rotation_drift,
+					hand_camera_rotations[hand_index].angle_to(
+						neutral_hand_camera_rotations[hand_index]))
+	player.head.rotation.x = 0.0
+	_check(camera_hand_ik != null and max_hand_screen_drift < 5.0,
+		"resting hands stay camera-relative across vertical look (max drift=%.2f px)" \
+		% max_hand_screen_drift)
+	_check(max_hand_depth_drift < 0.01,
+		"resting hand depth stays camera-relative (max drift=%.3f m)" \
+		% max_hand_depth_drift)
+	_check(camera_hand_orientation != null and max_hand_rotation_drift < deg_to_rad(1.0),
+		"resting hand orientation stays camera-relative (max drift=%.2f degrees)" \
+		% rad_to_deg(max_hand_rotation_drift))
 	_check(grasp_animation_player != null
 		and grasp_animation_player.has_animation(&"idle")
 		and grasp_animation_player.has_animation(&"grab")
@@ -127,10 +187,12 @@ func _run() -> void:
 		await process_frame
 		_check(beard.visible, "looking forward does not visibility-toggle the physical beard")
 
-	var fountain := _find_by_type(scene, "FountainOfEndlessSpring") as FountainOfEndlessSpring
-	var torch := _find_by_type(scene, "TorchOfEternalFlame")
-	if torch == null:
-		torch = scene.find_child("TorchOfEternalFlame", true, false)
+	var fountain_root := scene.get_node_or_null(^"Floor1/EndlessSpring")
+	var fountain := fountain_root.get_node_or_null(^"HeldItemSource") \
+		if fountain_root != null else null
+	var torch_root := scene.get_node_or_null(^"TorchOfEternalFlame")
+	var torch := torch_root.get_node_or_null(^"HeldItemSource") \
+		if torch_root != null else null
 	var holder := scene.find_child("ElementHolder", true, false)
 	var crafter := scene.find_child("RuneScribingStation", true, false)
 	var burner := scene.find_child("Burner", true, false)
@@ -138,6 +200,9 @@ func _run() -> void:
 	var book := _find_by_type(scene, "Book") as Book
 	_check(fountain != null, "tower has a fountain")
 	_check(torch != null, "tower has the Torch of Eternal Flame")
+	_check(fountain != null and torch != null
+		and fountain.get_script() == torch.get_script(),
+		"fountain and torch reuse one held-item source component")
 	_check(holder != null, "tower has an element holder")
 	_check(crafter != null, "tower has a rune-scribing station")
 	var scribe_surface := crafter.get_node_or_null("Scroll/ScribeInkSurface") as MeshInstance3D if crafter else null
@@ -156,7 +221,7 @@ func _run() -> void:
 		return
 
 	# Fountain: empty hands -> cup water.
-	_check(fountain.focus_prompt(player, null) == fountain.prompt_text,
+	_check(fountain.focus_prompt(player, null) == fountain.gather_prompt,
 		"fountain prompts to cup water with empty hands")
 	fountain.interact(player, null)
 	_check(hands.held_item is HeldWater, "fountain fills the hands with spring water")
@@ -232,7 +297,7 @@ func _run() -> void:
 	crafter.interact(player, null)
 	_check(hands.held_item == null, "placing book reference empties the hands")
 	_check(crafter._reference_book == book, "crafter keeps the reference book")
-	_check((book.get_node("Visual/VisualRoot/OpenVisual") as Node3D).visible,
+	_check((book.get_node("Visual/VisualRoot/MotionRoot/OpenVisual") as Node3D).visible,
 		"reference book is open on the table")
 	var book_anchor := scene.find_child("OpenBookPlacement", true, false) as Node3D
 	var book_anchor_shape := book_anchor.get_node_or_null("StaticBody3D/CollisionShape3D") as Node3D if book_anchor else null
@@ -274,7 +339,7 @@ func _run() -> void:
 		book_anchor.interact(player, null)
 		_check(hands.held_item == null, "book placement accepts a held book directly")
 		_check(crafter._reference_book == book, "crafter tracks a book placed through the placement node")
-		_check((book.get_node("Visual/VisualRoot/OpenVisual") as Node3D).visible,
+		_check((book.get_node("Visual/VisualRoot/MotionRoot/OpenVisual") as Node3D).visible,
 			"directly placed book opens on the table")
 		_check(book.global_position.distance_to(book_anchor_shape.global_position) < 0.01,
 			"directly placed book uses the open book marker position")
@@ -286,7 +351,7 @@ func _run() -> void:
 	_check(hands.held_item == null, "dropping book empties the hands")
 
 	# Alchemy heat chain: torch -> burner fire slot -> flask with contents -> cooked flask.
-	_check(str(torch.call("focus_prompt", player, null)) == str(torch.get("prompt_text")),
+	_check(str(torch.call("focus_prompt", player, null)) == str(torch.get("gather_prompt")),
 		"torch prompts to gather fire with empty hands")
 	torch.call("interact", player, null)
 	_check(hands.held_item is HeldFire, "torch places eternal flame in the hands")
@@ -338,8 +403,12 @@ func _run() -> void:
 	var break_audio := scene.find_child("GlassBreakAudio", true, false)
 	_check(break_audio != null, "glass break sound plays")
 	if break_audio != null:
-		break_audio.queue_free()
+		var break_player := break_audio as AudioStreamPlayer3D
+		var playback_window := break_player.stream.get_length() + 0.25
+		await create_timer(playback_window).timeout
 		await process_frame
+	_check(not is_instance_valid(break_audio),
+		"glass break audio releases itself after playback")
 
 	_check(str(crafter.focus_prompt(player, null)) == crafter.prompt_text,
 		"crafter prompts to begin scribing with empty hands")

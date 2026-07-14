@@ -15,7 +15,7 @@ func interact(player: WizardPlayer, _collider: Object) -> void:
 	if held_item == null and item != null:
 		player.hands.pick_up(item)
 		item = null
-		
+
 	if held_item is not Item:
 		return
 	item = held_item
@@ -23,4 +23,3 @@ func interact(player: WizardPlayer, _collider: Object) -> void:
 	held_item.reparent(self)
 	held_item.position = Vector3.ZERO
 	held_item.rotation = Vector3.ZERO
-	

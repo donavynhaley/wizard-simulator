@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="BookVisualProfile" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://game/books/resources/book_visual_profile.gd" id="1_profile"]
+[ext_resource type="PackedScene" path="res://assets/models/book_closed.glb" id="2_closed"]
+[ext_resource type="PackedScene" path="res://assets/models/book_open.glb" id="3_open"]
+
+[resource]
+script = ExtResource("1_profile")
+closed_model_scene = ExtResource("2_closed")
+open_model_scene = ExtResource("3_open")

@@ -40,6 +40,18 @@ const CONTROL_BONES := {
 	"Finger02": "DEF-FINGER02.R",
 	"Finger03": "DEF-FINGER03.R",
 }
+const ARM_IK_CHAINS := [
+	{
+		"root": "DEF-ARM.L",
+		"middle": "DEF-FOREARM.L",
+		"end": "DEF-HAND.L",
+	},
+	{
+		"root": "DEF-ARM.R",
+		"middle": "DEF-FOREARM.R",
+		"end": "DEF-HAND.R",
+	},
+]
 
 @export_node_path("Node3D") var arm_model_path: NodePath = ^"../../../../BodyRig/WizardModel"
 @export_node_path("Node3D") var left_arm_pose_path: NodePath = ^"ArmModels/LeftArmPose"
@@ -50,9 +62,18 @@ const CONTROL_BONES := {
 	^"BeardInteractionAnimationPlayer"
 @export_node_path("Node3D") var beard_path: NodePath = ^"../../../../BodyRig/BeardAnchor/Beard"
 @export_node_path("Node3D") var head_path: NodePath = ^"../../.."
+@export_node_path("Camera3D") var camera_path: NodePath = ^"../.."
+@export_node_path("Node3D") var left_hand_target_path: NodePath = \
+	^"../CameraLocalArmTargets/LeftHandTarget"
+@export_node_path("Node3D") var left_elbow_pole_path: NodePath = \
+	^"../CameraLocalArmTargets/LeftElbowPole"
+@export_node_path("Node3D") var right_hand_target_path: NodePath = \
+	^"../CameraLocalArmTargets/RightHandTarget"
+@export_node_path("Node3D") var right_elbow_pole_path: NodePath = \
+	^"../CameraLocalArmTargets/RightElbowPole"
 @export_range(0.5, 1.5, 0.01) var arm_control_translation_scale := 1.0
-@export_range(0.0, 1.0, 0.01) var arm_pitch_follow := 0.65
-@export_range(0.0, 60.0, 1.0) var upward_arm_follow_limit_degrees := 20.0
+@export_range(0.5, 1.0, 0.01) var camera_hand_horizontal_scale := 0.62
+@export_range(-0.2, 0.0, 0.01) var camera_hand_vertical_offset := -0.08
 @export_range(0.0, 60.0, 1.0) var hat_screen_lock_start_pitch_degrees := 12.0
 @export_range(0.0, 1.5, 0.01) var hat_screen_lock_strength := 1.0
 @export_range(-80.0, -5.0, 1.0) var beard_interaction_pitch_degrees := -22.0
@@ -67,12 +88,22 @@ const CONTROL_BONES := {
 	get_node_or_null(beard_interaction_animation_player_path) as AnimationPlayer
 @onready var beard := get_node_or_null(beard_path) as FirstPersonBeard
 @onready var head := get_node_or_null(head_path) as Node3D
+@onready var camera := get_node_or_null(camera_path) as Camera3D
+@onready var left_hand_target := get_node_or_null(left_hand_target_path) as Node3D
+@onready var left_elbow_pole := get_node_or_null(left_elbow_pole_path) as Node3D
+@onready var right_hand_target := get_node_or_null(right_hand_target_path) as Node3D
+@onready var right_elbow_pole := get_node_or_null(right_elbow_pole_path) as Node3D
 
 var _skeleton: Skeleton3D
 var _base_rotations: Dictionary = {}
 var _base_positions: Dictionary = {}
+var _arm_ik_chains: Array[Dictionary] = []
+var _camera_local_hand_ik: TwoBoneIK3D
+var _camera_local_hand_orientation: CopyTransformModifier3D
 var _prepared := false
 var _holding_item := false
+var _active := true
+var _reading_book: Book
 
 
 func _ready() -> void:
@@ -87,6 +118,7 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if not _prepared:
 		_prepare_model()
+	_update_camera_local_hand_modifiers_active()
 	if Engine.is_editor_hint() and not preview_control_rig_in_editor:
 		return
 	if _skeleton != null:
@@ -95,7 +127,7 @@ func _process(_delta: float) -> void:
 		_apply_authored_arm_base_pose()
 		_apply_hat_screen_lock()
 		_apply_hand_controls()
-		_place_control_markers()
+		_update_camera_local_arm_targets()
 
 
 func set_holding_item(holding: bool) -> void:
@@ -113,13 +145,23 @@ func set_holding_item(holding: bool) -> void:
 		animation_player.play(RELEASE_ANIMATION, 0.08)
 
 
+func set_reading_book(book: Book) -> void:
+	_reading_book = book
+
+
+func get_reading_book() -> Book:
+	return _reading_book if is_instance_valid(_reading_book) else null
+
+
 func set_active(active: bool) -> void:
+	_active = active
 	set_process(active or Engine.is_editor_hint())
 	set_process_unhandled_input(active and not Engine.is_editor_hint())
 	if animation_player != null:
 		animation_player.active = active or Engine.is_editor_hint()
 	if beard_interaction_animation_player != null:
 		beard_interaction_animation_player.active = active or Engine.is_editor_hint()
+	_update_camera_local_hand_modifiers_active()
 
 
 func get_grasp_animation_player() -> AnimationPlayer:
@@ -206,6 +248,7 @@ func _prepare_model() -> void:
 	_cache_bone("LeftShoulder", "DEF-SHOULDER.L")
 	_cache_bone("RightShoulder", "DEF-SHOULDER.R")
 	_cache_bone("ModelHead", "DEF-HEAD")
+	_prepare_camera_local_hand_modifiers()
 	_prepared = true
 
 
@@ -234,7 +277,7 @@ func _apply_arm_pose(control: Node3D, shoulder_name: String, rest_position: Vect
 		return
 	var rig_position_offset := (control.position - rest_position) * arm_control_translation_scale
 	var skeleton_position_offset := _skeleton.global_basis.inverse() \
-		* (global_basis * rig_position_offset)
+		* (_get_neutral_viewmodel_basis() * rig_position_offset)
 	var parent_bone := _skeleton.get_bone_parent(bone)
 	var position_offset := skeleton_position_offset
 	if parent_bone != -1:
@@ -266,27 +309,172 @@ func _apply_authored_arm_base_pose() -> void:
 	var left_forearm := _skeleton.find_bone("DEF-FOREARM.L")
 	var upper_arm := _skeleton.find_bone("DEF-ARM.R")
 	var forearm := _skeleton.find_bone("DEF-FOREARM.R")
-	var head_pitch := head.rotation.x if head != null else 0.0
-	if head_pitch > 0.0:
-		head_pitch = minf(head_pitch, deg_to_rad(upward_arm_follow_limit_degrees))
-	var pitch := head_pitch * arm_pitch_follow
-	var pitch_offset := Quaternion(Vector3.RIGHT, pitch)
 	if left_upper_arm != -1:
 		_skeleton.set_bone_pose_rotation(
 			left_upper_arm,
-			(pitch_offset * LEFT_UPPER_ARM_BASE_ROTATION).normalized())
+			LEFT_UPPER_ARM_BASE_ROTATION)
 	if left_forearm != -1:
 		_skeleton.set_bone_pose_rotation(
 			left_forearm,
-			(pitch_offset * LEFT_FOREARM_BASE_ROTATION).normalized())
+			LEFT_FOREARM_BASE_ROTATION)
 	if upper_arm != -1:
 		_skeleton.set_bone_pose_rotation(
 			upper_arm,
-			(pitch_offset * RIGHT_UPPER_ARM_BASE_ROTATION).normalized())
+			RIGHT_UPPER_ARM_BASE_ROTATION)
 	if forearm != -1:
 		_skeleton.set_bone_pose_rotation(
 			forearm,
-			(pitch_offset * RIGHT_FOREARM_BASE_ROTATION).normalized())
+			RIGHT_FOREARM_BASE_ROTATION)
+
+
+## The skeleton lives inside an imported scene, so its runtime modifiers are
+## composed here after the imported bone hierarchy is available.
+func _prepare_camera_local_hand_modifiers() -> void:
+	if _skeleton == null or camera == null:
+		return
+	var targets: Array[Node3D] = [left_hand_target, right_hand_target]
+	var poles: Array[Node3D] = [left_elbow_pole, right_elbow_pole]
+	if targets.any(func(target: Node3D) -> bool: return target == null) \
+			or poles.any(func(pole: Node3D) -> bool: return pole == null):
+		return
+	_camera_local_hand_ik = _skeleton.get_node_or_null("CameraLocalHandIK") as TwoBoneIK3D
+	if _camera_local_hand_ik == null:
+		_camera_local_hand_ik = TwoBoneIK3D.new()
+		_camera_local_hand_ik.name = "CameraLocalHandIK"
+		_skeleton.add_child(_camera_local_hand_ik)
+	_camera_local_hand_orientation = _skeleton.get_node_or_null(
+		"CameraLocalHandOrientation") as CopyTransformModifier3D
+	if _camera_local_hand_orientation == null:
+		_camera_local_hand_orientation = CopyTransformModifier3D.new()
+		_camera_local_hand_orientation.name = "CameraLocalHandOrientation"
+		_skeleton.add_child(_camera_local_hand_orientation)
+	_skeleton.move_child(
+		_camera_local_hand_orientation,
+		min(_camera_local_hand_ik.get_index() + 1, _skeleton.get_child_count() - 1))
+	_camera_local_hand_ik.setting_count = ARM_IK_CHAINS.size()
+	_camera_local_hand_orientation.setting_count = ARM_IK_CHAINS.size()
+	_arm_ik_chains.clear()
+	for index in ARM_IK_CHAINS.size():
+		var bone_names := ARM_IK_CHAINS[index] as Dictionary
+		var root_bone := _skeleton.find_bone(bone_names["root"] as String)
+		var middle_bone := _skeleton.find_bone(bone_names["middle"] as String)
+		var end_bone := _skeleton.find_bone(bone_names["end"] as String)
+		if root_bone == -1 or middle_bone == -1 or end_bone == -1:
+			continue
+		_arm_ik_chains.append({
+			"middle": middle_bone,
+			"end": end_bone,
+			"target": targets[index],
+			"pole": poles[index],
+		})
+		_camera_local_hand_ik.set_root_bone(index, root_bone)
+		_camera_local_hand_ik.set_middle_bone(index, middle_bone)
+		_camera_local_hand_ik.set_end_bone(index, end_bone)
+		_camera_local_hand_ik.set_target_node(
+			index, _camera_local_hand_ik.get_path_to(targets[index]))
+		_camera_local_hand_ik.set_pole_node(
+			index, _camera_local_hand_ik.get_path_to(poles[index]))
+		_camera_local_hand_orientation.set_apply_bone(index, end_bone)
+		_camera_local_hand_orientation.set_reference_type(
+			index, BoneConstraint3D.REFERENCE_TYPE_NODE)
+		_camera_local_hand_orientation.set_reference_node(
+			index, _camera_local_hand_orientation.get_path_to(targets[index]))
+		_camera_local_hand_orientation.set_copy_flags(
+			index, CopyTransformModifier3D.TRANSFORM_FLAG_ROTATION)
+		_camera_local_hand_orientation.set_relative(index, false)
+		_camera_local_hand_orientation.set_additive(index, false)
+	if not _camera_local_hand_orientation.modification_processed.is_connected(
+			_on_camera_local_hand_modifiers_processed):
+		_camera_local_hand_orientation.modification_processed.connect(
+			_on_camera_local_hand_modifiers_processed)
+	_update_camera_local_hand_modifiers_active()
+
+
+## Reads the authored body-space pose as if the camera were level, then moves
+## its complete wrist and elbow targets into the camera's current frame.
+func _update_camera_local_arm_targets() -> void:
+	if _camera_local_hand_ik == null or not _camera_local_hand_ik.active or camera == null:
+		return
+	if _update_book_reading_arm_targets():
+		return
+	var neutral_camera_transform := _get_neutral_camera_transform()
+	for chain in _arm_ik_chains:
+		var middle_world := _bone_world_position(chain["middle"] as int)
+		var hand_world_transform := _bone_world_transform(chain["end"] as int)
+		var hand_world := hand_world_transform.origin
+		var camera_local_hand := neutral_camera_transform.affine_inverse() * hand_world
+		camera_local_hand.x *= camera_hand_horizontal_scale
+		camera_local_hand.y += camera_hand_vertical_offset
+		var target := chain["target"] as Node3D
+		var pole := chain["pole"] as Node3D
+		target.global_position = camera.global_transform * camera_local_hand
+		var camera_local_hand_basis := (
+			neutral_camera_transform.basis.inverse() * hand_world_transform.basis
+		).orthonormalized()
+		target.global_basis = (
+			camera.global_basis.orthonormalized() * camera_local_hand_basis
+		).orthonormalized()
+		var camera_local_elbow := neutral_camera_transform.affine_inverse() * middle_world
+		camera_local_elbow.x *= camera_hand_horizontal_scale
+		camera_local_elbow.y += camera_hand_vertical_offset
+		pole.global_position = camera.global_transform * camera_local_elbow
+
+
+func _update_book_reading_arm_targets() -> bool:
+	if _reading_book == null or not is_instance_valid(_reading_book):
+		_reading_book = null
+		return false
+	var grips := _reading_book.get_reading_hand_grips()
+	if grips.size() != 2 or _arm_ik_chains.size() < 2:
+		return false
+	for index in 2:
+		var chain := _arm_ik_chains[index]
+		var target := chain["target"] as Node3D
+		var pole := chain["pole"] as Node3D
+		target.global_transform = grips[index]
+		var side := -1.0 if index == 0 else 1.0
+		pole.global_position = target.global_position \
+			+ camera.global_basis * Vector3(side * 0.2, -0.16, 0.1)
+	return true
+
+
+func _get_neutral_camera_transform() -> Transform3D:
+	if head == null or camera == null or not head.get_parent() is Node3D:
+		return camera.global_transform if camera != null else global_transform
+	var body := head.get_parent() as Node3D
+	var head_basis := body.global_basis.orthonormalized()
+	var basis := (head_basis * camera.transform.basis).orthonormalized()
+	var origin := head.global_position + head_basis * camera.position
+	return Transform3D(basis, origin)
+
+
+func _get_neutral_viewmodel_basis() -> Basis:
+	var neutral_camera_basis := _get_neutral_camera_transform().basis
+	var viewmodel_basis: Basis = get_parent().transform.basis \
+		if get_parent() is Node3D else Basis.IDENTITY
+	return (neutral_camera_basis * viewmodel_basis * transform.basis).orthonormalized()
+
+
+func _bone_world_position(bone: int) -> Vector3:
+	return _skeleton.to_global(_skeleton.get_bone_global_pose(bone).origin)
+
+
+func _bone_world_transform(bone: int) -> Transform3D:
+	return _skeleton.global_transform * _skeleton.get_bone_global_pose(bone)
+
+
+func _update_camera_local_hand_modifiers_active() -> void:
+	if _camera_local_hand_ik == null:
+		return
+	var modifiers_active := _active \
+		and (not Engine.is_editor_hint() or preview_control_rig_in_editor)
+	_camera_local_hand_ik.active = modifiers_active
+	if _camera_local_hand_orientation != null:
+		_camera_local_hand_orientation.active = modifiers_active
+
+
+func _on_camera_local_hand_modifiers_processed() -> void:
+	_place_control_markers()
 
 
 func _apply_hat_screen_lock() -> void:

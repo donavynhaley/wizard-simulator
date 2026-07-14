@@ -29,12 +29,13 @@ func _ready() -> void:
 	add_to_group(GROUP)
 	_build()
 
-	var interactor := get_node_or_null(^"../Head/Camera3D/Interactor") as PlayerInteractor
-	if interactor:
+
+func configure(interactor: PlayerInteractor, hands: WizardHands) -> void:
+	if interactor != null:
 		interactor.focus_changed.connect(_on_focus_changed)
-	var hands := get_node_or_null(^"../Head/Camera3D/Viewmodel/HandAnchor") as WizardHands
-	if hands:
+	if hands != null:
 		hands.held_changed.connect(_on_held_changed)
+		_on_held_changed(hands.held_item)
 
 
 func _build() -> void:

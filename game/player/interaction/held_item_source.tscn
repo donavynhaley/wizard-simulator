@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/player/interaction/held_item_source.gd" id="1_source"]
+
+[node name="HeldItemSource" type="Node"]
+script = ExtResource("1_source")

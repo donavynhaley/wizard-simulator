@@ -1,9 +1,10 @@
-[gd_resource type="Resource" script_class="BookData" format=3 uid="uid://dwi4kltjsnjfk"]
+[gd_resource type="Resource" script_class="BookData" load_steps=9 format=3 uid="uid://dwi4kltjsnjfk"]
 
 [ext_resource type="Script" uid="uid://bfsb71ceawsfi" path="res://game/books/resources/book_data.gd" id="1_book_data"]
 [ext_resource type="Script" uid="uid://dqbhuio5lxao0" path="res://game/books/resources/book_page_data.gd" id="2_page_data"]
 [ext_resource type="Script" uid="uid://dr7ronxaidf54" path="res://game/books/resources/book_spread_data.gd" id="3_spread_data"]
 [ext_resource type="Resource" uid="uid://r222a1ctob6i" path="res://content/runes/templates/bolt/bolt_template_01.tres" id="4_eruoh"]
+[ext_resource type="Resource" path="res://content/books/default_book_visual_profile.tres" id="5_visual_profile"]
 
 [sub_resource type="Resource" id="BookPageData_bolt_intro"]
 script = ExtResource("2_page_data")
@@ -29,4 +30,5 @@ script = ExtResource("1_book_data")
 id = "bolt_rune_book"
 title = "Bolt Rune Book"
 display_name = "Bolt Rune Book"
+visual_profile = ExtResource("5_visual_profile")
 spreads = Array[ExtResource("3_spread_data")]([SubResource("BookSpreadData_bolt_first")])

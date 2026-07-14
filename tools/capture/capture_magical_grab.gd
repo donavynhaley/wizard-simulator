@@ -27,8 +27,12 @@ func _run() -> void:
 	await physics_frame
 
 	var player := scene.get_node("Player") as WizardPlayer
-	var fountain := _find_by_type(scene, "FountainOfEndlessSpring")
-	var torch := _find_by_type(scene, "TorchOfEternalFlame")
+	var fountain_root := scene.get_node_or_null(^"Floor1/EndlessSpring")
+	var fountain := fountain_root.get_node_or_null(^"HeldItemSource") \
+		if fountain_root != null else null
+	var torch_root := scene.get_node_or_null(^"TorchOfEternalFlame")
+	var torch := torch_root.get_node_or_null(^"HeldItemSource") \
+		if torch_root != null else null
 	var book := _find_by_type(scene, "Book") as Book
 	if player == null or fountain == null or torch == null or book == null:
 		push_error("Magical grab capture needs the tower player, fountain, torch, and book.")

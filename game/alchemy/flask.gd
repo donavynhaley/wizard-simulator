@@ -127,10 +127,5 @@ func _play_break_sound() -> void:
 	player.max_distance = 18.0
 	scene.add_child(player)
 	player.global_position = global_position
-	var cleanup := func() -> void:
-		if is_instance_valid(player):
-			player.queue_free()
-	player.finished.connect(cleanup, CONNECT_ONE_SHOT)
-	var cleanup_delay: float = clampf(GLASS_BREAK_SOUND.get_length() + 0.15, 0.25, 2.5)
-	get_tree().create_timer(cleanup_delay).timeout.connect(cleanup, CONNECT_ONE_SHOT)
+	player.finished.connect(player.queue_free, CONNECT_ONE_SHOT)
 	player.play()

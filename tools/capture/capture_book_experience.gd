@@ -42,9 +42,10 @@ func _run() -> void:
 		return
 	_add_capture_spread(book)
 	book.call("_next_page")
-	var turn_pivot := book.get_node("Visual/VisualRoot/OpenVisual/PageTurnPivot") as Node3D
+	var turning_page := book.get_node(
+		"Visual/VisualRoot/MotionRoot/OpenVisual/PageSurface/TurningPage") as MeshInstance3D
 	for frame in 120:
-		if turn_pivot.visible and turn_pivot.rotation.z > 0.9:
+		if turning_page.visible and turning_page.mesh.get_aabb().size.y > 0.08:
 			break
 		await process_frame
 	error = _save_viewport(TURN_OUT)
@@ -52,7 +53,7 @@ func _run() -> void:
 		quit(error)
 		return
 	for frame in 120:
-		if turn_pivot.visible and turn_pivot.rotation.z > 2.3:
+		if turning_page.visible and turning_page.mesh.get_aabb().size.y < 0.08:
 			break
 		await process_frame
 	error = _save_viewport(TURN_BACK_OUT)

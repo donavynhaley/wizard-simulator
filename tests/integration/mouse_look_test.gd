@@ -31,7 +31,9 @@ func _run() -> void:
 	var motion := InputEventMouseMotion.new()
 	motion.position = root.get_visible_rect().size * 0.5  # captured cursor sits center
 	motion.relative = Vector2(120.0, 0.0)
+	motion.screen_relative = motion.relative
 	motion.velocity = Vector2(1200.0, 0.0)
+	motion.screen_velocity = motion.velocity
 	Input.parse_input_event(motion)
 	await process_frame
 	await process_frame
@@ -43,6 +45,7 @@ func _run() -> void:
 	var motion_up := InputEventMouseMotion.new()
 	motion_up.position = root.get_visible_rect().size * 0.5
 	motion_up.relative = Vector2(0.0, 90.0)
+	motion_up.screen_relative = motion_up.relative
 	Input.parse_input_event(motion_up)
 	await process_frame
 	await process_frame
@@ -61,7 +64,9 @@ func _run() -> void:
 	held_motion.position = root.get_visible_rect().size * 0.5
 	held_motion.button_mask = MOUSE_BUTTON_MASK_LEFT
 	held_motion.relative = Vector2(-100.0, 0.0)
+	held_motion.screen_relative = held_motion.relative
 	held_motion.velocity = Vector2(-1000.0, 0.0)
+	held_motion.screen_velocity = held_motion.velocity
 	Input.parse_input_event(held_motion)
 	await process_frame
 	await process_frame

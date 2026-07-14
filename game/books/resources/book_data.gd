@@ -5,6 +5,7 @@ extends Resource
 @export var title: String = "Untitled Book"
 @export var display_name: String = ""
 @export var page_theme: Theme
+@export var visual_profile: BookVisualProfile
 @export var spreads: Array[BookSpreadData] = []
 
 
