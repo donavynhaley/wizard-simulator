@@ -15,7 +15,12 @@ The runtime wizard model is stored at `assets/third_party/polypizza/Wizardus Max
 The original local Poly Pizza folder, including the unused `fps_arms.glb`, is retained at `source_assets/third_party_packs/polypizza/` for provenance.
 
 `fps_arms.glb` is Rigged Fps Arms by Player11132 from [poly.pizza](https://poly.pizza/m/AMGNKfQqVc), licensed under CC BY.
-It is retained as source material and is not referenced by the current runtime.
+CIt is retained as source material and is not referenced by the current runtime.
+
+### WRAD ARMS (First-Person Viewmodel Arms)
+
+The rigged first-person arms are stored at `assets/external/WRAD_ARMS/` (runtime scene: `game/player/viewmodel/wizard_arms.tscn`).
+"WRAD ARMS" by [wriks](https://wriks.itch.io/wrad-arms) is released under CC0 1.0 Universal; the original license and readme are preserved alongside the assets.
 
 ### Animated Seal
 

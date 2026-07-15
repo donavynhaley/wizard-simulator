@@ -59,20 +59,6 @@ func _ready() -> void:
 	_set_physics_active(false)
 
 
-func focus_prompt(player: WizardPlayer, _collider: Object) -> String:
-	if player == null or player.hands == null:
-		return ""
-	if player.hands.held_item == null:
-		return "Pick up %s" % get_display_name()
-	return "Empty your hands"
-
-
-func interact(player: WizardPlayer, _collider: Object) -> void:
-	if player == null or player.hands == null or player.hands.held_item != null:
-		return
-	player.hands.pick_up(self)
-
-
 func get_display_name() -> String:
 	return book_data.get_display_name() if book_data != null else "Untitled Book"
 

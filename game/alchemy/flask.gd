@@ -1,7 +1,6 @@
 extends Item
 class_name Flask
 
-@export var pickup_prompt_text =  "pick up flask of "
 @export var break_impact_speed: float = 1.2
 @export_flags_3d_physics var active_collision_layer: int = 2
 @export_flags_3d_physics var active_collision_mask: int = 1
@@ -27,33 +26,6 @@ func get_flask_item() -> Reagent:
 
 func cook() -> void:
 	is_cooked = true
-
-func focus_prompt(player: WizardPlayer, _collider: Object) -> String:
-	if player == null or player.hands == null:
-		return ""
-	var hands := player.hands
-	if hands.held_item == null:
-		return _get_reagent_name()
-	return "empty your hands"
-
-func _get_reagent_name() -> String:
-	if is_cooked:
-		return "Pick up cooked flask"
-	var reagent = get_flask_item()
-	if reagent != null:
-		return pickup_prompt_text + reagent.get_name()
-	return "Pick up empty flask"
-	
-func interact(player: WizardPlayer, _collider: Object) -> void:
-	if _is_broken:
-		return
-	if player == null or player.hands == null:
-		return
-	var hands := player.hands
-	if hands.held_item != null and not (hands.held_item is Flask):
-		return
-	hands.pick_up(self)
-
 
 func set_held(value: bool) -> void:
 	_is_held = value

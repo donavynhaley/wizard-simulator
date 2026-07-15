@@ -1,8 +1,8 @@
 extends SceneTree
 
-## End-to-end check of the interaction chain in the real tower scene:
-## fountain -> hands -> element holder -> take back, plus the rune-scribing station
-## locking and unlocking the player. Run headless:
+## End-to-end check of the interaction chain in the real tower scene: the
+## look-to-focus player, the crafting-table fixtures, and the rune-scribing
+## station locking and unlocking the player. Run headless:
 ##   godot --headless --path . -s tests/integration/interaction_test.gd
 
 const RuneTemplateResource := preload("res://game/scribing/runes/rune_template.gd")
@@ -26,184 +26,19 @@ func _run() -> void:
 
 	var player := scene.get_node_or_null("Player") as WizardPlayer
 	_check(player != null, "player is a WizardPlayer")
-	var hands := player.hands
-	_check(hands != null, "player.hands resolves the typed hand anchor")
 	_check(player.interactor != null, "player.interactor resolves the typed interactor")
-	var grab_presentation := hands.get_grab_presentation() if hands != null else null
-	var body_rig := player.get_node_or_null("BodyRig") as WizardBodyRig
-	var first_person_rig := body_rig.get_first_person_rig() if body_rig else null
-	var grasp_animation_player := first_person_rig.get_grasp_animation_player() if first_person_rig else null
-	var right_arm_pose := first_person_rig.get_right_arm_pose() if first_person_rig else null
-	var wrist_control := first_person_rig.get_hand_control(&"Wrist") if first_person_rig else null
-	var beard := first_person_rig.get_beard() if first_person_rig else null
-	var wizard_model := body_rig.get_node_or_null("WizardModel") as Node3D if body_rig else null
-	_check(grab_presentation != null, "player has a reusable magical grab presentation")
-	_check(body_rig != null, "player has a viewmodel body rig for grasp posing")
-	_check(first_person_rig != null and right_arm_pose != null and wrist_control != null,
-		"player composes an editor-visible first-person arm rig with spatial pose controls")
-	_check(beard != null
-		and first_person_rig.scene_file_path.is_empty()
-		and beard.scene_file_path.is_empty()
-		and body_rig.get_node_or_null("WorldBodyModel") == null
-		and wizard_model != null
-		and wizard_model.get_parent() == body_rig,
-		"player scene owns one first-person wizard model and its beard authoring")
-	var arm_models := first_person_rig.get_node("ArmModels") if first_person_rig else null
-	_check(first_person_rig.get_arm_model_count() == 1
-		and arm_models.get_node_or_null("LeftArmModel") == null
-		and arm_models.get_node_or_null("RightArmModel") == null
-		and not player.get_node("Head/Camera3D").is_ancestor_of(wizard_model),
-		"one body-anchored wizard model supplies both first-person arms")
-	var wizard_skeleton := WizardModel.find_skeleton(wizard_model) if wizard_model else null
-	_check(wizard_skeleton != null
-		and wizard_skeleton.find_bone("DEF-HAT01") != -1
-		and FirstPersonWizardRig.CAMERA_INTERSECTION_BONES.has("DEF-HEAD")
-		and FirstPersonWizardRig.CAMERA_INTERSECTION_BONES.has("DEF-NECK"),
-		"first-person body retains its hat while removing camera intersection geometry")
+	var viewmodel := player.viewmodel
+	_check(viewmodel.get_node_or_null("WizardHat") != null,
+		"viewmodel wears the wizard hat")
+	_check(viewmodel.get_node_or_null("WizardArms") != null,
+		"viewmodel keeps the wizard arms in camera view")
 	var camera := player.get_node("Head/Camera3D") as Camera3D
-	_check(camera.near <= 0.03
-		and is_equal_approx(wizard_model.position.y, -0.88)
-		and is_equal_approx(wizard_model.position.z, 0.21),
-		"camera and body use the authored eye alignment with a tight near plane")
-	var camera_hand_ik := wizard_skeleton.find_child("CameraLocalHandIK", false, false) \
-		as TwoBoneIK3D if wizard_skeleton else null
-	var camera_hand_orientation := wizard_skeleton.find_child(
-		"CameraLocalHandOrientation", false, false) as CopyTransformModifier3D \
-		if wizard_skeleton else null
-	var final_arm_modifier := camera_hand_orientation as SkeletonModifier3D \
-		if camera_hand_orientation != null else camera_hand_ik as SkeletonModifier3D
-	var left_hand_bone := wizard_skeleton.find_bone("DEF-HAND.L") if wizard_skeleton else -1
-	var right_hand_bone := wizard_skeleton.find_bone("DEF-HAND.R") if wizard_skeleton else -1
-	var neutral_hand_screen_positions: Array[Vector2] = []
-	var neutral_hand_camera_depths: Array[float] = []
-	var neutral_hand_camera_rotations: Array[Quaternion] = []
-	var max_hand_screen_drift := 0.0
-	var max_hand_depth_drift := 0.0
-	var max_hand_rotation_drift := 0.0
-	for pitch_degrees in [0.0, -60.0, 60.0]:
-		player.head.rotation.x = deg_to_rad(pitch_degrees)
-		if final_arm_modifier != null:
-			await final_arm_modifier.modification_processed
-		else:
-			await process_frame
-		var hand_screen_positions: Array[Vector2] = []
-		var hand_camera_depths: Array[float] = []
-		var hand_camera_rotations: Array[Quaternion] = []
-		for hand_bone in [left_hand_bone, right_hand_bone]:
-			var hand_world_transform := wizard_skeleton.global_transform \
-				* wizard_skeleton.get_bone_global_pose(hand_bone)
-			var hand_world_position := hand_world_transform.origin
-			hand_screen_positions.append(camera.unproject_position(hand_world_position))
-			hand_camera_depths.append(camera.to_local(hand_world_position).z)
-			hand_camera_rotations.append(
-				(camera.global_basis.inverse() * hand_world_transform.basis).get_rotation_quaternion())
-		if neutral_hand_screen_positions.is_empty():
-			neutral_hand_screen_positions = hand_screen_positions
-			neutral_hand_camera_depths = hand_camera_depths
-			neutral_hand_camera_rotations = hand_camera_rotations
-		else:
-			for hand_index in 2:
-				max_hand_screen_drift = maxf(
-					max_hand_screen_drift,
-					hand_screen_positions[hand_index].distance_to(
-						neutral_hand_screen_positions[hand_index]))
-				max_hand_depth_drift = maxf(
-					max_hand_depth_drift,
-					absf(hand_camera_depths[hand_index]
-						- neutral_hand_camera_depths[hand_index]))
-				max_hand_rotation_drift = maxf(
-					max_hand_rotation_drift,
-					hand_camera_rotations[hand_index].angle_to(
-						neutral_hand_camera_rotations[hand_index]))
-	player.head.rotation.x = 0.0
-	_check(camera_hand_ik != null and max_hand_screen_drift < 5.0,
-		"resting hands stay camera-relative across vertical look (max drift=%.2f px)" \
-		% max_hand_screen_drift)
-	_check(max_hand_depth_drift < 0.01,
-		"resting hand depth stays camera-relative (max drift=%.3f m)" \
-		% max_hand_depth_drift)
-	_check(camera_hand_orientation != null and max_hand_rotation_drift < deg_to_rad(1.0),
-		"resting hand orientation stays camera-relative (max drift=%.2f degrees)" \
-		% rad_to_deg(max_hand_rotation_drift))
-	_check(grasp_animation_player != null
-		and grasp_animation_player.has_animation(&"idle")
-		and grasp_animation_player.has_animation(&"grab")
-		and grasp_animation_player.has_animation(&"hold")
-		and grasp_animation_player.has_animation(&"release"),
-		"viewmodel arm authors separate idle, grab, hold, and release clips")
-	if grasp_animation_player != null:
-		var idle_animation := grasp_animation_player.get_animation(&"idle")
-		var grab_animation := grasp_animation_player.get_animation(&"grab")
-		_check(grasp_animation_player.current_animation == &"idle"
-			and idle_animation.loop_mode == Animation.LOOP_LINEAR
-			and idle_animation.find_track(
-				NodePath("ArmModels/LeftArmPose:rotation"), Animation.TYPE_VALUE) != -1
-			and idle_animation.find_track(
-				NodePath("ArmModels/RightArmPose:rotation"), Animation.TYPE_VALUE) != -1,
-			"idle clip loops both visible hands in the lower frame")
-		_check(grab_animation.find_track(
-			NodePath("ArmModels/RightArmPose:position"), Animation.TYPE_VALUE) != -1
-			and grab_animation.find_track(
-				NodePath("HandControls/Wrist:rotation"), Animation.TYPE_VALUE) != -1,
-			"grab clip directly keys visible spatial rig controls")
-	_check(beard != null
-		and beard.animation_player.has_animation(&"lift")
-		and beard.animation_player.has_animation(&"lower")
-		and beard.get_node_or_null("BeardRoot/Segment01") is MeshInstance3D
-		and beard.get_node_or_null("BeardRoot/Joint02/Joint03/Joint04/Segment04") is MeshInstance3D
-		and beard.get_inventory_anchor().get_child_count() == 3,
-		"first-person rig includes a visible flexible beard with lift clips and inventory slots")
-	if beard != null:
-		_check(beard.visible
-			and beard.get_parent().get_parent() == body_rig
-			and not player.get_node("Head/Camera3D").is_ancestor_of(beard),
-			"beard stays physically mounted to the player instead of toggling with the camera")
-		player.head.rotation.x = deg_to_rad(-40.0)
-		await process_frame
-		_check(beard.visible, "looking down keeps the physical beard rendered")
-		var beard_root := beard.get_node("BeardRoot") as Node3D
-		var beard_rest_position := beard_root.position
-		var left_arm_pose := first_person_rig.get_node("ArmModels/LeftArmPose") as Node3D
-		var left_arm_rest_position := left_arm_pose.position
-		var beard_input := InputEventAction.new()
-		beard_input.action = &"check_beard_inventory"
-		beard_input.pressed = true
-		first_person_rig._unhandled_input(beard_input)
-		for frame in 70:
-			await process_frame
-		_check(beard.lifted
-			and beard_root.position.distance_to(beard_rest_position) > 0.15
-			and left_arm_pose.position.distance_to(left_arm_rest_position) > 0.25,
-			"holding the beard inventory action lifts the beard and the visible left hand")
-		beard_input.pressed = false
-		first_person_rig._unhandled_input(beard_input)
-		for frame in 70:
-			await process_frame
-		_check(not beard.lifted
-			and beard_root.position.distance_to(beard_rest_position) < 0.01
-			and left_arm_pose.position.distance_to(left_arm_rest_position) < 0.01,
-			"releasing the beard inventory action lowers the beard and hand to rest")
-		player.head.rotation.x = 0.0
-		await process_frame
-		_check(beard.visible, "looking forward does not visibility-toggle the physical beard")
+	_check(camera.near <= 0.03, "camera keeps a tight near plane for the viewmodel")
 
-	var fountain_root := scene.get_node_or_null(^"Floor1/EndlessSpring")
-	var fountain := fountain_root.get_node_or_null(^"HeldItemSource") \
-		if fountain_root != null else null
-	var torch_root := scene.get_node_or_null(^"TorchOfEternalFlame")
-	var torch := torch_root.get_node_or_null(^"HeldItemSource") \
-		if torch_root != null else null
-	var holder := scene.find_child("ElementHolder", true, false)
 	var crafter := scene.find_child("RuneScribingStation", true, false)
 	var burner := scene.find_child("Burner", true, false)
 	var flask := scene.find_child("Flask", true, false) as Flask
 	var book := _find_by_type(scene, "Book") as Book
-	_check(fountain != null, "tower has a fountain")
-	_check(torch != null, "tower has the Torch of Eternal Flame")
-	_check(fountain != null and torch != null
-		and fountain.get_script() == torch.get_script(),
-		"fountain and torch reuse one held-item source component")
-	_check(holder != null, "tower has an element holder")
 	_check(crafter != null, "tower has a rune-scribing station")
 	var scribe_surface := crafter.get_node_or_null("Scroll/ScribeInkSurface") as MeshInstance3D if crafter else null
 	_check(scribe_surface != null and is_equal_approx(scribe_surface.rotation_degrees.y, -90.0),
@@ -220,98 +55,17 @@ func _run() -> void:
 		_finish()
 		return
 
-	# Fountain: empty hands -> cup water.
-	_check(fountain.focus_prompt(player, null) == fountain.gather_prompt,
-		"fountain prompts to cup water with empty hands")
-	fountain.interact(player, null)
-	_check(hands.held_item is HeldWater, "fountain fills the hands with spring water")
-	_check(bool(grab_presentation.get("active")), "pickup starts the magical levitation presentation")
-	_check(grab_presentation.has_item_aura(), "pickup applies the aura shader directly to the item")
-	_check(hands.held_item.get_parent() == grab_presentation.call("get_item_anchor"),
-		"held item floats from the presentation anchor")
-	for frame in 60:
-		await process_frame
-	_check(grab_presentation.has_magic_stream(), "visible shader stream rises from the hand toward the item")
-	_check(first_person_rig.get_grasp_amount() > 0.95,
-		"pickup moves the visible arm rig into its spell-manipulation pose")
-	for frame in 60:
-		if grasp_animation_player.current_animation == &"hold":
-			break
-		await process_frame
-	_check(grasp_animation_player.current_animation == &"hold",
-		"completed grab clip transitions into the looping hold clip")
-	var float_anchor := grab_presentation.get_item_anchor()
-	var bob_position := float_anchor.position
-	var arm_hold_position := right_arm_pose.position
-	for frame in 36:
-		await process_frame
-	_check(float_anchor.position.distance_to(bob_position) > 0.004,
-		"held item gently bobs and sways through the authored holding animation")
-	_check(right_arm_pose.position.distance_to(arm_hold_position) > 0.002,
-		"looping hold clip directly moves the visible viewmodel arm node")
-	_check(fountain.focus_prompt(player, null) == fountain.refresh_prompt,
-		"fountain offers a refresh while holding water")
-
-	# Element holder: place the water, then take it back.
-	_check(str(holder.focus_prompt(player, null)) == holder.place_water_prompt,
-		"holder prompts to place held water")
-	holder.interact(player, null)
-	_check(hands.held_item == null, "placing water empties the hands")
-	for frame in 60:
-		await process_frame
-	_check(not bool(grab_presentation.get("active")), "placing an item dismisses the levitation presentation")
-	_check(not grab_presentation.has_item_aura(), "placing an item removes its temporary aura shader")
-	_check(first_person_rig.get_grasp_amount() < 0.05, "placing an item relaxes the viewmodel hand")
-	_check(wrist_control.rotation.length() < 0.001,
-		"release clip restores the spatial hand controls to their reset pose")
-	_check(grasp_animation_player.current_animation == &"idle",
-		"release clip returns to the looping visible-hand idle")
-	_check(holder.placed_element is HeldWater, "holder keeps the placed water")
-	_check(holder.placed_element.get_parent() == holder, "water reparents to the holder")
-	_check(str(holder.focus_prompt(player, null)).begins_with("Take"),
-		"holder prompts to take the element back")
-	holder.interact(player, null)
-	_check(hands.held_item is HeldWater, "taking back returns the water to the hands")
-	_check(bool(grab_presentation.get("active")), "taking an item back restores levitation")
-	_check(grab_presentation.has_item_aura(), "taking an item back restores its aura shader")
-	_check(holder.placed_element == null, "holder is empty after take-back")
-
-	# Spell crafter refuses while hands are full, then locks the player.
-	_check(str(crafter.focus_prompt(player, null)) == crafter.held_item_prompt,
-		"crafter prompts to empty hands first")
-	crafter.interact(player, null)
-	_check(not crafter._active, "crafter refuses to start with full hands")
-
-	hands.drop()
-	for frame in 60:
-		await process_frame
-	_check(hands.held_item == null, "dropping water empties the hands")
-	_check(not bool(grab_presentation.get("active")), "dropping an item dismisses levitation")
-	_check(not grab_presentation.has_item_aura(), "dropping an item removes its temporary aura shader")
-	_check(first_person_rig.get_grasp_amount() < 0.05, "dropping an item relaxes the grasp pose")
-
-	book.interact(player, null)
-	_check(hands.held_item == book, "player picks up a rune book")
-	_check(str(crafter.focus_prompt(player, null)) == "Place book reference",
-		"crafter prompts to place a held book reference")
-	crafter.interact(player, null)
-	_check(hands.held_item == null, "placing book reference empties the hands")
-	_check(crafter._reference_book == book, "crafter keeps the reference book")
-	_check((book.get_node("Visual/VisualRoot/MotionRoot/OpenVisual") as Node3D).visible,
-		"reference book is open on the table")
-	var book_anchor := scene.find_child("OpenBookPlacement", true, false) as Node3D
-	var book_anchor_shape := book_anchor.get_node_or_null("StaticBody3D/CollisionShape3D") as Node3D if book_anchor else null
-	_check(book_anchor_shape != null, "tower has a reference book placement marker")
-	if book_anchor_shape != null:
-		_check(book.global_position.distance_to(book_anchor_shape.global_position) < 0.01,
-			"reference book is placed at the open book marker")
-		_check(_basis_matches(book.global_transform.basis, book_anchor_shape.global_transform.basis, 0.01),
-			"reference book matches the open book marker rotation")
 	_check(str(crafter.focus_prompt(player, null)) == crafter.prompt_text,
-		"crafter offers scribing while the table book stays open")
+		"crafter prompts to begin scribing")
+	var mouse_mode_before_scribing := Input.mouse_mode
 	crafter.interact(player, null)
-	_check(crafter._active, "player can begin scribing with a placed reference book")
-	_check(not player.is_physics_processing(), "reference-book scribing freezes the player")
+	_check(crafter._active, "crafter enters scribing mode")
+	_check(not player.is_physics_processing(), "scribing freezes the player")
+	_check(not player._control_enabled,
+		"scribing prevents player focus events from recapturing the mouse")
+	var interactor := player.interactor
+	_check(not interactor.enabled, "scribing suspends the interactor")
+
 	var scribe_camera := crafter.get_node_or_null("ScribeCamera") as Camera3D
 	var scroll_camera_pose := crafter.get_node_or_null("ScrollCameraPose") as Marker3D
 	var book_camera_pose := crafter.get_node_or_null("BookCameraPose") as Marker3D
@@ -330,96 +84,6 @@ func _run() -> void:
 			await process_frame
 		_check(_transform_matches(scribe_camera.transform, scroll_camera_pose.transform, 0.01),
 			"S rotates the scribing camera back down to the scroll")
-	crafter._end_scribing(false)
-	_check(player.is_physics_processing(), "leaving reference-book scribing restores movement")
-	if book_anchor != null:
-		book_anchor.interact(player, null)
-	_check(hands.held_item == book, "player retrieves the reference book from its placement")
-	if book_anchor != null and book_anchor_shape != null:
-		book_anchor.interact(player, null)
-		_check(hands.held_item == null, "book placement accepts a held book directly")
-		_check(crafter._reference_book == book, "crafter tracks a book placed through the placement node")
-		_check((book.get_node("Visual/VisualRoot/MotionRoot/OpenVisual") as Node3D).visible,
-			"directly placed book opens on the table")
-		_check(book.global_position.distance_to(book_anchor_shape.global_position) < 0.01,
-			"directly placed book uses the open book marker position")
-		book_anchor.interact(player, null)
-		_check(hands.held_item == book, "book placement returns the reference book")
-		_check(crafter._reference_book == null, "crafter clears a book taken through the placement node")
-	hands.drop()
-	await process_frame
-	_check(hands.held_item == null, "dropping book empties the hands")
-
-	# Alchemy heat chain: torch -> burner fire slot -> flask with contents -> cooked flask.
-	_check(str(torch.call("focus_prompt", player, null)) == str(torch.get("gather_prompt")),
-		"torch prompts to gather fire with empty hands")
-	torch.call("interact", player, null)
-	_check(hands.held_item is HeldFire, "torch places eternal flame in the hands")
-	_check(str(torch.call("focus_prompt", player, null)) == str(torch.get("refresh_prompt")),
-		"torch offers to refresh held fire")
-
-	_check(str(burner.call("focus_prompt", player, null)) == str(burner.get("fire_prompt")),
-		"burner prompts to place held fire")
-	burner.call("interact", player, null)
-	_check(hands.held_item == null, "placing fire empties the hands")
-	var placed_fire := burner.get("placed_fire") as HeldFire
-	_check(placed_fire != null, "burner keeps the placed fire")
-	_check(placed_fire.get_parent() == burner, "fire reparents to the burner")
-
-	flask.interact(player, null)
-	_check(hands.held_item == flask, "player picks up the flask")
-	_check(str(burner.call("focus_prompt", player, null)) == str(burner.get("prompt_text")),
-		"burner prompts to place held flask")
-	burner.call("interact", player, null)
-	_check(hands.held_item == null, "placing flask empties the hands")
-	_check(burner.get("placed_flask") == flask, "burner keeps the placed flask")
-	_check(not flask.is_cooked, "empty flask does not cook over placed fire")
-
-	burner.call("interact", player, null)
-	_check(hands.held_item == flask, "player retrieves the uncooked empty flask")
-	var reagent := Reagent.new()
-	reagent.name = "test potion"
-	flask.item_in_flask = reagent
-	burner.call("interact", player, null)
-	_check(hands.held_item == null, "placing filled flask empties the hands")
-	_check(burner.get("placed_flask") == flask, "burner keeps the filled flask")
-	_check(flask.is_cooked, "burner cooks the placed flask")
-	_check(burner.get("placed_fire") == placed_fire, "fire remains on the burner after cooking")
-	_check(burner.get("placed_flask") == flask, "cooked flask remains on the burner")
-	_check(str(burner.call("focus_prompt", player, null)) == str(burner.get("remove_prompt")),
-		"burner prompts to retrieve cooked flask")
-	burner.call("interact", player, null)
-	_check(hands.held_item == flask, "player picks cooked flask back up")
-	_check(burner.get("placed_flask") == null, "burner is empty after cooked flask pickup")
-	for i in 20:
-		await process_frame
-	hands.drop()
-	for i in 180:
-		if not is_instance_valid(flask):
-			break
-		await physics_frame
-	_check(hands.held_item == null, "dropping cooked flask empties the hands")
-	_check(not is_instance_valid(flask), "dropped cooked flask breaks on impact")
-	var break_audio := scene.find_child("GlassBreakAudio", true, false)
-	_check(break_audio != null, "glass break sound plays")
-	if break_audio != null:
-		var break_player := break_audio as AudioStreamPlayer3D
-		var playback_window := break_player.stream.get_length() + 0.25
-		await create_timer(playback_window).timeout
-		await process_frame
-	_check(not is_instance_valid(break_audio),
-		"glass break audio releases itself after playback")
-
-	_check(str(crafter.focus_prompt(player, null)) == crafter.prompt_text,
-		"crafter prompts to begin scribing with empty hands")
-	var mouse_mode_before_scribing := Input.mouse_mode
-	crafter.interact(player, null)
-	_check(crafter._active, "crafter enters scribing mode")
-	_check(not player.is_physics_processing(), "scribing freezes the player")
-	_check(not player._control_enabled,
-		"scribing prevents player focus events from recapturing the mouse")
-	var interactor := player.interactor
-	_check(not interactor.enabled, "scribing suspends the interactor")
 
 	# The authored quill replaces the system cursor while drawing.
 	_check(crafter.get_node_or_null("ScribeArm") == null,
@@ -515,7 +179,6 @@ func _run() -> void:
 	_check(_completed_stroke_count == 2, "sealing emits neutral scribing completion")
 	_check(crafter.get_recognized_rune_ids() == [&"font", &"mend"],
 		"sealing preserves recognized rune ids for a future spell design")
-	_check(hands.held_item == null, "sealing does not create an inventory spell")
 	_check(scene.find_child("FontArea", true, false) == null,
 		"sealing does not create a spell delivery")
 

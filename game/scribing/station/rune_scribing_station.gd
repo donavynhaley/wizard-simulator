@@ -15,7 +15,6 @@ const RuneRecognizerResource := preload("res://game/scribing/runes/rune_recogniz
 const ScribingSessionState := preload("res://game/scribing/session/scribing_session.gd")
 
 @export var prompt_text: String = "Begin scribing"
-@export var held_item_prompt: String = "Empty your hands first"
 @export var active_prompt: String = "Scribing - W book / S scroll / hold Space to seal"
 @export var sealed_prompt: String = "Runes sealed"
 
@@ -48,8 +47,6 @@ const ScribingSessionState := preload("res://game/scribing/session/scribing_sess
 
 @export_group("Reference Book")
 @export_node_path("Node3D") var reference_book_placement_path: NodePath = ^"../OpenBookPlacement"
-@export var reference_book_position := Vector3(-0.36, 0.12, 0.18)
-@export var reference_book_rotation_degrees := Vector3(0.0, 24.0, 0.0)
 
 @export_group("Table Camera")
 @export_multiline var table_camera_notes := "Scribing requires this Camera3D. Move, rotate, and tune its FOV directly in the crafting table scene for exact composition."
@@ -128,13 +125,7 @@ func interact(player: WizardPlayer, _collider: Object) -> void:
 		WizardHud.toast(self, sealed_prompt)
 		return
 
-	if player == null or player.hands == null:
-		return
-	if player.hands.held_item is Book and _reference_book == null:
-		_place_reference_book(player.hands.held_item as Book, player)
-		return
-	if player.hands.held_item != null:
-		WizardHud.toast(self, held_item_prompt)
+	if player == null:
 		return
 
 	_begin_scribing(player)
@@ -146,43 +137,9 @@ func focus_prompt(player: WizardPlayer, _collider: Object) -> String:
 	if _sealed:
 		return sealed_prompt
 
-	if player == null or player.hands == null:
+	if player == null:
 		return ""
-	if player.hands.held_item is Book and _reference_book == null:
-		return "Place book reference"
-	if player.hands.held_item != null:
-		return held_item_prompt
 	return prompt_text
-
-
-func _place_reference_book(book: Book, player: WizardPlayer) -> void:
-	if book == null or player == null or player.hands == null:
-		return
-	if _reference_book_placement != null:
-		_reference_book_placement.place_book(book, player)
-		_reference_book = _reference_book_placement.placed_book
-		return
-	player.hands.release_item(book)
-	_reference_book = book
-	book.reparent(self)
-	book.position = reference_book_position
-	book.rotation_degrees = reference_book_rotation_degrees
-	book.scale = Vector3.ONE
-	book.set_stationed(true)
-	book.open_for_reference()
-
-
-func _take_reference_book(player: WizardPlayer) -> void:
-	if _reference_book == null or player == null or player.hands == null:
-		return
-	if _reference_book_placement != null and _reference_book_placement.placed_book == _reference_book:
-		_reference_book_placement.take_book(player)
-		_reference_book = null
-		return
-	var book := _reference_book
-	_reference_book = null
-	book.set_stationed(false)
-	player.hands.pick_up(book)
 
 
 func _on_reference_book_placed(book: Book) -> void:

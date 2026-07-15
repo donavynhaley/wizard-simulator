@@ -1,0 +1,70 @@
+[gd_scene format=3 uid="uid://d26rum456430b"]
+
+[ext_resource type="PackedScene" uid="uid://ckph2c4ur7xr6" path="res://game/player/player.tscn" id="1_player"]
+[ext_resource type="PackedScene" uid="uid://denm5q4at0ecf" path="res://assets/models/barrel_pristine.glb" id="2_barrel"]
+[ext_resource type="PackedScene" uid="uid://ffh1pimlntly" path="res://assets/models/candle.glb" id="3_candle"]
+[ext_resource type="PackedScene" uid="uid://bykwrxhkq5qhr" path="res://shared/vfx/magical_flame.tscn" id="4_flame"]
+
+[sub_resource type="Environment" id="Environment_lab"]
+background_mode = 1
+background_color = Color(0.09, 0.08, 0.16, 1)
+ambient_light_source = 1
+ambient_light_color = Color(0.34, 0.32, 0.5, 1)
+ambient_light_energy = 0.9
+tonemap_mode = 3
+glow_enabled = true
+glow_intensity = 0.5
+glow_hdr_threshold = 1.25
+fog_enabled = true
+fog_light_color = Color(0.22, 0.2, 0.35, 1)
+fog_density = 0.004
+adjustment_enabled = true
+adjustment_brightness = 1.08
+adjustment_saturation = 1.14
+
+[sub_resource type="StandardMaterial3D" id="Material_stone"]
+albedo_color = Color(0.24, 0.23, 0.27, 1)
+roughness = 0.95
+
+[node name="SpellcraftLab" type="Node3D" unique_id=1904519756]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1037324903]
+environment = SubResource("Environment_lab")
+
+[node name="Room" type="Node3D" parent="." unique_id=112449874]
+
+[node name="Shell" type="CSGBox3D" parent="Room" unique_id=263748015]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.3, 0)
+use_collision = true
+size = Vector3(20, 5, 14)
+material = SubResource("Material_stone")
+
+[node name="Interior" type="CSGBox3D" parent="Room/Shell" unique_id=1457675852]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
+operation = 2
+size = Vector3(13.4, 4.4, 13.4)
+
+[node name="Lighting" type="Node3D" parent="." unique_id=352399701]
+
+[node name="WarmCeilingFill" type="OmniLight3D" parent="Lighting" unique_id=1419425117]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.1, 0)
+light_color = Color(1, 0.85, 0.6, 1)
+light_energy = 1.3
+omni_range = 22.0
+
+[node name="Props" type="Node3D" parent="." unique_id=631834174]
+
+[node name="Barrel" parent="Props" unique_id=1852542570 instance=ExtResource("2_barrel")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 1.0225313, -2.0276403)
+
+[node name="TargetBarrel" parent="Props" unique_id=221223200 instance=ExtResource("2_barrel")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.82046914, -2.151853)
+
+[node name="Candle" parent="Props" unique_id=1952878648 instance=ExtResource("3_candle")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, -1.992365)
+
+[node name="MagicalFlame" parent="Props" unique_id=1933211394 instance=ExtResource("4_flame")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.25733203, -2)
+
+[node name="Player" parent="." unique_id=1488847941 instance=ExtResource("1_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 4.5)

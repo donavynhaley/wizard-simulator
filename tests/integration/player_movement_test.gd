@@ -19,7 +19,6 @@ func _run() -> void:
 	await _test_coyote_jump()
 	await _test_buffered_jump()
 	await _test_tall_obstacle_rejection()
-	await _test_blocked_viewmodel_motion()
 	await _test_control_takeover_reset()
 	_release_movement_actions()
 
@@ -155,27 +154,6 @@ func _test_tall_obstacle_rejection() -> void:
 	Input.action_release("move_forward")
 	_check(player.global_position.y < 1.05 and player.global_position.z > 0.0,
 		"automatic stair stepping rejects a 0.6 m obstacle")
-	await _dispose_world(world)
-
-
-func _test_blocked_viewmodel_motion() -> void:
-	var world := _make_world()
-	_add_box(world, Vector3(0.0, 1.5, -0.6), Vector3(3.0, 3.0, 0.2))
-	var player := await _spawn_player(world, Vector3(0.0, 0.9, 0.2))
-	player.locomotion.enable_stair_stepping = false
-	Input.action_press("move_forward")
-	await _physics_frames(45)
-	var lowest_viewmodel_y := INF
-	var highest_viewmodel_y := -INF
-	for frame in 45:
-		await physics_frame
-		lowest_viewmodel_y = minf(lowest_viewmodel_y, player.viewmodel.position.y)
-		highest_viewmodel_y = maxf(highest_viewmodel_y, player.viewmodel.position.y)
-	Input.action_release("move_forward")
-	var blocked_motion := highest_viewmodel_y - lowest_viewmodel_y
-	_check(blocked_motion < 0.003,
-		"viewmodel does not walk-bob while movement is blocked (range=%.4f m)" \
-		% blocked_motion)
 	await _dispose_world(world)
 
 

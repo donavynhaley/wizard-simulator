@@ -17,8 +17,10 @@ func _run() -> void:
 		"player composes locomotion as a child component")
 	_check(player.get_node_or_null(^"Components/Look") != null,
 		"player composes mouse look as a child component")
-	_check(player.get_node_or_null(^"Components/ViewmodelMotion") != null,
-		"player composes viewmodel motion as a child component")
+	_check(player.get_node_or_null(^"Head/Camera3D/Viewmodel/WizardHat") != null,
+		"player wears the wizard hat in the camera viewmodel")
+	_check(player.get_node_or_null(^"Head/Camera3D/Viewmodel/WizardArms") != null,
+		"player keeps the wizard arms in the camera viewmodel")
 	player.free()
 	player = null
 	await process_frame
