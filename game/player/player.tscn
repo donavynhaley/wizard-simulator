@@ -4,14 +4,17 @@
 [ext_resource type="Script" uid="uid://ba4uytaelk731" path="res://game/player/interaction/player_interactor.gd" id="2"]
 [ext_resource type="Script" uid="uid://sxk83ntemfcv" path="res://game/spellcraft/casting/casting_controller.gd" id="4_5ghna"]
 [ext_resource type="PackedScene" path="res://game/player/hud/wizard_hud.tscn" id="4_epvkq"]
-[ext_resource type="PackedScene" path="res://game/player/viewmodel/wizard_arms.tscn" id="5_anr75"]
+[ext_resource type="PackedScene" uid="uid://d4j6n73b5yerg" path="res://game/player/viewmodel/wizard_arms.tscn" id="5_anr75"]
 [ext_resource type="PackedScene" uid="uid://rrtoivfq87n7" path="res://assets/external/wizard_hat.glb" id="5_hat"]
 [ext_resource type="PackedScene" path="res://game/player/components/wizard_locomotion.tscn" id="7_locomotion"]
 [ext_resource type="PackedScene" path="res://game/player/components/wizard_look.tscn" id="8_look"]
+[ext_resource type="PackedScene" path="res://game/spellcraft/casting/sketch_ribbon.tscn" id="9_ribbon"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
 radius = 0.35
 height = 1.7
+
+[sub_resource type="ImmediateMesh" id="ImmediateMesh_5ghna"]
 
 [node name="Player" type="CharacterBody3D" unique_id=1184757697 groups=["player"]]
 floor_constant_speed = true
@@ -24,9 +27,9 @@ script = ExtResource("1")
 
 [node name="Look" parent="Components" unique_id=1869611420 instance=ExtResource("8_look")]
 
-[node name="CastingController" type="Node" parent="Components" unique_id=818843547 node_paths=PackedStringArray("hud")]
+[node name="CastingController" type="Node" parent="Components" unique_id=818843547]
 script = ExtResource("4_5ghna")
-hud = NodePath("../../WizardHud")
+stroke_max_lifetime = 2.0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=541500586]
 shape = SubResource("CapsuleShape3D_player")
@@ -43,6 +46,11 @@ near = 0.03
 [node name="Interactor" type="RayCast3D" parent="Head/Camera3D" unique_id=614184027]
 unique_name_in_owner = true
 script = ExtResource("2")
+
+[node name="SketchRibbon" parent="Head/Camera3D" unique_id=778549545 instance=ExtResource("9_ribbon")]
+mesh = SubResource("ImmediateMesh_5ghna")
+corner_rounding = 0.165
+corner_smoothing_passes = 4
 
 [node name="Viewmodel" type="Node3D" parent="Head/Camera3D" unique_id=378493421]
 

@@ -1,0 +1,69 @@
+[gd_scene format=3 uid="uid://crgr2sraattbm"]
+
+[ext_resource type="Script" uid="uid://0ll3hrmje4aa" path="res://game/spellcraft/casting/sketch_ribbon.gd" id="1_script"]
+[ext_resource type="Shader" uid="uid://bhtowikaorq60" path="res://game/spellcraft/casting/sketch_ribbon.gdshader" id="2_shader"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ribbon"]
+render_priority = 0
+shader = ExtResource("2_shader")
+shader_parameter/emission_energy = 4.5
+
+[sub_resource type="ImmediateMesh" id="ImmediateMesh_qfcvl"]
+
+[sub_resource type="Gradient" id="Gradient_spark"]
+colors = PackedColorArray(0.55, 0.28, 1, 1, 0.55, 0.28, 1, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_spark"]
+gradient = SubResource("Gradient_spark")
+
+[sub_resource type="Curve" id="Curve_spark_scale"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_spark_scale"]
+curve = SubResource("Curve_spark_scale")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_sparks"]
+emission_shape = 1
+emission_sphere_radius = 0.015
+spread = 180.0
+initial_velocity_min = 0.06
+initial_velocity_max = 0.22
+gravity = Vector3(0, 0, 0)
+damping_min = 0.1
+damping_max = 0.3
+scale_min = 0.5
+scale_curve = SubResource("CurveTexture_spark_scale")
+color_ramp = SubResource("GradientTexture1D_spark")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_spark"]
+transparency = 1
+blend_mode = 1
+no_depth_test = true
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_color = Color(1.6, 1.2, 2, 1)
+billboard_mode = 3
+billboard_keep_scale = true
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="QuadMesh" id="QuadMesh_spark"]
+material = SubResource("StandardMaterial3D_spark")
+size = Vector2(0.012, 0.012)
+
+[node name="SketchRibbon" type="MeshInstance3D" unique_id=1122567817]
+material_override = SubResource("ShaderMaterial_ribbon")
+cast_shadow = 0
+mesh = SubResource("ImmediateMesh_qfcvl")
+script = ExtResource("1_script")
+base_color = Color(0.55, 0.28, 1, 1)
+
+[node name="TipSparks" type="GPUParticles3D" parent="." unique_id=160409644]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.35, 0.15, -1.8)
+emitting = false
+amount = 28
+lifetime = 0.6
+process_material = SubResource("ParticleProcessMaterial_sparks")
+draw_pass_1 = SubResource("QuadMesh_spark")
