@@ -126,8 +126,52 @@ def make_rune_ignite():
     return to_stereo(mono, mono[idx2])
 
 
+# ---------------------------------------------------------------------------
+# spell_fire -- one-shot launch when a held spell is cast (left click). Snappy
+# release whoosh in the air family: sharp attack, filter closing as the energy
+# shoots away (opposite of the ignite's swell), a release snap, and a low recoil
+# push. Shorter and punchier than the ignite.
+# ---------------------------------------------------------------------------
+def make_spell_fire():
+    dur = 0.7
+    t = t_axis(dur)
+    n = np.random.randn(len(t))
+    lp = lowpass(n, 8000)
+    bright = highpass(lp, 1200)
+    dark = highpass(lp, 300)
+    # sharp attack, quick decay
+    env = np.clip(t / 0.015, 0, 1) * np.exp(-t * 7.0)
+    # filter CLOSES: bright -> dark as the bolt launches away
+    close = np.clip(t / 0.12, 0, 1)
+    whoosh = (bright * (1 - close) + dark * close) * env
+    # faint downward doppler as it recedes
+    down_f = 900.0 * (0.4) ** (t / dur)
+    doppler = np.sin(2 * np.pi * np.cumsum(down_f) / SR) * env * 0.12
+    # air motion (flange) matching the rest of the family
+    lfo = 0.5 + 0.5 * np.sin(2 * np.pi * 4.0 * t)
+    maxd = int(SR * 0.004)
+    idx = np.clip(np.arange(len(t)) - (lfo * maxd).astype(int), 0, len(t) - 1)
+    whoosh = whoosh + whoosh[idx] * 0.6
+    # release snap transient
+    snap = np.sin(2 * np.pi * 1500 * t) * np.exp(-t * 90.0) * 0.4
+    # low recoil push, quick
+    push_f = 90.0 + 70.0 * np.exp(-t * 20.0)
+    push = np.sin(2 * np.pi * np.cumsum(push_f) / SR) \
+        * np.exp(-t * 10.0) * np.clip(t / 0.005, 0, 1) * 0.7
+    mono = whoosh * 0.8 + doppler + snap + push
+    tail = np.zeros_like(mono)
+    for dl, g in [(0.05, 0.18), (0.10, 0.10)]:
+        s = int(SR * dl)
+        tail += np.concatenate([np.zeros(s), mono[:-s]]) * g
+    mono = mono + tail
+    idx2 = np.clip(np.arange(len(mono)) - int(SR * 0.003), 0, len(mono) - 1)
+    return to_stereo(mono, mono[idx2])
+
+
 if __name__ == "__main__":
     np.random.seed(11)   # reproduces the approved "air" sketch loop exactly
     save_wav("sketch_loop.wav", make_sketch_loop())
     np.random.seed(23)
     save_wav("rune_ignite.wav", make_rune_ignite())
+    np.random.seed(31)
+    save_wav("spell_fire.wav", make_spell_fire())

@@ -1,16 +1,30 @@
 class_name CastingController
 extends Node
 
-## Drives the Arx-style casting flow. Holding cast_focus (RMB) for
-## enable_sketching_state_time enters SKETCHING: the player is frozen from
-## looking and mouse motion draws air-sigil strokes. Strokes fade and expire on
-## a per-stroke lifetime, and recognition runs on every stroke lift over the
-## still-live strokes. Recognizing a rune flares the ribbon and emits
-## rune_recognized (the spell-forming state builds on top of this next).
+## Drives the Arx-style casting flow across three states:
+##   IDLE       - holding cast_focus (RMB) for enable_sketching_state_time charges
+##                the arm and enters SKETCHING.
+##   SKETCHING  - the player is frozen from looking; mouse motion draws air-sigil
+##                strokes. Recognition on each stroke lift locks a rune and
+##                presents it (spell_held + palm effect); redrawing overrides and
+##                swaps the presented spell. Releasing RMB commits the locked rune
+##                (or cancels if none), so a wrong draw is never force-cast.
+##   SPELL_HELD - the committed spell is held in the palm, settling to a casual
+##                hold, until fired with a left click (cast).
+## Audio lives in the CastingAudio child; the ribbon and arm clips are authored
+## in their own scenes and only driven from here.
 
 signal rune_recognized(id: StringName, score: float)
+## Emitted when a held spell is fired (left click). The projectile/effect system
+## acts on this; locked_rune_id/score identify which spell launched.
+signal spell_cast(id: StringName, score: float)
 
 const FOCUS_ANIM := &"cast_focus"
+const SPELL_HELD_ANIM := &"spell_held"
+const SPELL_END_ANIM := &"spell_held_end"
+const SPELL_FIRE_ANIM := &"spell_cast"
+const RESET_ANIM := &"Reset"
+const AIR_TEMPLATE_DIR := "res://content/runes/air"
 
 enum CASTING_STATE {
 	IDLE,
@@ -24,18 +38,16 @@ enum CASTING_STATE {
 @export var stroke_max_lifetime := 6.0
 @export_range(0.0, 1.0, 0.01) var match_threshold := 0.75
 
-@export_group("Audio")
-## Looping hum played while a stroke is actively being traced. Its pitch and
-## volume track the drawing speed, so a fast confident stroke sounds brighter.
-@export_node_path("AudioStreamPlayer") var sketch_loop_audio_path: NodePath = ^"SketchLoopAudio"
-## One-shot reward stinger fired the instant a rune locks in.
-@export_node_path("AudioStreamPlayer") var rune_ignite_audio_path: NodePath = ^"RuneIgniteAudio"
-@export var sketch_pitch_min := 0.82         ## pitch when the hand is nearly still
-@export var sketch_pitch_max := 1.65         ## pitch at full draw speed
-@export var sketch_speed_for_max_pitch := 2400.0  ## cursor px/sec that maps to max pitch
-@export var sketch_volume_db := -7.0         ## loudest (moving) volume of the sketch hum
-@export var sketch_quiet_db := -17.0         ## volume while a stroke is held still
-@export var sketch_idle_db := -42.0          ## ducked bed when no stroke is being drawn; lower for near-silence
+@export_group("Spell Held")
+## Per-rune palm effects. A recognized rune spawns the matching scene at the
+## palm anchor; a rune with no entry uses default_spell_effect.
+@export var spell_effect_bindings: Array[SpellEffectBinding] = []
+## Fallback effect when the recognized rune has no binding above.
+@export var default_spell_effect: PackedScene
+## Tint applied to the spawned effect for now; the element system overrides this.
+@export var default_spell_color := Color(0.55, 0.28, 1.0)
+## Beat held on the fired pose after the cast clip before the arm resets to rest.
+@export var cast_reset_delay := 0.2
 
 @export_group("Arm Idle")
 @export var idle_bob_amount := 0.004        ## vertical breathing, metres
@@ -50,6 +62,7 @@ enum CASTING_STATE {
 
 var current_state: CASTING_STATE = CASTING_STATE.IDLE
 
+# Resolved scene nodes.
 var _player: WizardPlayer
 var _hud: WizardHud
 var _camera: Camera3D
@@ -58,8 +71,14 @@ var _ribbon: SketchRibbon
 var _arm_anim: AnimationPlayer
 var _arms: Node3D
 var _arm_base_transform: Transform3D
-var _sketch_audio: AudioStreamPlayer
-var _ignite_audio: AudioStreamPlayer
+var _spell_anchor: Node3D
+var _audio: CastingAudio
+
+# Sketching / spell runtime state.
+var _spell_effect: Node3D
+var _spell_settled := false      ## true once spell_held_end has played (focus released)
+var _spell_presented := false    ## true once spell_held has played this session (no replay on override)
+var _focus_used := false         ## blocks auto-resketch while focus stays held after a cast
 var _sketch_draw_speed := 0.0    ## smoothed cursor speed (px/sec) driving hum pitch
 var _sketch_motion_accum := 0.0  ## cursor distance moved since the last frame
 var _idle_time := 0.0
@@ -74,12 +93,14 @@ var locked_rune_id: StringName = &""
 var locked_rune_score := 0.0
 
 
+#region Lifecycle
 func _ready() -> void:
 	_player = owner as WizardPlayer
 	if _player == null:
 		_player = get_tree().get_first_node_in_group(&"player") as WizardPlayer
 	assert(_player != null, "CastingController must live under a WizardPlayer.")
 
+	_audio = get_node_or_null("CastingAudio") as CastingAudio
 	_camera = _player.get_node_or_null("Head/Camera3D") as Camera3D
 	_configure_recognizer()
 	# The ribbon look is authored in sketch_ribbon.tscn, instanced under the
@@ -90,16 +111,17 @@ func _ready() -> void:
 			_ribbon.visible = false
 		_arm_anim = _camera.get_node_or_null(
 			"Viewmodel/WizardArms/AnimationPlayer") as AnimationPlayer
+		if _arm_anim != null:
+			# Chains the cast (spell_cast) clip into the Reset clip so the arm
+			# eases home once the spell has launched.
+			_arm_anim.animation_finished.connect(_on_arm_anim_finished)
 		_arms = _camera.get_node_or_null("Viewmodel/WizardArms") as Node3D
 		if _arms != null:
 			# The authored mount transform; idle breathing modulates around it.
 			_arm_base_transform = _arms.transform
-
-	# Audio players are authored as children in player.tscn; the controller only
-	# drives play/stop and live pitch/volume. All optional: a missing node is
-	# simply silent.
-	_sketch_audio = get_node_or_null(sketch_loop_audio_path) as AudioStreamPlayer
-	_ignite_audio = get_node_or_null(rune_ignite_audio_path) as AudioStreamPlayer
+		# Palm anchor rides the wrist bone; held-spell effects parent under it.
+		_spell_anchor = _camera.get_node_or_null(
+			"Viewmodel/WizardArms/arms/Skeleton3D/RightHandAttachment/SpellAnchor") as Node3D
 
 
 func _process(delta: float) -> void:
@@ -108,17 +130,37 @@ func _process(delta: float) -> void:
 			_update_idle(delta)
 		CASTING_STATE.SKETCHING:
 			_update_sketching(delta)
+		CASTING_STATE.SPELL_HELD:
+			_update_spell_held(delta)
 
 
 func _input(event: InputEvent) -> void:
 	# The arm-extend charge plays forward while cast_focus is held and rewinds
-	# the moment it is released, regardless of state, so an early release smoothly
-	# retracts and a hold-to-sketch finishes extended. Handled on the button
-	# edges so it works in IDLE (before the threshold) too.
+	# the moment it is released, so an early release smoothly retracts and a
+	# hold-to-sketch finishes extended. Handled on the button edges so it works
+	# in IDLE (before the threshold) too.
 	if event.is_action_pressed("cast_focus"):
-		_play_focus_animation(true)
+		# A fresh focus press re-arms sketching; ignored while a spell is held.
+		if current_state != CASTING_STATE.SPELL_HELD:
+			_focus_used = false
+			_play_focus_animation(true)
 	elif event.is_action_released("cast_focus"):
-		_play_focus_animation(false)
+		# Releasing focus: in SPELL_HELD it settles into the casual hold; in
+		# SKETCHING with a locked rune it commits (spell_held drives the arm, so
+		# skip the retract); otherwise it retracts the charge-up arm.
+		if current_state == CASTING_STATE.SPELL_HELD:
+			_settle_spell_held()
+		elif current_state == CASTING_STATE.SKETCHING and locked_rune_id != &"":
+			pass
+		else:
+			_play_focus_animation(false)
+
+	# A held spell fires on the next cast (left click), regardless of focus; the
+	# spell stays in hand until then.
+	if current_state == CASTING_STATE.SPELL_HELD:
+		if event.is_action_pressed("cast"):
+			_fire_spell()
+		return
 
 	if current_state != CASTING_STATE.SKETCHING:
 		return
@@ -128,24 +170,26 @@ func _input(event: InputEvent) -> void:
 		_begin_stroke()
 	elif event.is_action_released("cast"):
 		_end_stroke()
+#endregion
 
 
-## Drives the arm-extend clip. Forward extends; reverse retracts from wherever
-## the extend reached, so releasing mid-charge rewinds instead of snapping.
-func _play_focus_animation(forward: bool) -> void:
-	if _arm_anim == null or not _arm_anim.has_animation(FOCUS_ANIM):
+#region State machine
+func _set_state(next: CASTING_STATE) -> void:
+	if next == current_state:
 		return
-	if forward:
-		_arm_anim.play(FOCUS_ANIM, -1.0, 1.0)
-	else:
-		# from_end only matters when starting fresh from the finished, fully
-		# extended pose; mid-charge it continues from the current position.
-		var from_end := _arm_anim.current_animation != FOCUS_ANIM
-		_arm_anim.play(FOCUS_ANIM, -1.0, -1.0, from_end)
+	match current_state:
+		CASTING_STATE.SKETCHING: _exit_sketching()
+		CASTING_STATE.SPELL_HELD: _exit_spell_held()
+	current_state = next
+	match next:
+		CASTING_STATE.SKETCHING: _enter_sketching()
+		CASTING_STATE.SPELL_HELD: _enter_spell_held()
 
 
 func _update_idle(delta: float) -> void:
-	if Input.is_action_pressed("cast_focus"):
+	# _focus_used stays set until a fresh focus press, so firing a spell while
+	# focus is still held does not immediately roll into a new sketch.
+	if Input.is_action_pressed("cast_focus") and not _focus_used:
 		sketching_state_time_accumulator += delta
 		if sketching_state_time_accumulator >= enable_sketching_state_time:
 			_set_state(CASTING_STATE.SKETCHING)
@@ -153,9 +197,29 @@ func _update_idle(delta: float) -> void:
 		sketching_state_time_accumulator = 0.0
 
 
+func _enter_sketching() -> void:
+	_strokes.clear()
+	_active_stroke = null
+	locked_rune_id = &""
+	locked_rune_score = 0.0
+	_spell_presented = false
+	_idle_time = 0.0
+	_player.look_enabled = false
+	sketching_cursor_pos = get_viewport().get_visible_rect().size * 0.5
+	if _ribbon != null:
+		_ribbon.clear()
+		_ribbon.visible = true
+	if _audio != null:
+		_audio.start_sketch()
+	if _get_hud() != null:
+		_hud.set_sketch_cursor(sketching_cursor_pos)
+		_hud.show_sketch_cursor(true)
+
+
 func _update_sketching(delta: float) -> void:
 	if not Input.is_action_pressed("cast_focus"):
-		_set_state(CASTING_STATE.IDLE)
+		# Release commits: a locked rune forms the held spell; otherwise cancel.
+		_set_state(CASTING_STATE.SPELL_HELD if locked_rune_id != &"" else CASTING_STATE.IDLE)
 		return
 	# Smooth the cursor speed (px/sec) drawn since last frame; drives hum pitch.
 	var inst_speed := _sketch_motion_accum / maxf(delta, 0.0001)
@@ -176,7 +240,8 @@ func _update_sketching(delta: float) -> void:
 		# so its reference stays valid; it re-seeds on the next point.
 		if stroke.points.is_empty() and stroke != _active_stroke:
 			_strokes.remove_at(i)
-	_update_sketch_audio(delta)
+	if _audio != null:
+		_audio.update_sketch(_sketch_draw_speed, _active_stroke != null, delta)
 	if _ribbon != null:
 		var viewport_size := get_viewport().get_visible_rect().size
 		_ribbon.rebuild(_strokes, _camera, viewport_size, stroke_max_lifetime)
@@ -185,51 +250,87 @@ func _update_sketching(delta: float) -> void:
 	_apply_arm_idle(delta)
 
 
-## Subtle breathing on the fully extended arm so the held pose is not frozen.
-## Layers a small parent-space bob, drift, and tilt on top of the mount so it
-## composes with the skeletal pose the cast_focus clip is holding.
-func _apply_arm_idle(delta: float) -> void:
-	if _arms == null:
+func _exit_sketching() -> void:
+	if not template_recording_id.is_empty():
+		_save_template()
+	if _ribbon != null:
+		_ribbon.clear()
+		_ribbon.visible = false
+	if _get_hud() != null:
+		_hud.show_sketch_cursor(false)
+	if _arms != null:
+		# Restore the mount so the retract animation plays from a clean pose.
+		_arms.transform = _arm_base_transform
+	if _audio != null:
+		_audio.stop_sketch()
+	_sketch_draw_speed = 0.0
+	_sketch_motion_accum = 0.0
+	_player.look_enabled = true
+	sketching_state_time_accumulator = 0.0
+
+
+## Presents the forming spell for the locked rune: plays spell_held (once) and
+## spawns or replaces the palm effect. Called on each match while still sketching,
+## so overriding a rune swaps the held effect. Not committed until RMB releases.
+func _present_held_spell() -> void:
+	_spell_settled = false
+	# Play spell_held only on the first match of the session; overriding just
+	# swaps the palm effect without replaying the forming animation.
+	if not _spell_presented:
+		_spell_presented = true
+		if _arm_anim != null and _arm_anim.has_animation(SPELL_HELD_ANIM):
+			_arm_anim.play(SPELL_HELD_ANIM)
+	_spawn_spell_effect(locked_rune_id)
+
+
+## Commit (focus released with a locked rune): the spell was already presented on
+## match, so just settle from the presenting pose into the casual hold.
+func _enter_spell_held() -> void:
+	_idle_time = 0.0
+	if _spell_effect == null:
+		_present_held_spell()
+	_settle_spell_held()
+
+
+## Held indefinitely with the same procedural sway; only a left click fires it.
+func _update_spell_held(delta: float) -> void:
+	_apply_arm_idle(delta)
+
+
+## Focus released while holding: relax from the presenting pose into a casual
+## hold. The orb stays in hand and the state persists until the spell fires.
+func _settle_spell_held() -> void:
+	if _spell_settled:
 		return
-	_idle_time += delta
-	var breathe := sin(_idle_time * idle_speed)
-	var drift := sin(_idle_time * idle_speed * 0.7 + 0.6)
-	var tilt := deg_to_rad(idle_rotation_degrees)
-	var transform := _arm_base_transform
-	transform.origin += Vector3(drift * idle_sway_amount, breathe * idle_bob_amount, 0.0)
-	transform.basis = Basis.from_euler(Vector3(
-		breathe * tilt * 0.6, drift * tilt * 0.5, drift * tilt)) * _arm_base_transform.basis
-	_arms.transform = transform
+	_spell_settled = true
+	if _arm_anim != null and _arm_anim.has_animation(SPELL_END_ANIM):
+		_arm_anim.play(SPELL_END_ANIM)
 
 
-## Drives the looping sketch hum. The stream runs continuously for the whole
-## sketching session (started in _enter_sketching, stopped in _exit_sketching);
-## this only rides its pitch and volume so it never restarts mid-rune. Volume
-## swells with draw speed while a stroke is active and ducks to sketch_idle_db
-## between strokes. Frame-driven (move_toward) so nothing fights a tween.
-func _update_sketch_audio(delta: float) -> void:
-	if _sketch_audio == null or not _sketch_audio.playing:
-		return
-	var pitch_t := clampf(_sketch_draw_speed / sketch_speed_for_max_pitch, 0.0, 1.0)
-	_sketch_audio.pitch_scale = lerpf(sketch_pitch_min, sketch_pitch_max, pitch_t)
-	var target_db := sketch_idle_db
-	if _active_stroke != null:
-		# Ease between the still and moving levels by a gentler speed ramp.
-		var vol_t := clampf(_sketch_draw_speed / (sketch_speed_for_max_pitch * 0.4), 0.0, 1.0)
-		target_db = lerpf(sketch_quiet_db, sketch_volume_db, vol_t)
-	_sketch_audio.volume_db = move_toward(_sketch_audio.volume_db, target_db, delta * 90.0)
+## Left click while a spell is held: launch it. Leaves SPELL_HELD, which plays
+## spell_fire and clears the orb.
+func _fire_spell() -> void:
+	if _audio != null:
+		_audio.play_fire()
+	spell_cast.emit(locked_rune_id, locked_rune_score)
+	_focus_used = true
+	_set_state(CASTING_STATE.IDLE)
 
 
-func _set_state(next: CASTING_STATE) -> void:
-	if next == current_state:
-		return
-	match current_state:
-		CASTING_STATE.SKETCHING: _exit_sketching()
-	current_state = next
-	match next:
-		CASTING_STATE.SKETCHING: _enter_sketching()
+func _exit_spell_held() -> void:
+	if _arms != null:
+		_arms.transform = _arm_base_transform
+	# The orb rides the hand through the cast clip and is cleared when it finishes
+	# (the launch moment). Without the clip there is no finish event, so clear now.
+	if _arm_anim != null and _arm_anim.has_animation(SPELL_FIRE_ANIM):
+		_arm_anim.play(SPELL_FIRE_ANIM)
+	else:
+		_clear_spell_effect()
+		_play_focus_animation(false)
+#endregion
 
 
+#region Strokes
 func _begin_stroke() -> void:
 	_active_stroke = SketchStroke.new()
 	_active_stroke.points.append(sketching_cursor_pos)
@@ -257,9 +358,22 @@ func _end_stroke() -> void:
 	_try_recognize()
 
 
+func _on_sketch_motion(relative: Vector2) -> void:
+	var bounds := get_viewport().get_visible_rect().size
+	sketching_cursor_pos = (sketching_cursor_pos + relative * sketching_cursor_sensitivity) \
+		.clamp(Vector2.ZERO, bounds)
+	_sketch_motion_accum += relative.length() * sketching_cursor_sensitivity
+	if _get_hud() != null:
+		_hud.set_sketch_cursor(sketching_cursor_pos)
+	_append_stroke_point()
+#endregion
+
+
+#region Recognition & templates
 ## Runs recognition over the live unconsumed strokes on lift. A match locks the
 ## rune in and consumes its ink (still visible, fading in the recognized tint);
-## drawing and matching again overrides the lock. A failed lift changes nothing.
+## drawing and matching again overrides the lock, and releasing cast_focus later
+## commits whatever is locked. A failed lift changes nothing.
 func _try_recognize() -> void:
 	if _recognizer == null:
 		return
@@ -291,17 +405,14 @@ func _try_recognize() -> void:
 			stroke.consumed = true
 		if _ribbon != null:
 			_ribbon.mark_recognized()
-		if _ignite_audio != null:
-			_ignite_audio.play()
+		if _audio != null:
+			_audio.play_ignite()
 		WizardHud.toast(self, "%s rune %s (%d%%)" % [
 			String(result["id"]).capitalize(),
 			"overrides" if overriding else "ignites",
 			int(roundf(score * 100.0))])
 		rune_recognized.emit(result["id"], score)
-		# TODO: audio cue + transition into the palm-up spell-forming state.
-
-
-const AIR_TEMPLATE_DIR := "res://content/runes/air"
+		_present_held_spell()
 
 
 func _configure_recognizer() -> void:
@@ -378,58 +489,91 @@ func _stroke_point_arrays(unconsumed_only := false) -> Array:
 			continue
 		out.append(stroke.points)
 	return out
+#endregion
 
 
-func _enter_sketching() -> void:
-	_strokes.clear()
-	_active_stroke = null
-	locked_rune_id = &""
-	locked_rune_score = 0.0
-	_idle_time = 0.0
-	_player.look_enabled = false
-	sketching_cursor_pos = get_viewport().get_visible_rect().size * 0.5
-	if _ribbon != null:
-		_ribbon.clear()
-		_ribbon.visible = true
-	if _sketch_audio != null:
-		# One continuous voice for the whole session; volume rides draw speed.
-		_sketch_audio.volume_db = sketch_idle_db
-		_sketch_audio.play()
-	if _get_hud() != null:
-		_hud.set_sketch_cursor(sketching_cursor_pos)
-		_hud.show_sketch_cursor(true)
+#region Arm animation
+## Drives the arm-extend clip. Forward extends; reverse retracts from wherever
+## the extend reached, so releasing mid-charge rewinds instead of snapping.
+func _play_focus_animation(forward: bool) -> void:
+	if _arm_anim == null or not _arm_anim.has_animation(FOCUS_ANIM):
+		return
+	if forward:
+		_arm_anim.play(FOCUS_ANIM, -1.0, 1.0)
+	else:
+		# from_end only matters when starting fresh from the finished, fully
+		# extended pose; mid-charge it continues from the current position.
+		var from_end := _arm_anim.current_animation != FOCUS_ANIM
+		_arm_anim.play(FOCUS_ANIM, -1.0, -1.0, from_end)
 
 
-func _exit_sketching() -> void:
-	if not template_recording_id.is_empty():
-		_save_template()
-	if _ribbon != null:
-		_ribbon.clear()
-		_ribbon.visible = false
-	if _get_hud() != null:
-		_hud.show_sketch_cursor(false)
-	if _arms != null:
-		# Restore the mount so the retract animation plays from a clean pose.
-		_arms.transform = _arm_base_transform
-	if _sketch_audio != null and _sketch_audio.playing:
-		_sketch_audio.stop()
-	_sketch_draw_speed = 0.0
-	_sketch_motion_accum = 0.0
-	_player.look_enabled = true
-	sketching_state_time_accumulator = 0.0
+## Once the cast (spell_cast) clip finishes, the spell launches (orb cleared),
+## the fired pose is held briefly, then the Reset clip eases the arm back to
+## rest. Skipped if a fresh action (e.g. a new charge) took over during the pause.
+func _on_arm_anim_finished(anim_name: StringName) -> void:
+	if anim_name != SPELL_FIRE_ANIM:
+		return
+	_clear_spell_effect()  # the orb launches as the cast clip ends
+	if cast_reset_delay > 0.0:
+		await get_tree().create_timer(cast_reset_delay).timeout
+	if not is_instance_valid(_arm_anim) or not _arm_anim.has_animation(RESET_ANIM):
+		return
+	var current := _arm_anim.current_animation
+	if current != "" and current != SPELL_FIRE_ANIM:
+		return
+	_arm_anim.play(RESET_ANIM)
 
 
-func _on_sketch_motion(relative: Vector2) -> void:
-	var bounds := get_viewport().get_visible_rect().size
-	sketching_cursor_pos = (sketching_cursor_pos + relative * sketching_cursor_sensitivity) \
-		.clamp(Vector2.ZERO, bounds)
-	_sketch_motion_accum += relative.length() * sketching_cursor_sensitivity
-	if _get_hud() != null:
-		_hud.set_sketch_cursor(sketching_cursor_pos)
-	_append_stroke_point()
+## Subtle breathing on the fully extended arm so the held pose is not frozen.
+## Layers a small parent-space bob, drift, and tilt on top of the mount so it
+## composes with whichever skeletal pose (cast_focus or spell_held) is playing.
+func _apply_arm_idle(delta: float) -> void:
+	if _arms == null:
+		return
+	_idle_time += delta
+	var breathe := sin(_idle_time * idle_speed)
+	var drift := sin(_idle_time * idle_speed * 0.7 + 0.6)
+	var tilt := deg_to_rad(idle_rotation_degrees)
+	var transform := _arm_base_transform
+	transform.origin += Vector3(drift * idle_sway_amount, breathe * idle_bob_amount, 0.0)
+	transform.basis = Basis.from_euler(Vector3(
+		breathe * tilt * 0.6, drift * tilt * 0.5, drift * tilt)) * _arm_base_transform.basis
+	_arms.transform = transform
+#endregion
 
 
+#region Spell effects
+## Instantiates the palm effect for a rune under the anchor: its binding if one
+## exists, else default_spell_effect. Tinted via set_color for the element system.
+func _spawn_spell_effect(rune_id: StringName) -> void:
+	_clear_spell_effect()
+	if _spell_anchor == null:
+		return
+	var scene: PackedScene = default_spell_effect
+	for binding in spell_effect_bindings:
+		if binding != null and binding.rune_id == rune_id and binding.effect_scene != null:
+			scene = binding.effect_scene
+			break
+	if scene == null:
+		return
+	_spell_effect = scene.instantiate() as Node3D
+	if _spell_effect == null:
+		return
+	_spell_anchor.add_child(_spell_effect)
+	if _spell_effect.has_method("set_color"):
+		_spell_effect.call("set_color", default_spell_color)
+
+
+func _clear_spell_effect() -> void:
+	if _spell_effect != null:
+		_spell_effect.queue_free()
+		_spell_effect = null
+#endregion
+
+
+#region Helpers
 func _get_hud() -> WizardHud:
 	if _hud == null and _player != null:
 		_hud = _player.hud
 	return _hud
+#endregion

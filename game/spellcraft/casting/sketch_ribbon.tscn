@@ -26,18 +26,32 @@ curve = SubResource("Curve_spark_scale")
 [sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_sparks"]
 emission_shape = 1
 emission_sphere_radius = 0.015
-spread = 180.0
-initial_velocity_min = 0.06
-initial_velocity_max = 0.22
-gravity = Vector3(0, 0, 0)
+direction = Vector3(0, -1, 0)
+spread = 22.0
+initial_velocity_min = 0.04
+initial_velocity_max = 0.14
+gravity = Vector3(0, -2.2, 0)
 damping_min = 0.1
 damping_max = 0.3
 scale_min = 0.5
 scale_curve = SubResource("CurveTexture_spark_scale")
 color_ramp = SubResource("GradientTexture1D_spark")
 
+[sub_resource type="Gradient" id="Gradient_dot"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(1, 1, 1, 1, 0, 0, 0, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_dot"]
+gradient = SubResource("Gradient_dot")
+width = 64
+height = 64
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
+
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_spark"]
 transparency = 1
+albedo_texture = SubResource("GradientTexture2D_dot")
 blend_mode = 1
 no_depth_test = true
 shading_mode = 0
@@ -51,7 +65,7 @@ particles_anim_loop = false
 
 [sub_resource type="QuadMesh" id="QuadMesh_spark"]
 material = SubResource("StandardMaterial3D_spark")
-size = Vector2(0.012, 0.012)
+size = Vector2(0.55, 0.55)
 
 [node name="SketchRibbon" type="MeshInstance3D" unique_id=1122567817]
 material_override = SubResource("ShaderMaterial_ribbon")
@@ -62,8 +76,6 @@ base_color = Color(0.55, 0.28, 1, 1)
 
 [node name="TipSparks" type="GPUParticles3D" parent="." unique_id=160409644]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.35, 0.15, -1.8)
-emitting = false
-amount = 28
-lifetime = 0.6
+lifetime = 1.0
 process_material = SubResource("ParticleProcessMaterial_sparks")
 draw_pass_1 = SubResource("QuadMesh_spark")
