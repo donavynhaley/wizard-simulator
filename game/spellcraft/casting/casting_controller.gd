@@ -24,6 +24,19 @@ enum CASTING_STATE {
 @export var stroke_max_lifetime := 6.0
 @export_range(0.0, 1.0, 0.01) var match_threshold := 0.75
 
+@export_group("Audio")
+## Looping hum played while a stroke is actively being traced. Its pitch and
+## volume track the drawing speed, so a fast confident stroke sounds brighter.
+@export_node_path("AudioStreamPlayer") var sketch_loop_audio_path: NodePath = ^"SketchLoopAudio"
+## One-shot reward stinger fired the instant a rune locks in.
+@export_node_path("AudioStreamPlayer") var rune_ignite_audio_path: NodePath = ^"RuneIgniteAudio"
+@export var sketch_pitch_min := 0.82         ## pitch when the hand is nearly still
+@export var sketch_pitch_max := 1.65         ## pitch at full draw speed
+@export var sketch_speed_for_max_pitch := 2400.0  ## cursor px/sec that maps to max pitch
+@export var sketch_volume_db := -7.0         ## loudest (moving) volume of the sketch hum
+@export var sketch_quiet_db := -17.0         ## volume while a stroke is held still
+@export var sketch_idle_db := -42.0          ## ducked bed when no stroke is being drawn; lower for near-silence
+
 @export_group("Arm Idle")
 @export var idle_bob_amount := 0.004        ## vertical breathing, metres
 @export var idle_sway_amount := 0.003       ## horizontal drift, metres
@@ -45,6 +58,10 @@ var _ribbon: SketchRibbon
 var _arm_anim: AnimationPlayer
 var _arms: Node3D
 var _arm_base_transform: Transform3D
+var _sketch_audio: AudioStreamPlayer
+var _ignite_audio: AudioStreamPlayer
+var _sketch_draw_speed := 0.0    ## smoothed cursor speed (px/sec) driving hum pitch
+var _sketch_motion_accum := 0.0  ## cursor distance moved since the last frame
 var _idle_time := 0.0
 var sketching_state_time_accumulator: float = 0.0
 var sketching_cursor_pos: Vector2
@@ -77,6 +94,12 @@ func _ready() -> void:
 		if _arms != null:
 			# The authored mount transform; idle breathing modulates around it.
 			_arm_base_transform = _arms.transform
+
+	# Audio players are authored as children in player.tscn; the controller only
+	# drives play/stop and live pitch/volume. All optional: a missing node is
+	# simply silent.
+	_sketch_audio = get_node_or_null(sketch_loop_audio_path) as AudioStreamPlayer
+	_ignite_audio = get_node_or_null(rune_ignite_audio_path) as AudioStreamPlayer
 
 
 func _process(delta: float) -> void:
@@ -134,6 +157,10 @@ func _update_sketching(delta: float) -> void:
 	if not Input.is_action_pressed("cast_focus"):
 		_set_state(CASTING_STATE.IDLE)
 		return
+	# Smooth the cursor speed (px/sec) drawn since last frame; drives hum pitch.
+	var inst_speed := _sketch_motion_accum / maxf(delta, 0.0001)
+	_sketch_motion_accum = 0.0
+	_sketch_draw_speed = lerpf(_sketch_draw_speed, inst_speed, clampf(delta * 12.0, 0.0, 1.0))
 	for i in range(_strokes.size() - 1, -1, -1):
 		var stroke := _strokes[i]
 		for j in stroke.point_ages.size():
@@ -149,6 +176,7 @@ func _update_sketching(delta: float) -> void:
 		# so its reference stays valid; it re-seeds on the next point.
 		if stroke.points.is_empty() and stroke != _active_stroke:
 			_strokes.remove_at(i)
+	_update_sketch_audio(delta)
 	if _ribbon != null:
 		var viewport_size := get_viewport().get_visible_rect().size
 		_ribbon.rebuild(_strokes, _camera, viewport_size, stroke_max_lifetime)
@@ -172,6 +200,24 @@ func _apply_arm_idle(delta: float) -> void:
 	transform.basis = Basis.from_euler(Vector3(
 		breathe * tilt * 0.6, drift * tilt * 0.5, drift * tilt)) * _arm_base_transform.basis
 	_arms.transform = transform
+
+
+## Drives the looping sketch hum. The stream runs continuously for the whole
+## sketching session (started in _enter_sketching, stopped in _exit_sketching);
+## this only rides its pitch and volume so it never restarts mid-rune. Volume
+## swells with draw speed while a stroke is active and ducks to sketch_idle_db
+## between strokes. Frame-driven (move_toward) so nothing fights a tween.
+func _update_sketch_audio(delta: float) -> void:
+	if _sketch_audio == null or not _sketch_audio.playing:
+		return
+	var pitch_t := clampf(_sketch_draw_speed / sketch_speed_for_max_pitch, 0.0, 1.0)
+	_sketch_audio.pitch_scale = lerpf(sketch_pitch_min, sketch_pitch_max, pitch_t)
+	var target_db := sketch_idle_db
+	if _active_stroke != null:
+		# Ease between the still and moving levels by a gentler speed ramp.
+		var vol_t := clampf(_sketch_draw_speed / (sketch_speed_for_max_pitch * 0.4), 0.0, 1.0)
+		target_db = lerpf(sketch_quiet_db, sketch_volume_db, vol_t)
+	_sketch_audio.volume_db = move_toward(_sketch_audio.volume_db, target_db, delta * 90.0)
 
 
 func _set_state(next: CASTING_STATE) -> void:
@@ -245,6 +291,8 @@ func _try_recognize() -> void:
 			stroke.consumed = true
 		if _ribbon != null:
 			_ribbon.mark_recognized()
+		if _ignite_audio != null:
+			_ignite_audio.play()
 		WizardHud.toast(self, "%s rune %s (%d%%)" % [
 			String(result["id"]).capitalize(),
 			"overrides" if overriding else "ignites",
@@ -343,6 +391,10 @@ func _enter_sketching() -> void:
 	if _ribbon != null:
 		_ribbon.clear()
 		_ribbon.visible = true
+	if _sketch_audio != null:
+		# One continuous voice for the whole session; volume rides draw speed.
+		_sketch_audio.volume_db = sketch_idle_db
+		_sketch_audio.play()
 	if _get_hud() != null:
 		_hud.set_sketch_cursor(sketching_cursor_pos)
 		_hud.show_sketch_cursor(true)
@@ -359,6 +411,10 @@ func _exit_sketching() -> void:
 	if _arms != null:
 		# Restore the mount so the retract animation plays from a clean pose.
 		_arms.transform = _arm_base_transform
+	if _sketch_audio != null and _sketch_audio.playing:
+		_sketch_audio.stop()
+	_sketch_draw_speed = 0.0
+	_sketch_motion_accum = 0.0
 	_player.look_enabled = true
 	sketching_state_time_accumulator = 0.0
 
@@ -367,6 +423,7 @@ func _on_sketch_motion(relative: Vector2) -> void:
 	var bounds := get_viewport().get_visible_rect().size
 	sketching_cursor_pos = (sketching_cursor_pos + relative * sketching_cursor_sensitivity) \
 		.clamp(Vector2.ZERO, bounds)
+	_sketch_motion_accum += relative.length() * sketching_cursor_sensitivity
 	if _get_hud() != null:
 		_hud.set_sketch_cursor(sketching_cursor_pos)
 	_append_stroke_point()
