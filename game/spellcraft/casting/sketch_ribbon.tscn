@@ -11,7 +11,7 @@ shader_parameter/emission_energy = 4.5
 [sub_resource type="ImmediateMesh" id="ImmediateMesh_qfcvl"]
 
 [sub_resource type="Gradient" id="Gradient_spark"]
-colors = PackedColorArray(0.55, 0.28, 1, 1, 0.55, 0.28, 1, 0)
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
 
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_spark"]
 gradient = SubResource("Gradient_spark")
@@ -56,7 +56,7 @@ blend_mode = 1
 no_depth_test = true
 shading_mode = 0
 vertex_color_use_as_albedo = true
-albedo_color = Color(1.6, 1.2, 2, 1)
+albedo_color = Color(0.88, 0.34, 2, 1)
 billboard_mode = 3
 billboard_keep_scale = true
 particles_anim_h_frames = 1

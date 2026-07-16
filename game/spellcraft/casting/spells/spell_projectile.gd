@@ -10,6 +10,7 @@ signal hit(position: Vector3, collider: Node)
 @export var lifetime := 3.0
 @export var impact_scene: PackedScene
 
+var element: Element   ## carried through so the impact burst matches the bolt
 var _velocity := Vector3.ZERO
 var _age := 0.0
 var _spent := false
@@ -17,6 +18,27 @@ var _spent := false
 
 func _ready() -> void:
 	body_entered.connect(_on_body_entered)
+
+
+func set_shader_param(param: StringName, value: Variant) -> void:
+	var mat := _orb_material()
+	if mat != null:
+		mat.set_shader_parameter(param, value)
+
+
+func set_color(c: Color) -> void:
+	set_shader_param(&"base_color", c)
+	set_shader_param(&"rim_color", c.lightened(0.45))
+	var light := get_node_or_null(^"Light") as OmniLight3D
+	if light != null:
+		light.light_color = c
+
+
+func _orb_material() -> ShaderMaterial:
+	var orb := get_node_or_null(^"Orb") as MeshInstance3D
+	if orb == null:
+		return null
+	return orb.get_active_material(0) as ShaderMaterial
 
 
 func launch(velocity: Vector3) -> void:
@@ -49,4 +71,6 @@ func _impact(pos: Vector3, collider: Node) -> void:
 		parent.add_child(burst)
 		if burst is Node3D:
 			(burst as Node3D).global_position = pos
+		if element != null:
+			element.apply_to(burst)
 	queue_free()

@@ -25,6 +25,8 @@ func _on_begin() -> void:
 		if _reticle != null:
 			add_child(_reticle)
 			_reticle.visible = false
+			if element != null:
+				element.apply_to(_reticle)
 
 
 func _physics_process(_delta: float) -> void:
@@ -48,6 +50,8 @@ func _on_resolve() -> void:
 	if burst is Node3D:
 		(burst as Node3D).global_position = _target
 	burst.set(&"max_radius", explosion_radius)
+	if element != null:
+		element.apply_to(burst)
 
 
 func _update_target() -> void:

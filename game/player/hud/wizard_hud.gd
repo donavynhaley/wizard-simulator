@@ -11,6 +11,7 @@ const TEXT_OUTLINE_COLOR := Color(0, 0, 0, 0.8)
 var _prompt: Label
 var _toasts: VBoxContainer
 var _sketching_cursor: TextureRect
+var _siphon: SiphonOverlay
 
 
 ## Canonical way for props and stations to surface a message. `from` is any
@@ -39,6 +40,11 @@ func _build() -> void:
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
+
+	_siphon = SiphonOverlay.new()
+	_siphon.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_siphon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_siphon)
 
 	var dot := ColorRect.new()
 	dot.color = Color(0.95, 0.93, 0.85, 0.8)
@@ -98,3 +104,8 @@ func show_sketch_cursor(shown: bool) -> void:
 func set_sketch_cursor(pos: Vector2) -> void:
 	var cursor_position_centered = pos - _sketching_cursor.texture.get_size() * 0.5
 	_sketching_cursor.position = cursor_position_centered
+
+
+func set_siphon_markers(markers: Array) -> void:
+	if _siphon != null:
+		_siphon.set_markers(markers)

@@ -22,5 +22,8 @@ func _on_resolve() -> void:
 	_world.add_child(proj)
 	if proj is Node3D:
 		(proj as Node3D).global_position = _muzzle_position()
+	if element != null:
+		element.apply_to(proj)
+		proj.set(&"element", element)  # carried to the impact burst
 	if proj.has_method("launch"):
 		proj.call("launch", _fire_dir * speed)

@@ -36,15 +36,27 @@ var _flare_tween: Tween
 var _tip_particles: GPUParticles3D
 
 
+var _default_base_color: Color
+var _default_recognized_color: Color
+var _spark_material: StandardMaterial3D
+var _default_tip_albedo: Color
+
+
 func _ready() -> void:
 	_immediate_mesh = ImmediateMesh.new()
 	mesh = _immediate_mesh
 	cast_shadow = MeshInstance3D.SHADOW_CASTING_SETTING_OFF
 	_tip_particles = get_node_or_null(^"TipSparks") as GPUParticles3D
+	if _tip_particles != null and _tip_particles.draw_pass_1 is PrimitiveMesh:
+		_spark_material = (_tip_particles.draw_pass_1 as PrimitiveMesh).material as StandardMaterial3D
+		if _spark_material != null:
+			_default_tip_albedo = _spark_material.albedo_color
 
 	_material = material_override as ShaderMaterial
 	if _material != null:
 		_rest_energy = float(_material.get_shader_parameter("emission_energy"))
+	_default_base_color = base_color
+	_default_recognized_color = recognized_color
 
 
 func _process(_delta: float) -> void:
@@ -62,6 +74,30 @@ func clear() -> void:
 		_material.set_shader_parameter("emission_energy", _rest_energy)
 	if _tip_particles != null:
 		_tip_particles.emitting = false
+
+
+## Recolours the drawn ink to an element tint, or resets to the default arcane
+## colours. Applied live: base_color drives every point on rebuild, so the whole
+## rune recolours as it is siphoned.
+func set_ink_color(base: Color) -> void:
+	base_color = base
+	recognized_color = base.lightened(0.35)
+
+
+func reset_ink_color() -> void:
+	base_color = _default_base_color
+	recognized_color = _default_recognized_color
+
+
+## Tints the cursor tip sparks (embers) to an element colour, or resets them.
+func set_tip_color(color: Color) -> void:
+	if _spark_material != null:
+		_spark_material.albedo_color = Color(color.r * 1.6, color.g * 1.6, color.b * 1.6, 1.0)
+
+
+func reset_tip_color() -> void:
+	if _spark_material != null:
+		_spark_material.albedo_color = _default_tip_albedo
 
 
 ## Plays the recognition emission flare. Re-triggerable: each new or overriding

@@ -11,6 +11,8 @@ extends Node3D
 ## Spawned results (projectiles, explosions) are parented to the world so they
 ## outlive this node, which is freed right after resolve().
 
+var element: Element   ## the imbued element applied to spawned effects (null = neutral)
+
 var _camera: Camera3D
 var _muzzle: Node3D    ## where projectiles originate (the palm anchor)
 var _world: Node       ## where spawned results are parented

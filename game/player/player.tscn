@@ -17,6 +17,7 @@
 [ext_resource type="AudioStream" uid="uid://c2u2uev4k5xx5" path="res://assets/sounds/spell_fire.wav" id="18_firesfx"]
 [ext_resource type="Resource" path="res://game/spellcraft/casting/spells/triangle_spell.tres" id="19_triangle"]
 [ext_resource type="Resource" path="res://game/spellcraft/casting/spells/circle_spell.tres" id="20_circle"]
+[ext_resource type="PackedScene" path="res://game/spellcraft/elements/siphon_stream.tscn" id="21_stream"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
 radius = 0.35
@@ -40,6 +41,7 @@ script = ExtResource("4_5ghna")
 stroke_max_lifetime = 2.0
 spell_effect_bindings = Array[ExtResource("5_2mv0n")]([ExtResource("19_triangle"), ExtResource("20_circle")])
 default_spell_effect = ExtResource("16_palmfx")
+siphon_stream_scene = ExtResource("21_stream")
 
 [node name="CastingAudio" type="Node" parent="Components/CastingController" unique_id=2044185999]
 script = ExtResource("17_castaudio")

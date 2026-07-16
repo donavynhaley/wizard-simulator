@@ -40,3 +40,10 @@ func set_color(color: Color) -> void:
 	if _mat != null:
 		_mat.set_shader_parameter(&"base_color", color)
 		_mat.set_shader_parameter(&"rim_color", color.lightened(0.45))
+
+
+func set_shader_param(param: StringName, value: Variant) -> void:
+	if _mat == null and _orb != null:
+		_mat = _orb.get_active_material(0) as ShaderMaterial
+	if _mat != null:
+		_mat.set_shader_parameter(param, value)

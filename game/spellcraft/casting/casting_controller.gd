@@ -38,6 +38,14 @@ enum CASTING_STATE {
 @export var stroke_max_lifetime := 6.0
 @export_range(0.0, 1.0, 0.01) var match_threshold := 0.75
 
+@export_group("Element Siphon")
+## Radius (px) from the sketch cursor to a source's screen position to target it.
+@export var siphon_cursor_radius := 60.0
+## Seconds of dwelling the cursor over a source to pull its element in.
+@export var siphon_dwell_time := 0.6
+## Wisp stream drawn from a source toward the caster while siphoning.
+@export var siphon_stream_scene: PackedScene
+
 @export_group("Spell Held")
 ## Per-rune palm effects. A recognized rune spawns the matching scene at the
 ## palm anchor; a rune with no entry uses default_spell_effect.
@@ -77,6 +85,12 @@ var _audio: CastingAudio
 # Sketching / spell runtime state.
 var _spell_effect: Node3D
 var _spell_cast: SpellCast       ## the active cast behaviour (bolt / ground AoE)
+var _current_element: Element    ## element imbued this cast (null = neutral arcane)
+var _siphon_target: ElementSource
+var _siphon_dwell := 0.0
+var _siphon_stream: Node3D
+var _siphon_stream_source: ElementSource
+var _ribbon_default_base: Color
 var _spell_settled := false      ## true once spell_held_end has played (focus released)
 var _spell_presented := false    ## true once spell_held has played this session (no replay on override)
 var _focus_used := false         ## blocks auto-resketch while focus stays held after a cast
@@ -110,6 +124,7 @@ func _ready() -> void:
 		_ribbon = _camera.get_node_or_null("SketchRibbon") as SketchRibbon
 		if _ribbon != null:
 			_ribbon.visible = false
+			_ribbon_default_base = _ribbon.base_color
 		_arm_anim = _camera.get_node_or_null(
 			"Viewmodel/WizardArms/AnimationPlayer") as AnimationPlayer
 		if _arm_anim != null:
@@ -205,11 +220,16 @@ func _enter_sketching() -> void:
 	locked_rune_score = 0.0
 	_spell_presented = false
 	_clear_spell_cast()
+	_current_element = null
+	_siphon_target = null
+	_siphon_dwell = 0.0
 	_idle_time = 0.0
 	_player.look_enabled = false
 	sketching_cursor_pos = get_viewport().get_visible_rect().size * 0.5
 	if _ribbon != null:
 		_ribbon.clear()
+		_ribbon.reset_ink_color()
+		_ribbon.reset_tip_color()
 		_ribbon.visible = true
 	if _audio != null:
 		_audio.start_sketch()
@@ -244,11 +264,15 @@ func _update_sketching(delta: float) -> void:
 			_strokes.remove_at(i)
 	if _audio != null:
 		_audio.update_sketch(_sketch_draw_speed, _active_stroke != null, delta)
+	_update_siphon(delta)
 	if _ribbon != null:
 		var viewport_size := get_viewport().get_visible_rect().size
 		_ribbon.rebuild(_strokes, _camera, viewport_size, stroke_max_lifetime)
+		# After siphoning, the cursor keeps emitting element embers even between
+		# strokes, so the pulled element visibly follows the cursor.
 		_ribbon.update_tip(
-			sketching_cursor_pos, _camera, viewport_size, _active_stroke != null)
+			sketching_cursor_pos, _camera, viewport_size,
+			_active_stroke != null or _current_element != null)
 	_apply_arm_idle(delta)
 
 
@@ -260,6 +284,10 @@ func _exit_sketching() -> void:
 		_ribbon.visible = false
 	if _get_hud() != null:
 		_hud.show_sketch_cursor(false)
+		_hud.set_siphon_markers([])
+	_siphon_target = null
+	_siphon_dwell = 0.0
+	_clear_siphon_stream()
 	if _arms != null:
 		# Restore the mount so the retract animation plays from a clean pose.
 		_arms.transform = _arm_base_transform
@@ -374,6 +402,109 @@ func _on_sketch_motion(relative: Vector2) -> void:
 	if _get_hud() != null:
 		_hud.set_sketch_cursor(sketching_cursor_pos)
 	_append_stroke_point()
+#endregion
+
+
+#region Element siphon
+## While sketching, projects every on-screen element source to the cursor; dwelling
+## over one pulls its element in - recolouring the rune and imbuing the spell.
+func _update_siphon(delta: float) -> void:
+	if _camera == null:
+		return
+	var cursor := sketching_cursor_pos
+	var bounds := get_viewport().get_visible_rect().size
+	var hovered: ElementSource = null
+	var hovered_marker: Dictionary = {}
+	var markers: Array = []
+	for node in get_tree().get_nodes_in_group(ElementSource.GROUP):
+		var src := node as ElementSource
+		if src == null or src.element == null:
+			continue
+		var world_point := src.siphon_point()
+		if _camera.is_position_behind(world_point):
+			continue
+		var screen := _camera.unproject_position(world_point)
+		if screen.x < 0.0 or screen.y < 0.0 or screen.x > bounds.x or screen.y > bounds.y:
+			continue
+		var marker := {"pos": screen, "color": src.element.color, "progress": 0.0}
+		markers.append(marker)
+		if cursor.distance_to(screen) <= siphon_cursor_radius and hovered == null:
+			hovered = src
+			hovered_marker = marker
+	if hovered != null:
+		if hovered == _siphon_target:
+			_siphon_dwell = minf(_siphon_dwell + delta, siphon_dwell_time)
+		else:
+			_siphon_target = hovered
+			_siphon_dwell = 0.0
+		var progress := _siphon_dwell / maxf(siphon_dwell_time, 0.01)
+		hovered_marker["progress"] = progress
+		_preview_ink(hovered.element, progress)
+		if _siphon_dwell >= siphon_dwell_time:
+			_lock_element(hovered.element)
+	else:
+		_siphon_target = null
+		_siphon_dwell = 0.0
+		_preview_ink(null, 0.0)
+	_update_siphon_stream(hovered)
+	if _get_hud() != null:
+		_hud.set_siphon_markers(markers)
+
+
+## Streams element wisps from the hovered source toward the caster while dwelling.
+func _update_siphon_stream(target: ElementSource) -> void:
+	if target != _siphon_stream_source:
+		_clear_siphon_stream()
+		_siphon_stream_source = target
+		if target != null and siphon_stream_scene != null:
+			var world: Node = get_tree().current_scene
+			if world == null:
+				world = get_tree().root
+			_siphon_stream = siphon_stream_scene.instantiate() as Node3D
+			if _siphon_stream != null:
+				world.add_child(_siphon_stream)
+				if _siphon_stream.has_method("set_color"):
+					_siphon_stream.call("set_color", target.element.color)
+	if _siphon_stream != null and _siphon_stream_source != null and _camera != null:
+		var origin := _siphon_stream_source.siphon_point()
+		_siphon_stream.global_position = origin
+		if origin.distance_to(_camera.global_position) > 0.05:
+			_siphon_stream.look_at(_camera.global_position, Vector3.UP)
+
+
+func _clear_siphon_stream() -> void:
+	if _siphon_stream != null:
+		_siphon_stream.queue_free()
+		_siphon_stream = null
+	_siphon_stream_source = null
+
+
+## Ramps the ribbon ink from the committed colour toward the previewed element by
+## the dwell progress (or resets to arcane when nothing is being pulled).
+func _preview_ink(preview: Element, progress: float) -> void:
+	if _ribbon == null:
+		return
+	if _current_element == null and preview == null:
+		_ribbon.reset_ink_color()
+		return
+	var committed: Color = _current_element.color if _current_element != null else _ribbon_default_base
+	var ink := committed if preview == null else committed.lerp(preview.color, progress)
+	_ribbon.set_ink_color(ink)
+
+
+## Locks the pulled element in for this cast: recolours the ink fully and re-tints
+## an already-presented orb, so pulling after drawing still works.
+func _lock_element(imbued: Element) -> void:
+	if imbued == _current_element:
+		return
+	_current_element = imbued
+	if _ribbon != null:
+		_ribbon.set_ink_color(imbued.color)
+		_ribbon.set_tip_color(imbued.color)  # embers now trail the cursor in element colour
+	if _spell_effect != null:
+		imbued.apply_to(_spell_effect)
+	var label := imbued.display_name if not imbued.display_name.is_empty() else String(imbued.id)
+	WizardHud.toast(self, "%s siphoned" % label.capitalize())
 #endregion
 
 
@@ -568,6 +699,8 @@ func _spawn_spell_effect(rune_id: StringName) -> void:
 	_spell_anchor.add_child(_spell_effect)
 	if _spell_effect.has_method("set_color"):
 		_spell_effect.call("set_color", default_spell_color)
+	if _current_element != null:
+		_current_element.apply_to(_spell_effect)
 
 
 func _clear_spell_effect() -> void:
@@ -591,6 +724,7 @@ func _spawn_spell_cast(rune_id: StringName) -> void:
 	var world: Node = get_tree().current_scene
 	if world == null:
 		world = get_tree().root
+	_spell_cast.element = _current_element
 	_spell_cast.begin(_camera, _spell_anchor, world, _player)
 
 

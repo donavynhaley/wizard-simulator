@@ -2539,7 +2539,7 @@ bone_name = "wrist.r"
 bone_idx = 4
 
 [node name="SpellAnchor" type="Marker3D" parent="arms/Skeleton3D/RightHandAttachment" index="0" unique_id=1518641773]
-transform = Transform3D(1, 8.940697e-08, -4.004687e-08, 0, 0.9999999, -3.7252903e-09, -3.5390258e-08, 1.1175871e-08, 0.9999998, -0.31047273, 0.6081071, 0.02904594)
+transform = Transform3D(1, 7.4505806e-08, -4.4703484e-08, 1.4901161e-08, 0.9999999, 2.9802322e-08, -2.9802322e-08, 4.4703484e-08, 0.9999998, -0.54736865, 0.6599293, 0.04736221)
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="." index="1" unique_id=372333211]
 libraries/ = SubResource("AnimationLibrary_27a50")
