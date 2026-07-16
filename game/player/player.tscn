@@ -4,22 +4,25 @@
 [ext_resource type="Script" uid="uid://ba4uytaelk731" path="res://game/player/interaction/player_interactor.gd" id="2"]
 [ext_resource type="Script" uid="uid://sxk83ntemfcv" path="res://game/spellcraft/casting/casting_controller.gd" id="4_5ghna"]
 [ext_resource type="PackedScene" path="res://game/player/hud/wizard_hud.tscn" id="4_epvkq"]
+[ext_resource type="Script" uid="uid://dpxk74eq8hxfd" path="res://game/spellcraft/casting/spell_effect_binding.gd" id="5_2mv0n"]
 [ext_resource type="PackedScene" uid="uid://d4j6n73b5yerg" path="res://game/player/viewmodel/wizard_arms.tscn" id="5_anr75"]
 [ext_resource type="PackedScene" uid="uid://rrtoivfq87n7" path="res://assets/external/wizard_hat.glb" id="5_hat"]
 [ext_resource type="PackedScene" path="res://game/player/components/wizard_locomotion.tscn" id="7_locomotion"]
 [ext_resource type="PackedScene" path="res://game/player/components/wizard_look.tscn" id="8_look"]
-[ext_resource type="PackedScene" path="res://game/spellcraft/casting/sketch_ribbon.tscn" id="9_ribbon"]
+[ext_resource type="PackedScene" uid="uid://crgr2sraattbm" path="res://game/spellcraft/casting/sketch_ribbon.tscn" id="9_ribbon"]
 [ext_resource type="AudioStream" uid="uid://basen10rm4ou3" path="res://assets/sounds/sketch_loop.ogg" id="10_sketchsfx"]
 [ext_resource type="AudioStream" uid="uid://db88abxrs2lv5" path="res://assets/sounds/rune_ignite.wav" id="11_ignitesfx"]
-[ext_resource type="PackedScene" uid="uid://cwspellpalm0001" path="res://game/spellcraft/casting/effects/spell_palm_effect.tscn" id="16_palmfx"]
+[ext_resource type="PackedScene" uid="uid://b7nt1rl222ctc" path="res://game/spellcraft/casting/effects/spell_palm_effect.tscn" id="16_palmfx"]
 [ext_resource type="Script" uid="uid://bcgeqrt5cux1s" path="res://game/spellcraft/casting/casting_audio.gd" id="17_castaudio"]
 [ext_resource type="AudioStream" uid="uid://c2u2uev4k5xx5" path="res://assets/sounds/spell_fire.wav" id="18_firesfx"]
+[ext_resource type="Resource" path="res://game/spellcraft/casting/spells/triangle_spell.tres" id="19_triangle"]
+[ext_resource type="Resource" path="res://game/spellcraft/casting/spells/circle_spell.tres" id="20_circle"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
 radius = 0.35
 height = 1.7
 
-[sub_resource type="ImmediateMesh" id="ImmediateMesh_5ghna"]
+[sub_resource type="ImmediateMesh" id="ImmediateMesh_gh012"]
 
 [node name="Player" type="CharacterBody3D" unique_id=1184757697 groups=["player"]]
 floor_constant_speed = true
@@ -35,19 +38,20 @@ script = ExtResource("1")
 [node name="CastingController" type="Node" parent="Components" unique_id=818843547]
 script = ExtResource("4_5ghna")
 stroke_max_lifetime = 2.0
+spell_effect_bindings = Array[ExtResource("5_2mv0n")]([ExtResource("19_triangle"), ExtResource("20_circle")])
 default_spell_effect = ExtResource("16_palmfx")
 
-[node name="CastingAudio" type="Node" parent="Components/CastingController"]
+[node name="CastingAudio" type="Node" parent="Components/CastingController" unique_id=2044185999]
 script = ExtResource("17_castaudio")
 
-[node name="SketchLoopAudio" type="AudioStreamPlayer" parent="Components/CastingController/CastingAudio"]
+[node name="SketchLoopAudio" type="AudioStreamPlayer" parent="Components/CastingController/CastingAudio" unique_id=1100411650]
 stream = ExtResource("10_sketchsfx")
 
-[node name="RuneIgniteAudio" type="AudioStreamPlayer" parent="Components/CastingController/CastingAudio"]
+[node name="RuneIgniteAudio" type="AudioStreamPlayer" parent="Components/CastingController/CastingAudio" unique_id=1059245772]
 stream = ExtResource("11_ignitesfx")
 max_polyphony = 4
 
-[node name="SpellFireAudio" type="AudioStreamPlayer" parent="Components/CastingController/CastingAudio"]
+[node name="SpellFireAudio" type="AudioStreamPlayer" parent="Components/CastingController/CastingAudio" unique_id=432828579]
 stream = ExtResource("18_firesfx")
 max_polyphony = 3
 
@@ -68,7 +72,7 @@ unique_name_in_owner = true
 script = ExtResource("2")
 
 [node name="SketchRibbon" parent="Head/Camera3D" unique_id=778549545 instance=ExtResource("9_ribbon")]
-mesh = SubResource("ImmediateMesh_5ghna")
+mesh = SubResource("ImmediateMesh_gh012")
 corner_rounding = 0.165
 corner_smoothing_passes = 4
 

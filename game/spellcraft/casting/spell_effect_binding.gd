@@ -7,4 +7,7 @@ extends Resource
 ## The element system later tints the spawned effect through set_color().
 
 @export var rune_id: StringName = &""
+## The held-in-palm visual (energy orb) presented while the spell is formed.
 @export var effect_scene: PackedScene
+## The cast behaviour (a SpellCast scene: bolt, ground AoE, ...) run on commit.
+@export var cast_scene: PackedScene

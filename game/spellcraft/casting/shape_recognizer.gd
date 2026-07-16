@@ -37,6 +37,13 @@ func template_count() -> int:
 	return _templates.size()
 
 
+func has_template(id: StringName) -> bool:
+	for t in _templates:
+		if t["id"] == id:
+			return true
+	return false
+
+
 ## Scores live strokes against every template. Returns the best `{id, score}`;
 ## score is 0..1 and doubles as the match quality for spell stability tiers.
 func evaluate(strokes: Array) -> Dictionary:

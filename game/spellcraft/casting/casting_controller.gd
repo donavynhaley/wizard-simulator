@@ -76,6 +76,7 @@ var _audio: CastingAudio
 
 # Sketching / spell runtime state.
 var _spell_effect: Node3D
+var _spell_cast: SpellCast       ## the active cast behaviour (bolt / ground AoE)
 var _spell_settled := false      ## true once spell_held_end has played (focus released)
 var _spell_presented := false    ## true once spell_held has played this session (no replay on override)
 var _focus_used := false         ## blocks auto-resketch while focus stays held after a cast
@@ -203,6 +204,7 @@ func _enter_sketching() -> void:
 	locked_rune_id = &""
 	locked_rune_score = 0.0
 	_spell_presented = false
+	_clear_spell_cast()
 	_idle_time = 0.0
 	_player.look_enabled = false
 	sketching_cursor_pos = get_viewport().get_visible_rect().size * 0.5
@@ -290,11 +292,14 @@ func _enter_spell_held() -> void:
 	if _spell_effect == null:
 		_present_held_spell()
 	_settle_spell_held()
+	_spawn_spell_cast(locked_rune_id)
 
 
 ## Held indefinitely with the same procedural sway; only a left click fires it.
 func _update_spell_held(delta: float) -> void:
 	_apply_arm_idle(delta)
+	if _spell_cast != null:
+		_spell_cast.update_aim(delta)
 
 
 ## Focus released while holding: relax from the presenting pose into a casual
@@ -312,6 +317,8 @@ func _settle_spell_held() -> void:
 func _fire_spell() -> void:
 	if _audio != null:
 		_audio.play_fire()
+	if _spell_cast != null:
+		_spell_cast.cast()  # lock the aim; the result launches on resolve()
 	spell_cast.emit(locked_rune_id, locked_rune_score)
 	_focus_used = true
 	_set_state(CASTING_STATE.IDLE)
@@ -326,6 +333,7 @@ func _exit_spell_held() -> void:
 		_arm_anim.play(SPELL_FIRE_ANIM)
 	else:
 		_clear_spell_effect()
+		_resolve_spell_cast()
 		_play_focus_animation(false)
 #endregion
 
@@ -418,15 +426,12 @@ func _try_recognize() -> void:
 func _configure_recognizer() -> void:
 	_recognizer = ShapeRecognizer.new()
 	_load_recorded_templates()
-	if _recognizer.template_count() > 0:
-		return
-	# Fallback exemplars in a 0..1 unit square (the recognizer bounding-box
-	# normalizes, so they align with pixel-space input). Recorded templates
-	# drawn through the real input path always beat these.
-	_recognizer.add_template(&"triangle", [PackedVector2Array([
-		Vector2(0.5, 0.0), Vector2(1.0, 1.0), Vector2(0.0, 1.0), Vector2(0.5, 0.0)])])
-	_recognizer.add_template(&"bolt", [PackedVector2Array([
-		Vector2(0.0, 0.0), Vector2(1.0, 0.2), Vector2(0.0, 0.8), Vector2(1.0, 1.0)])])
+	# Hardcoded fallback for any rune without a recorded exemplar, so recording
+	# one rune (e.g. circle) does not knock out the others. Recorded templates
+	# (drawn through the real input path) always win when present.
+	if not _recognizer.has_template(&"triangle"):
+		_recognizer.add_template(&"triangle", [PackedVector2Array([
+			Vector2(0.5, 0.0), Vector2(1.0, 1.0), Vector2(0.0, 1.0), Vector2(0.5, 0.0)])])
 
 
 func _load_recorded_templates() -> void:
@@ -514,6 +519,7 @@ func _on_arm_anim_finished(anim_name: StringName) -> void:
 	if anim_name != SPELL_FIRE_ANIM:
 		return
 	_clear_spell_effect()  # the orb launches as the cast clip ends
+	_resolve_spell_cast()  # spawn the projectile / explosion at the launch moment
 	if cast_reset_delay > 0.0:
 		await get_tree().create_timer(cast_reset_delay).timeout
 	if not is_instance_valid(_arm_anim) or not _arm_anim.has_animation(RESET_ANIM):
@@ -568,6 +574,46 @@ func _clear_spell_effect() -> void:
 	if _spell_effect != null:
 		_spell_effect.queue_free()
 		_spell_effect = null
+
+
+## Instantiates the rune's cast behaviour (bolt, ground AoE, ...) and begins it.
+func _spawn_spell_cast(rune_id: StringName) -> void:
+	_clear_spell_cast()
+	var scene := _cast_scene_for(rune_id)
+	if scene == null:
+		return
+	_spell_cast = scene.instantiate() as SpellCast
+	if _spell_cast == null:
+		return
+	add_child(_spell_cast)
+	# Spawned projectiles/explosions live in the active scene so they outlive the
+	# behaviour; fall back to the tree root if there is no current scene.
+	var world: Node = get_tree().current_scene
+	if world == null:
+		world = get_tree().root
+	_spell_cast.begin(_camera, _spell_anchor, world, _player)
+
+
+## Spawns the behaviour's result (projectile / explosion) at the launch moment,
+## then frees it.
+func _resolve_spell_cast() -> void:
+	if _spell_cast != null:
+		_spell_cast.resolve()
+		_spell_cast.queue_free()
+		_spell_cast = null
+
+
+func _clear_spell_cast() -> void:
+	if _spell_cast != null:
+		_spell_cast.queue_free()
+		_spell_cast = null
+
+
+func _cast_scene_for(rune_id: StringName) -> PackedScene:
+	for binding in spell_effect_bindings:
+		if binding != null and binding.rune_id == rune_id:
+			return binding.cast_scene
+	return null
 #endregion
 
 
