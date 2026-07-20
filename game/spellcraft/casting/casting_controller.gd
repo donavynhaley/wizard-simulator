@@ -452,23 +452,43 @@ func _update_sight_pull(delta: float) -> void:
 		_reset_pull()
 		return
 	if target != _pull_target:
+		if _pull_target != null:
+			_pull_target.release_pull()
 		_pull_target = target
 		_pull_dwell = 0.0
 	_pull_dwell = minf(_pull_dwell + delta, sight_pull_time)
-	_sight.aim_progress = _pull_dwell / maxf(sight_pull_time, 0.01)
+	var progress := _pull_dwell / maxf(sight_pull_time, 0.01)
+	_sight.aim_progress = progress
+	target.set_pull(progress, _palm_position())
 	_update_siphon_stream(target)
 	if _pull_dwell >= sight_pull_time:
 		_lock_element(target.element)
+		# The source reacts to being emptied: one-shots are sucked into the
+		# palm and depleted, persistent founts just settle back.
+		target.consume(_palm_position())
+		_reset_pull()
 
 
 func _reset_pull() -> void:
 	if _pull_target == null and _siphon_stream == null:
 		return
+	if _pull_target != null:
+		_pull_target.release_pull()
 	_pull_target = null
 	_pull_dwell = 0.0
 	if _sight != null:
 		_sight.aim_progress = 0.0
 	_clear_siphon_stream()
+
+
+## Where pulled essence lands: the palm anchor when the arms are up, else the
+## camera as a stand-in.
+func _palm_position() -> Vector3:
+	if _spell_anchor != null:
+		return _spell_anchor.global_position
+	if _camera != null:
+		return _camera.global_position
+	return _player.global_position
 
 
 ## Streams element wisps from the hovered source toward the caster while dwelling.

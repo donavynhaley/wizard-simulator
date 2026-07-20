@@ -71,12 +71,14 @@ func _run() -> void:
 	Input.action_press("sight")
 	Input.action_press("cast")
 	var frames := 0
+	var peak_progress := 0.0
 	while casting._current_element == null and frames < 2000:
 		await process_frame
+		peak_progress = maxf(peak_progress, sight.aim_progress)
 		frames += 1
 	Input.action_release("cast")
 	_check(casting._current_element == fire, "the sight pull draws the element into the rune")
-	_check(sight.aim_progress > 0.0, "the pull dwell fills the aimed ring")
+	_check(peak_progress > 0.0, "the pull dwell fills the aimed ring")
 	Input.action_release("sight")
 	await process_frame
 
@@ -101,6 +103,49 @@ func _run() -> void:
 	_check(casting.current_state == CastingController.CASTING_STATE.IDLE,
 		"drop_item shakes off the primed rune")
 	_check(casting.locked_rune_id == &"", "dismissal clears the locked rune")
+
+	# One-shot depletion: a consumed source is sucked into the palm, leaves the
+	# sight group, and its visual ends hidden.
+	var flame_visual := Node3D.new()
+	root.add_child(flame_visual)
+	var oneshot := ElementSource.new()
+	oneshot.element = fire
+	oneshot.one_shot = true
+	oneshot.consume_time = 0.05
+	oneshot.visual = flame_visual
+	root.add_child(oneshot)
+	oneshot.global_position = camera.global_position + camera.global_transform.basis * Vector3(0, 0, -3)
+	flame_visual.global_position = oneshot.global_position
+	# Push the persistent source off-centre so the one-shot wins the aim.
+	source.global_position = camera.global_position + camera.global_transform.basis * Vector3(6, 0, -3)
+	casting.locked_rune_id = &"draw"
+	casting._current_element = null
+	casting._set_state(CastingController.CASTING_STATE.SPELL_HELD)
+	Input.action_press("sight")
+	await process_frame
+	await process_frame
+	_check(sight.aimed_source() == oneshot, "sight aims the centred one-shot source")
+	Input.action_press("cast")
+	frames = 0
+	while casting._current_element == null and frames < 2000:
+		await process_frame
+		frames += 1
+	Input.action_release("cast")
+	Input.action_release("sight")
+	_check(casting._current_element == fire, "the one-shot pull still fuels the rune")
+	_check(not oneshot.available(), "a completed pull depletes a one-shot source")
+	_check(not oneshot.is_in_group(ElementSource.GROUP), "a depleted source leaves the sight group")
+	frames = 0
+	while flame_visual.visible and frames < 2000:
+		await process_frame
+		frames += 1
+	_check(not flame_visual.visible, "the consumed visual is sucked away and hidden")
+	casting._dismissing = true
+	casting._set_state(CastingController.CASTING_STATE.IDLE)
+	casting._dismissing = false
+	oneshot.queue_free()
+	flame_visual.queue_free()
+	await process_frame
 
 	# Sketching runs at the deliberate time scale and restores on exit.
 	casting._set_state(CastingController.CASTING_STATE.SKETCHING)

@@ -70,18 +70,22 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, -1.992365)
 [node name="MagicalFlame" parent="Props" unique_id=1933211394 instance=ExtResource("4_flame")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.25733203, -2)
 
-[node name="FireSource" type="Node3D" parent="Props/MagicalFlame"]
+[node name="FireSource" type="Node3D" parent="Props/MagicalFlame" node_paths=PackedStringArray("visual")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
 script = ExtResource("5_elemsrc")
 element = ExtResource("6_fire")
+one_shot = true
+visual = NodePath("..")
 
 [node name="EndlessSpring" parent="Props" instance=ExtResource("7_spring")]
 transform = Transform3D(0.2, 0, 0, 0, 0.2, 0, 0, 0, 0.2, -2.5, 0, -2)
 
-[node name="WaterSource" type="Node3D" parent="Props"]
+[node name="WaterSource" type="Node3D" parent="Props" node_paths=PackedStringArray("visual")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 1, -2)
 script = ExtResource("5_elemsrc")
 element = ExtResource("8_water")
+one_shot = true
+visual = NodePath("../EndlessSpring")
 
 [node name="Player" parent="." unique_id=1488847941 instance=ExtResource("1_player")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 4.5)
