@@ -10,6 +10,7 @@ const LookComponent := preload("res://game/player/components/wizard_look.gd")
 
 @onready var locomotion: LocomotionComponent = $Components/Locomotion
 @onready var look: LookComponent = $Components/Look
+@onready var viewmodel_motion: ViewmodelMotion = $Components/ViewmodelMotion
 @onready var head: Node3D = $Head
 @onready var viewmodel: Node3D = $Head/Camera3D/Viewmodel
 @onready var hud: WizardHud = $WizardHud
@@ -27,6 +28,7 @@ func _ready() -> void:
 	assert(locomotion != null, "WizardPlayer requires a Locomotion component.")
 	assert(look != null, "WizardPlayer requires a Look component.")
 	hud.configure(interactor)
+	viewmodel_motion.configure(self, head, viewmodel.get_node(^"WizardHat"))
 	_capture_mouse()
 
 ## Freezes or resumes the player wholesale. Stations that take over the camera
