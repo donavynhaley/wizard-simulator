@@ -53,14 +53,17 @@ Add rows only through cases, never speculatively.
 Runes are verbs of the same graph Sight reads: they move essence and edit links.
 This six-verb core replaces the earlier bolt/font/mend/rend set; the old names survive in the repo only as stroke templates awaiting re-skinning.
 
-| Rune | Verb | What it does in the graph |
-| --- | --- | --- |
-| Draw | Pull | Move essence out of a subject and into the hand |
-| Pour | Push | Move essence from the hand into a subject |
-| Bind | Connect | Create a link between two subjects |
-| Sever | Cut | Break a link |
-| Seal | Close | Hold a boundary: wards, locks, containment |
-| Open | Release | Undo a boundary |
+| Rune | Verb | Glyph | What it does in the graph |
+| --- | --- | --- | --- |
+| Draw | Pull | Inward spiral (coil to the centre) | Move essence out of a subject and into the hand |
+| Pour | Push | Falling triangle (the tipped cup) | Move essence from the hand into a subject |
+| Bind | Connect | Figure-eight (the knot) | Create a link between two subjects |
+| Sever | Cut | Lightning slash (drawn violently) | Break a link |
+| Seal | Close | Closed ring (the ritual circle) | Hold a boundary: wards, locks, containment |
+| Open | Release | Broken ring (the gap is the door) | Undo a boundary |
+
+Every glyph is one stroke, and the motion matches the verb's emotion: a cut is slashed, a seal is drawn calm.
+The pairs teach each other: Open is a Seal deliberately left unclosed, Sever slashes through the knot Bind ties, Draw coils in what Pour funnels out.
 
 There is no runeless magic: Draw takes, Pour gives, and every traced rune is spent by its single use.
 Essence rests in the off hand between verbs: Draw lands it there and frees the casting hand for the next rune; Pour sends it home to an empty vessel or pushes it out at a target.
@@ -343,6 +346,7 @@ Every case that introduces vocabulary or a rule adds a line here, same day.
 | There is no runeless magic; every traced rune is spent by its single use | Kernel |
 | Essence rests in the off hand between verbs; Pour alone gives it back | Kernel |
 | A matching empty vessel accepts poured essence; foreign essence is refused | Case Minus One |
+| A seal left unclosed is an opening - close your circles, apprentice | Kernel |
 | The academy teaches every graduate Draw and Pour | Case Minus One |
 | Tower mysteries are authored as cases, never bespoke puzzle minigames | Case Minus One |
 | Element founts start dormant; restoration costs gold and understanding | Case Minus One |
@@ -360,5 +364,7 @@ Every case that introduces vocabulary or a rule adds a line here, same day.
 ### Registry
 
 - Elements: fire, water, earth, air.
-- Runes: draw, pour, bind, sever, seal, open (legacy bolt/font/mend/rend stroke templates await re-skinning).
+- Runes: draw, pour, bind, sever, seal, open.
+  Seal's ring uses the recorded hand-drawn circles; the other five use synthetic fallback glyphs until hand exemplars are recorded (recorded always wins).
+  Legacy bolt/font/mend/rend stroke templates retired.
 - Cases: locked_door (Case Minus One), sour_milk (Case Zero).
