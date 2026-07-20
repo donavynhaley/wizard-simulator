@@ -91,6 +91,9 @@ corner_smoothing_passes = 4
 
 [node name="Viewmodel" type="Node3D" parent="Head/Camera3D" unique_id=378493421]
 
+[node name="LeftHandAnchor" type="Node3D" parent="Head/Camera3D/Viewmodel"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.28, -0.22, -0.5)
+
 [node name="WizardArms" parent="Head/Camera3D/Viewmodel" unique_id=1588980357 instance=ExtResource("5_anr75")]
 transform = Transform3D(0.09, 0, 0, 0, 0.0869, -0.0233, 0, 0.0233, 0.0869, 0, -0.120000005, -0.032716922)
 

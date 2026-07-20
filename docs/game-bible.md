@@ -62,8 +62,8 @@ This six-verb core replaces the earlier bolt/font/mend/rend set; the old names s
 | Seal | Close | Hold a boundary: wards, locks, containment |
 | Open | Release | Undo a boundary |
 
-There is no runeless magic: taking always requires Draw.
-What the hand already holds can always be released - crudely thrown (the magic bolt, now costing a Draw first) or articulately Poured.
+There is no runeless magic: Draw takes, Pour gives, and every traced rune is spent by its single use.
+Essence rests in the off hand between verbs: Draw lands it there and frees the casting hand for the next rune; Pour sends it home to an empty vessel or pushes it out at a target.
 Compound workings are sequences, not mega-runes: Draw then Pour is a transfer; Bind then Pour is action at a distance.
 Healing is Pour with a matching nature; harm is forced Draw or an opposed Pour.
 
@@ -71,10 +71,10 @@ Healing is Pour with a matching nature; harm is forced Draw or an opposed Pour.
 
 Every cast is a sentence performed with the body: verb, then noun, then object.
 
-1. **Trace the rune**: the verb primes in the casting hand.
-2. **Pull the noun**: holding Sight, aim at a source and draw its element into the hand.
+1. **Trace the verb**: the rune primes in the casting hand and waits for its single use.
+2. **Draw the noun**: holding Sight, aim at a source and pull its essence into the off hand; the Draw rune is spent.
    What renders as a source depends on the journal; learned Natures expand the mana map.
-3. **Release at the object**: aim and let go.
+3. **Trace and give**: with essence carried, Pour returns it to an empty matching vessel or pushes it out at the target; spent again.
 
 Sight is the noun-space: sources, threads, and boundaries are aimed at through it.
 Sever can only target a thread Sight renders, so casting depth is journal depth.
@@ -87,7 +87,9 @@ Feel decisions (locked 2026-07-20):
   Danger still pressures the handwriting.
 - A primed rune **persists until used or dismissed** (shake it off); no timer.
   Walking around holding a verb is a feature.
-- **No runeless magic**: every taking is a traced Draw; releasing what is held is always allowed.
+- **Two hands** (locked while prototyping): the right hand speaks the verb, the left hand carries the noun.
+  Every traced rune is spent by its single use; carried essence survives traces and dismissals.
+- **No runeless magic**: Draw is the only way to take, Pour the only way to give back.
 - The academy taught every graduate **Draw and Pour** - take and give.
   Everything else is learned from the world.
 
@@ -338,7 +340,9 @@ Every case that introduces vocabulary or a rule adds a line here, same day.
 | Power is never created, only moved (siphon, reagent, or scroll) | Kernel |
 | An item's learned Nature makes it a valid reagent | Kernel |
 | Runes are verbs on the world-graph; compound workings are sequences of verbs | Kernel |
-| There is no runeless magic; taking requires Draw, releasing what is held is always allowed | Kernel |
+| There is no runeless magic; every traced rune is spent by its single use | Kernel |
+| Essence rests in the off hand between verbs; Pour alone gives it back | Kernel |
+| A matching empty vessel accepts poured essence; foreign essence is refused | Case Minus One |
 | The academy teaches every graduate Draw and Pour | Case Minus One |
 | Tower mysteries are authored as cases, never bespoke puzzle minigames | Case Minus One |
 | Element founts start dormant; restoration costs gold and understanding | Case Minus One |

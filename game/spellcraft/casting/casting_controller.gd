@@ -1,8 +1,9 @@
 class_name CastingController
 extends Node
 
-## Drives the verb-first casting sentence (game-bible.md): trace the verb, pull
-## the noun through held Sight, release at the object. Three states:
+## Drives the two-hands casting sentence (game-bible.md): the RIGHT hand speaks
+## the verb, the LEFT hand carries the noun, and each traced rune is consumed by
+## its use. Three states:
 ##   IDLE       - holding cast_focus (RMB) for enable_sketching_state_time charges
 ##                the arm and enters SKETCHING.
 ##   SKETCHING  - the player is frozen from looking; mouse motion draws air-sigil
@@ -11,15 +12,18 @@ extends Node
 ##                (spell_held + palm effect); redrawing overrides and swaps the
 ##                presented spell. Releasing RMB commits the locked rune (or
 ##                cancels if none), so a wrong draw is never force-cast.
-##   SPELL_HELD - the committed verb is PRIMED in the palm, colourless, until an
-##                element is pulled through Sight: hold the sight action, aim at
-##                a source, and hold cast (LMB) to dwell-pull its essence in.
-##                The FUELED spell then fires on a left click. A primed rune
-##                without essence refuses to fire - there is no runeless magic,
-##                and no essence-less release.
-## The primed rune persists until used or dismissed; Sight itself lives in the
-## sibling SightController. Audio lives in the CastingAudio child; the ribbon
-## and arm clips are authored in their own scenes and only driven from here.
+##   SPELL_HELD - the traced verb waits in the right palm until used:
+##                DRAW - hold Sight, aim a live source, hold cast (LMB) to
+##                dwell-pull its essence into the LEFT hand. The pull spends the
+##                rune; the essence persists in the off hand across traces.
+##                POUR - with essence in the left hand, cast at an empty vessel
+##                pours it home; cast anywhere else pushes it out as the bolt.
+##                Either use spends the rune. Pour with an empty left hand, and
+##                Draw with a full one, refuse.
+## The held verb persists until used or dismissed (drop_item shakes it off; the
+## left hand keeps its essence). Sight itself lives in the sibling
+## SightController. Audio lives in the CastingAudio child; the ribbon and arm
+## clips are authored in their own scenes and only driven from here.
 
 signal rune_recognized(id: StringName, score: float)
 ## Emitted when a held spell is fired (left click). The projectile/effect system
@@ -93,7 +97,9 @@ var _audio: CastingAudio
 # Sketching / spell runtime state.
 var _spell_effect: Node3D
 var _spell_cast: SpellCast       ## the active cast behaviour (bolt / ground AoE)
-var _current_element: Element    ## element pulled into the rune (null = primed, unfueled)
+var _held_element: Element       ## essence carried in the LEFT hand (null = empty)
+var _left_hand_effect: Node3D    ## the orb visualising the carried essence
+var _left_anchor: Node3D         ## where carried essence lives on the viewmodel
 var _sight: SightController      ## sibling component; the noun-space to pull through
 var _pull_target: ElementSource  ## source the held cast is currently pulling from
 var _pull_dwell := 0.0
@@ -147,6 +153,8 @@ func _ready() -> void:
 		# Palm anchor rides the wrist bone; held-spell effects parent under it.
 		_spell_anchor = _camera.get_node_or_null(
 			"Viewmodel/WizardArms/arms/Skeleton3D/RightHandAttachment/SpellAnchor") as Node3D
+		# The off hand: carried essence lives here between verbs.
+		_left_anchor = _camera.get_node_or_null("Viewmodel/LeftHandAnchor") as Node3D
 
 
 func _process(delta: float) -> void:
@@ -180,26 +188,36 @@ func _input(event: InputEvent) -> void:
 		else:
 			_play_focus_animation(false)
 
-	# While a spell is held, cast (left click) is context-sensitive:
-	# aiming at a live source through Sight begins a pull (handled per-frame in
-	# _update_sight_pull); aiming at an empty vessel pours matching essence
-	# home; a fueled rune fires; a primed rune refuses.
+	# While a verb is held, cast (left click) is verb-sensitive. Draw takes:
+	# the press begins a pull on a live Sight-aimed source (dwelled per-frame in
+	# _update_sight_pull) and lands the essence in the LEFT hand. Pour gives:
+	# into a matching empty vessel, or pushed out as the cast. Each use spends
+	# the rune.
 	if current_state == CASTING_STATE.SPELL_HELD:
 		if event.is_action_pressed("cast"):
 			var aimed := _sight.aimed_source() if _sight != null else null
-			if aimed != null and aimed.available():
-				pass  # this press starts (or continues) a pull, never a cast
-			elif aimed != null:
-				if _current_element == aimed.element:
-					_return_essence(aimed)
-				elif _current_element == null:
-					WizardHud.toast(self, "The rune holds no essence - pull one through Sight")
+			if locked_rune_id == &"draw":
+				if aimed != null and aimed.available():
+					if _held_element != null:
+						WizardHud.toast(self, "Your left hand is already full")
+					# else: this press starts the pull, handled per-frame
+				elif aimed != null:
+					WizardHud.toast(self, "That vessel is empty - nothing to draw")
 				else:
-					WizardHud.toast(self, "The vessel refuses foreign essence")
-			elif _current_element == null:
-				WizardHud.toast(self, "The rune holds no essence - pull one through Sight")
+					WizardHud.toast(self, "Nothing to draw from here - find a source in Sight")
+			elif locked_rune_id == &"pour":
+				if _held_element == null:
+					WizardHud.toast(self, "Your left hand holds nothing to pour")
+				elif aimed != null and not aimed.available():
+					if _held_element == aimed.element:
+						_pour_into_vessel(aimed)
+					else:
+						WizardHud.toast(self, "The vessel refuses foreign essence")
+				else:
+					_fire_spell()
 			else:
-				_fire_spell()
+				# Future verbs: no behaviour bound yet.
+				WizardHud.toast(self, "The rune stirs, but nothing answers")
 		elif event.is_action_pressed("drop_item"):
 			_dismiss_spell()
 		return
@@ -246,7 +264,7 @@ func _enter_sketching() -> void:
 	locked_rune_score = 0.0
 	_spell_presented = false
 	_clear_spell_cast()
-	_current_element = null
+	# The left hand keeps its essence across traces: only the verb resets.
 	_pull_target = null
 	_pull_dwell = 0.0
 	_idle_time = 0.0
@@ -365,14 +383,17 @@ func _settle_spell_held() -> void:
 		_arm_anim.play(SPELL_END_ANIM)
 
 
-## Left click while a fueled spell is held: launch it. Leaves SPELL_HELD, which
-## plays spell_fire and clears the orb.
+## Pour's use, push form: the left hand's essence is thrown out as the cast.
+## Both hands empty afterwards - essence spent, rune spent.
 func _fire_spell() -> void:
 	if _audio != null:
 		_audio.play_fire()
 	if _spell_cast != null:
+		_spell_cast.element = _held_element
 		_spell_cast.cast()  # lock the aim; the result launches on resolve()
 	spell_cast.emit(locked_rune_id, locked_rune_score)
+	_held_element = null
+	_clear_left_hand_effect()
 	_focus_used = true
 	_set_state(CASTING_STATE.IDLE)
 
@@ -449,11 +470,13 @@ func _on_sketch_motion(relative: Vector2) -> void:
 
 
 #region Sight pull
-## While a spell is held and Sight is up: holding cast on the aimed source dwells
-## a pull, streaming its essence toward the palm; completion fuels the rune.
-## Aiming is the SightController's job; this only runs the dwell and the fill.
+## Draw's use: while the Draw verb is held, Sight is up, and the left hand is
+## empty, holding cast on the aimed source dwells a pull that streams its
+## essence toward the off hand. Completion lands the essence in the LEFT hand
+## and spends the rune. Aiming is the SightController's job.
 func _update_sight_pull(delta: float) -> void:
-	if _sight == null or not _sight.active:
+	if _sight == null or not _sight.active \
+			or locked_rune_id != &"draw" or _held_element != null:
 		_reset_pull()
 		return
 	var target := _sight.aimed_source()
@@ -468,14 +491,10 @@ func _update_sight_pull(delta: float) -> void:
 	_pull_dwell = minf(_pull_dwell + delta, sight_pull_time)
 	var progress := _pull_dwell / maxf(sight_pull_time, 0.01)
 	_sight.aim_progress = progress
-	target.set_pull(progress, _palm_position())
+	target.set_pull(progress, _left_hand_position())
 	_update_siphon_stream(target)
 	if _pull_dwell >= sight_pull_time:
-		_lock_element(target.element)
-		# The source reacts to being emptied: one-shots are sucked into the
-		# palm and depleted, persistent founts just settle back.
-		target.consume(_palm_position())
-		_reset_pull()
+		_receive_element(target)
 
 
 func _reset_pull() -> void:
@@ -490,14 +509,20 @@ func _reset_pull() -> void:
 	_clear_siphon_stream()
 
 
-## Where pulled essence lands: the palm anchor when the arms are up, else the
-## camera as a stand-in.
+## The right palm: fallback landing point when the off hand is missing.
 func _palm_position() -> Vector3:
 	if _spell_anchor != null:
 		return _spell_anchor.global_position
 	if _camera != null:
 		return _camera.global_position
 	return _player.global_position
+
+
+## Where carried essence lives: the left-hand anchor, else the palm fallback.
+func _left_hand_position() -> Vector3:
+	if _left_anchor != null:
+		return _left_anchor.global_position
+	return _palm_position()
 
 
 ## Streams element wisps from the hovered source toward the caster while dwelling.
@@ -528,34 +553,65 @@ func _clear_siphon_stream() -> void:
 	_siphon_stream_source = null
 
 
-## The inverse of the pull: held essence poured back into its empty vessel.
-## Power is never created, only moved - and moving it home is always allowed.
-## The rune stays primed, colourless again, ready to pull something else.
-func _return_essence(vessel: ElementSource) -> void:
-	var element := _current_element
-	vessel.restore(_palm_position())
-	_current_element = null
-	if _spell_cast != null:
-		_spell_cast.element = null
-	_spawn_spell_effect(locked_rune_id)  # re-present the colourless primed orb
-	var label := element.display_name if not element.display_name.is_empty() else String(element.id)
-	WizardHud.toast(self, "%s returned to its vessel" % label.capitalize())
-
-
-## Fuels the held rune with the pulled element: tints the palm orb and hands the
-## element to the pending cast behaviour so the launch carries it.
-func _lock_element(imbued: Element) -> void:
-	if imbued == _current_element:
-		return
-	_current_element = imbued
-	if _spell_effect != null:
-		imbued.apply_to(_spell_effect)
-	if _spell_cast != null:
-		_spell_cast.element = imbued
+## Draw's pull completed: the essence lands in the LEFT hand, the source reacts
+## to being emptied, and the spent Draw rune fades from the right.
+func _receive_element(source: ElementSource) -> void:
+	_held_element = source.element
+	_spawn_left_hand_effect(_held_element)
 	if _audio != null:
 		_audio.play_ignite()
-	var label := imbued.display_name if not imbued.display_name.is_empty() else String(imbued.id)
-	WizardHud.toast(self, "%s drawn into the rune" % label.capitalize())
+	WizardHud.toast(self, "%s drawn into your left hand" % _element_label(_held_element))
+	source.consume(_left_hand_position())
+	_reset_pull()
+	_consume_rune()
+
+
+## Pour's use, vessel form: held essence flows home, and the Pour rune is spent.
+func _pour_into_vessel(vessel: ElementSource) -> void:
+	var label := _element_label(_held_element)
+	vessel.restore(_left_hand_position())
+	_held_element = null
+	_clear_left_hand_effect()
+	WizardHud.toast(self, "%s returned to its vessel" % label)
+	_consume_rune()
+
+
+## A rune spent by its use: fades from the right hand without a cast clip,
+## exactly like a dismissal, but earned.
+func _consume_rune() -> void:
+	_dismissing = true
+	_set_state(CASTING_STATE.IDLE)
+	_dismissing = false
+
+
+func _element_label(element: Element) -> String:
+	if element == null:
+		return "Essence"
+	var label := element.display_name if not element.display_name.is_empty() else String(element.id)
+	return label.capitalize()
+
+
+## The carried essence orb: same effect scene as the palm one, tinted by the
+## element, parented to the off-hand anchor. It outlives verbs and traces.
+func _spawn_left_hand_effect(element: Element) -> void:
+	_clear_left_hand_effect()
+	if _left_anchor == null or default_spell_effect == null:
+		return
+	_left_hand_effect = default_spell_effect.instantiate() as Node3D
+	if _left_hand_effect == null:
+		return
+	_left_anchor.add_child(_left_hand_effect)
+	_left_hand_effect.scale = Vector3.ONE * 0.7
+	if element != null:
+		element.apply_to(_left_hand_effect)
+
+
+func _clear_left_hand_effect() -> void:
+	if _left_hand_effect != null:
+		_left_hand_effect.queue_free()
+		_left_hand_effect = null
+
+
 #endregion
 
 
@@ -749,10 +805,9 @@ func _spawn_spell_effect(rune_id: StringName) -> void:
 	if _spell_effect == null:
 		return
 	_spell_anchor.add_child(_spell_effect)
+	# The rune orb stays colourless: essence lives in the LEFT hand, not the verb.
 	if _spell_effect.has_method("set_color"):
 		_spell_effect.call("set_color", default_spell_color)
-	if _current_element != null:
-		_current_element.apply_to(_spell_effect)
 
 
 func _clear_spell_effect() -> void:
@@ -776,7 +831,7 @@ func _spawn_spell_cast(rune_id: StringName) -> void:
 	var world: Node = get_tree().current_scene
 	if world == null:
 		world = get_tree().root
-	_spell_cast.element = _current_element
+	_spell_cast.element = _held_element
 	_spell_cast.begin(_camera, _spell_anchor, world, _player)
 
 

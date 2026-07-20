@@ -1,11 +1,9 @@
 [gd_resource type="Resource" script_class="SpellEffectBinding" format=3 uid="uid://dufs4nm1diqs"]
 
 [ext_resource type="Script" uid="uid://dpxk74eq8hxfd" path="res://game/spellcraft/casting/spell_effect_binding.gd" id="1_script"]
-[ext_resource type="PackedScene" path="res://game/spellcraft/casting/spells/bolt_cast.tscn" id="2_bolt"]
 [ext_resource type="PackedScene" path="res://game/spellcraft/casting/effects/spell_palm_prism.tscn" id="3_prism"]
 
 [resource]
 script = ExtResource("1_script")
 rune_id = &"draw"
 effect_scene = ExtResource("3_prism")
-cast_scene = ExtResource("2_bolt")
