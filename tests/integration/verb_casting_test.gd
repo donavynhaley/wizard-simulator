@@ -98,6 +98,12 @@ func _run() -> void:
 	_check(casting.current_state == CastingController.CASTING_STATE.IDLE,
 		"a completed pull spends the Draw rune")
 	_check(casting._left_hand_effect != null, "carried essence shows in the off hand")
+	_check(casting._left_anchor != null
+		and String(casting._left_anchor.get_path()).contains("LeftHandAttachment"),
+		"the essence orb rides the skeleton's left wrist attachment")
+	_check(casting._left_arm_anim != null and casting._left_arm_anim.is_playing()
+		and String(casting._left_arm_anim.current_animation).ends_with("_left"),
+		"the left arm raises into its mirrored hold")
 	_check(not source.available(), "a completed pull depletes a one-shot source")
 	_check(source.is_in_group(ElementSource.GROUP), "a depleted source stays listed as an empty vessel")
 	frames = 0

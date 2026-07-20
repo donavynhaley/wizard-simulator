@@ -100,6 +100,7 @@ var _spell_cast: SpellCast       ## the active cast behaviour (bolt / ground AoE
 var _held_element: Element       ## essence carried in the LEFT hand (null = empty)
 var _left_hand_effect: Node3D    ## the orb visualising the carried essence
 var _left_anchor: Node3D         ## where carried essence lives on the viewmodel
+var _left_arm_anim: AnimationPlayer  ## mirrored left-arm clips (carry pose)
 var _sight: SightController      ## sibling component; the noun-space to pull through
 var _pull_target: ElementSource  ## source the held cast is currently pulling from
 var _pull_dwell := 0.0
@@ -153,8 +154,20 @@ func _ready() -> void:
 		# Palm anchor rides the wrist bone; held-spell effects parent under it.
 		_spell_anchor = _camera.get_node_or_null(
 			"Viewmodel/WizardArms/arms/Skeleton3D/RightHandAttachment/SpellAnchor") as Node3D
-		# The off hand: carried essence lives here between verbs.
-		_left_anchor = _camera.get_node_or_null("Viewmodel/LeftHandAnchor") as Node3D
+		# The off hand: carried essence lives here between verbs. Prefer the
+		# skeleton attachment (rides the animated wrist.l); the static camera
+		# anchor is the fallback.
+		_left_anchor = _camera.get_node_or_null(
+			"Viewmodel/WizardArms/arms/Skeleton3D/LeftHandAttachment/SpellAnchor") as Node3D
+		if _left_anchor == null:
+			_left_anchor = _camera.get_node_or_null("Viewmodel/LeftHandAnchor") as Node3D
+		# The left arm's own player: mirrored clips (see
+		# tools/authoring/mirror_arm_animations.gd), processed after the right
+		# player in tree order so the carry pose wins the left bones.
+		_left_arm_anim = _camera.get_node_or_null(
+			"Viewmodel/WizardArms/LeftAnimationPlayer") as AnimationPlayer
+		if _left_arm_anim != null:
+			_left_arm_anim.animation_finished.connect(_on_left_arm_anim_finished)
 
 
 func _process(delta: float) -> void:
@@ -593,8 +606,11 @@ func _element_label(element: Element) -> String:
 
 ## The carried essence orb: same effect scene as the palm one, tinted by the
 ## element, parented to the off-hand anchor. It outlives verbs and traces.
+## The left arm raises into its mirrored hold pose to receive it.
 func _spawn_left_hand_effect(element: Element) -> void:
 	_clear_left_hand_effect()
+	if _left_arm_anim != null and _left_arm_anim.has_animation(&"spell_held_left"):
+		_left_arm_anim.play(&"spell_held_left")
 	if _left_anchor == null or default_spell_effect == null:
 		return
 	_left_hand_effect = default_spell_effect.instantiate() as Node3D
@@ -610,6 +626,24 @@ func _clear_left_hand_effect() -> void:
 	if _left_hand_effect != null:
 		_left_hand_effect.queue_free()
 		_left_hand_effect = null
+	# Only when the essence is truly gone (not a re-spawn): ease the left arm
+	# back down; stopping later returns the left bones to the right player.
+	if _held_element == null and _left_arm_anim != null \
+			and _left_arm_anim.has_animation(&"Reset_left"):
+		_left_arm_anim.play(&"Reset_left")
+
+
+## Chains the left arm's raise through its settle into the looping carry hold,
+## and stops the left player once its reset lands so it releases the left bones.
+func _on_left_arm_anim_finished(anim_name: StringName) -> void:
+	if _held_element != null and anim_name == &"spell_held_left" \
+			and _left_arm_anim.has_animation(&"spell_held_end_left"):
+		_left_arm_anim.play(&"spell_held_end_left")
+	elif _held_element != null and anim_name == &"spell_held_end_left" \
+			and _left_arm_anim.has_animation(&"spell_carry_left"):
+		_left_arm_anim.play(&"spell_carry_left")
+	elif anim_name == &"Reset_left":
+		_left_arm_anim.stop()
 
 
 #endregion
