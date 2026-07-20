@@ -12,14 +12,14 @@ extends Node
 
 @export_group("Look Sway")
 ## Radians of trailing offset per rad/sec of view rotation (before clamping).
-@export var sway_angular_gain := 0.05
+@export var sway_angular_gain := 0.032
 ## Hard cap on trailing offset so a fast flick can't swing the hat off-screen.
-@export var sway_max := 0.13
+@export var sway_max := 0.085
 ## How fast the hat catches back up to the view; higher = tighter/less laggy.
-@export var sway_stiffness := 11.0
+@export var sway_stiffness := 16.0
 ## Bank (roll) per rad/sec of yaw, so turning leans the hat into the turn.
-@export var bank_gain := 0.035
-@export var bank_max := 0.09
+@export var bank_gain := 0.018
+@export var bank_max := 0.05
 
 @export_group("Head Bob")
 @export var bob_enabled := true
