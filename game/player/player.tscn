@@ -51,7 +51,9 @@ stream = ExtResource("10_sketchsfx")
 
 [node name="RuneIgniteAudio" type="AudioStreamPlayer" parent="Components/CastingController/CastingAudio" unique_id=1059245772]
 stream = ExtResource("11_ignitesfx")
+pitch_scale = 0.82
 max_polyphony = 4
+bus = &"SpellCast"
 
 [node name="SpellFireAudio" type="AudioStreamPlayer" parent="Components/CastingController/CastingAudio" unique_id=432828579]
 stream = ExtResource("18_firesfx")
