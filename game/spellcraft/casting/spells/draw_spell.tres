@@ -6,6 +6,6 @@
 
 [resource]
 script = ExtResource("1_script")
-rune_id = &"triangle"
+rune_id = &"draw"
 effect_scene = ExtResource("3_prism")
 cast_scene = ExtResource("2_bolt")

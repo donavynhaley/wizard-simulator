@@ -1,18 +1,25 @@
 class_name CastingController
 extends Node
 
-## Drives the Arx-style casting flow across three states:
+## Drives the verb-first casting sentence (game-bible.md): trace the verb, pull
+## the noun through held Sight, release at the object. Three states:
 ##   IDLE       - holding cast_focus (RMB) for enable_sketching_state_time charges
 ##                the arm and enters SKETCHING.
 ##   SKETCHING  - the player is frozen from looking; mouse motion draws air-sigil
-##                strokes. Recognition on each stroke lift locks a rune and
-##                presents it (spell_held + palm effect); redrawing overrides and
-##                swaps the presented spell. Releasing RMB commits the locked rune
-##                (or cancels if none), so a wrong draw is never force-cast.
-##   SPELL_HELD - the committed spell is held in the palm, settling to a casual
-##                hold, until fired with a left click (cast).
-## Audio lives in the CastingAudio child; the ribbon and arm clips are authored
-## in their own scenes and only driven from here.
+##                strokes at sketch_time_scale (deliberate, never a pause).
+##                Recognition on each stroke lift locks a rune and presents it
+##                (spell_held + palm effect); redrawing overrides and swaps the
+##                presented spell. Releasing RMB commits the locked rune (or
+##                cancels if none), so a wrong draw is never force-cast.
+##   SPELL_HELD - the committed verb is PRIMED in the palm, colourless, until an
+##                element is pulled through Sight: hold the sight action, aim at
+##                a source, and hold cast (LMB) to dwell-pull its essence in.
+##                The FUELED spell then fires on a left click. A primed rune
+##                without essence refuses to fire - there is no runeless magic,
+##                and no essence-less release.
+## The primed rune persists until used or dismissed; Sight itself lives in the
+## sibling SightController. Audio lives in the CastingAudio child; the ribbon
+## and arm clips are authored in their own scenes and only driven from here.
 
 signal rune_recognized(id: StringName, score: float)
 ## Emitted when a held spell is fired (left click). The projectile/effect system
@@ -37,13 +44,14 @@ enum CASTING_STATE {
 @export var sketching_min_distance_dedup := 4.0
 @export var stroke_max_lifetime := 6.0
 @export_range(0.0, 1.0, 0.01) var match_threshold := 0.75
+## Engine time scale while sketching: deliberate and slightly protected,
+## never a pause menu (locked feel decision, game-bible.md).
+@export_range(0.1, 1.0, 0.05) var sketch_time_scale := 0.7
 
-@export_group("Element Siphon")
-## Radius (px) from the sketch cursor to a source's screen position to target it.
-@export var siphon_cursor_radius := 60.0
-## Seconds of dwelling the cursor over a source to pull its element in.
-@export var siphon_dwell_time := 0.6
-## Wisp stream drawn from a source toward the caster while siphoning.
+@export_group("Sight Pull")
+## Seconds of holding cast on a Sight-aimed source to pull its element in.
+@export var sight_pull_time := 0.9
+## Wisp stream drawn from a source toward the caster while pulling.
 @export var siphon_stream_scene: PackedScene
 
 @export_group("Spell Held")
@@ -85,13 +93,14 @@ var _audio: CastingAudio
 # Sketching / spell runtime state.
 var _spell_effect: Node3D
 var _spell_cast: SpellCast       ## the active cast behaviour (bolt / ground AoE)
-var _current_element: Element    ## element imbued this cast (null = neutral arcane)
-var _siphon_target: ElementSource
-var _siphon_dwell := 0.0
+var _current_element: Element    ## element pulled into the rune (null = primed, unfueled)
+var _sight: SightController      ## sibling component; the noun-space to pull through
+var _pull_target: ElementSource  ## source the held cast is currently pulling from
+var _pull_dwell := 0.0
 var _siphon_stream: Node3D
 var _siphon_stream_source: ElementSource
-var _ribbon_default_base: Color
 var _spell_settled := false      ## true once spell_held_end has played (focus released)
+var _dismissing := false         ## true while a shake-off exit is in flight (no cast clip)
 var _spell_presented := false    ## true once spell_held has played this session (no replay on override)
 var _focus_used := false         ## blocks auto-resketch while focus stays held after a cast
 var _sketch_draw_speed := 0.0    ## smoothed cursor speed (px/sec) driving hum pitch
@@ -117,6 +126,7 @@ func _ready() -> void:
 
 	_audio = get_node_or_null("CastingAudio") as CastingAudio
 	_camera = _player.get_node_or_null("Head/Camera3D") as Camera3D
+	_sight = get_parent().get_node_or_null("SightController") as SightController
 	_configure_recognizer()
 	# The ribbon look is authored in sketch_ribbon.tscn, instanced under the
 	# camera in player.tscn; the controller only drives it.
@@ -124,7 +134,6 @@ func _ready() -> void:
 		_ribbon = _camera.get_node_or_null("SketchRibbon") as SketchRibbon
 		if _ribbon != null:
 			_ribbon.visible = false
-			_ribbon_default_base = _ribbon.base_color
 		_arm_anim = _camera.get_node_or_null(
 			"Viewmodel/WizardArms/AnimationPlayer") as AnimationPlayer
 		if _arm_anim != null:
@@ -171,11 +180,19 @@ func _input(event: InputEvent) -> void:
 		else:
 			_play_focus_animation(false)
 
-	# A held spell fires on the next cast (left click), regardless of focus; the
-	# spell stays in hand until then.
+	# While a spell is held, cast (left click) is context-sensitive:
+	# aiming at a source through Sight begins a pull (handled per-frame in
+	# _update_sight_pull); a fueled rune fires; a primed rune refuses.
 	if current_state == CASTING_STATE.SPELL_HELD:
 		if event.is_action_pressed("cast"):
-			_fire_spell()
+			if _sight != null and _sight.aimed_source() != null:
+				pass  # this press starts (or continues) a pull, never a cast
+			elif _current_element == null:
+				WizardHud.toast(self, "The rune holds no essence - pull one through Sight")
+			else:
+				_fire_spell()
+		elif event.is_action_pressed("drop_item"):
+			_dismiss_spell()
 		return
 
 	if current_state != CASTING_STATE.SKETCHING:
@@ -221,9 +238,10 @@ func _enter_sketching() -> void:
 	_spell_presented = false
 	_clear_spell_cast()
 	_current_element = null
-	_siphon_target = null
-	_siphon_dwell = 0.0
+	_pull_target = null
+	_pull_dwell = 0.0
 	_idle_time = 0.0
+	Engine.time_scale = sketch_time_scale
 	_player.look_enabled = false
 	sketching_cursor_pos = get_viewport().get_visible_rect().size * 0.5
 	if _ribbon != null:
@@ -264,19 +282,16 @@ func _update_sketching(delta: float) -> void:
 			_strokes.remove_at(i)
 	if _audio != null:
 		_audio.update_sketch(_sketch_draw_speed, _active_stroke != null, delta)
-	_update_siphon(delta)
 	if _ribbon != null:
 		var viewport_size := get_viewport().get_visible_rect().size
 		_ribbon.rebuild(_strokes, _camera, viewport_size, stroke_max_lifetime)
-		# After siphoning, the cursor keeps emitting element embers even between
-		# strokes, so the pulled element visibly follows the cursor.
 		_ribbon.update_tip(
-			sketching_cursor_pos, _camera, viewport_size,
-			_active_stroke != null or _current_element != null)
+			sketching_cursor_pos, _camera, viewport_size, _active_stroke != null)
 	_apply_arm_idle(delta)
 
 
 func _exit_sketching() -> void:
+	Engine.time_scale = 1.0
 	if not template_recording_id.is_empty():
 		_save_template()
 	if _ribbon != null:
@@ -284,9 +299,8 @@ func _exit_sketching() -> void:
 		_ribbon.visible = false
 	if _get_hud() != null:
 		_hud.show_sketch_cursor(false)
-		_hud.set_siphon_markers([])
-	_siphon_target = null
-	_siphon_dwell = 0.0
+	_pull_target = null
+	_pull_dwell = 0.0
 	_clear_siphon_stream()
 	if _arms != null:
 		# Restore the mount so the retract animation plays from a clean pose.
@@ -323,9 +337,11 @@ func _enter_spell_held() -> void:
 	_spawn_spell_cast(locked_rune_id)
 
 
-## Held indefinitely with the same procedural sway; only a left click fires it.
+## Held indefinitely with the same procedural sway. While Sight is up the held
+## cast button pulls essence from the aimed source; a left click fires once fueled.
 func _update_spell_held(delta: float) -> void:
 	_apply_arm_idle(delta)
+	_update_sight_pull(delta)
 	if _spell_cast != null:
 		_spell_cast.update_aim(delta)
 
@@ -340,8 +356,8 @@ func _settle_spell_held() -> void:
 		_arm_anim.play(SPELL_END_ANIM)
 
 
-## Left click while a spell is held: launch it. Leaves SPELL_HELD, which plays
-## spell_fire and clears the orb.
+## Left click while a fueled spell is held: launch it. Leaves SPELL_HELD, which
+## plays spell_fire and clears the orb.
 func _fire_spell() -> void:
 	if _audio != null:
 		_audio.play_fire()
@@ -352,9 +368,27 @@ func _fire_spell() -> void:
 	_set_state(CASTING_STATE.IDLE)
 
 
+## Shake off the primed rune (drop_item): the verb dissipates uncast, essence
+## and all. The persist-until-dismissed half of the no-timer feel decision.
+func _dismiss_spell() -> void:
+	_dismissing = true
+	_set_state(CASTING_STATE.IDLE)
+	_dismissing = false
+	WizardHud.toast(self, "The rune fades from your hand")
+
+
 func _exit_spell_held() -> void:
+	_reset_pull()
 	if _arms != null:
 		_arms.transform = _arm_base_transform
+	if _dismissing:
+		# Dismissal is not a launch: no cast clip, no projectile; just retract.
+		_clear_spell_effect()
+		_clear_spell_cast()
+		locked_rune_id = &""
+		locked_rune_score = 0.0
+		_play_focus_animation(false)
+		return
 	# The orb rides the hand through the cast clip and is cleared when it finishes
 	# (the launch moment). Without the clip there is no finish event, so clear now.
 	if _arm_anim != null and _arm_anim.has_animation(SPELL_FIRE_ANIM):
@@ -405,50 +439,36 @@ func _on_sketch_motion(relative: Vector2) -> void:
 #endregion
 
 
-#region Element siphon
-## While sketching, projects every on-screen element source to the cursor; dwelling
-## over one pulls its element in - recolouring the rune and imbuing the spell.
-func _update_siphon(delta: float) -> void:
-	if _camera == null:
+#region Sight pull
+## While a spell is held and Sight is up: holding cast on the aimed source dwells
+## a pull, streaming its essence toward the palm; completion fuels the rune.
+## Aiming is the SightController's job; this only runs the dwell and the fill.
+func _update_sight_pull(delta: float) -> void:
+	if _sight == null or not _sight.active:
+		_reset_pull()
 		return
-	var cursor := sketching_cursor_pos
-	var bounds := get_viewport().get_visible_rect().size
-	var hovered: ElementSource = null
-	var hovered_marker: Dictionary = {}
-	var markers: Array = []
-	for node in get_tree().get_nodes_in_group(ElementSource.GROUP):
-		var src := node as ElementSource
-		if src == null or src.element == null:
-			continue
-		var world_point := src.siphon_point()
-		if _camera.is_position_behind(world_point):
-			continue
-		var screen := _camera.unproject_position(world_point)
-		if screen.x < 0.0 or screen.y < 0.0 or screen.x > bounds.x or screen.y > bounds.y:
-			continue
-		var marker := {"pos": screen, "color": src.element.color, "progress": 0.0}
-		markers.append(marker)
-		if cursor.distance_to(screen) <= siphon_cursor_radius and hovered == null:
-			hovered = src
-			hovered_marker = marker
-	if hovered != null:
-		if hovered == _siphon_target:
-			_siphon_dwell = minf(_siphon_dwell + delta, siphon_dwell_time)
-		else:
-			_siphon_target = hovered
-			_siphon_dwell = 0.0
-		var progress := _siphon_dwell / maxf(siphon_dwell_time, 0.01)
-		hovered_marker["progress"] = progress
-		_preview_ink(hovered.element, progress)
-		if _siphon_dwell >= siphon_dwell_time:
-			_lock_element(hovered.element)
-	else:
-		_siphon_target = null
-		_siphon_dwell = 0.0
-		_preview_ink(null, 0.0)
-	_update_siphon_stream(hovered)
-	if _get_hud() != null:
-		_hud.set_siphon_markers(markers)
+	var target := _sight.aimed_source()
+	if target == null or not Input.is_action_pressed("cast"):
+		_reset_pull()
+		return
+	if target != _pull_target:
+		_pull_target = target
+		_pull_dwell = 0.0
+	_pull_dwell = minf(_pull_dwell + delta, sight_pull_time)
+	_sight.aim_progress = _pull_dwell / maxf(sight_pull_time, 0.01)
+	_update_siphon_stream(target)
+	if _pull_dwell >= sight_pull_time:
+		_lock_element(target.element)
+
+
+func _reset_pull() -> void:
+	if _pull_target == null and _siphon_stream == null:
+		return
+	_pull_target = null
+	_pull_dwell = 0.0
+	if _sight != null:
+		_sight.aim_progress = 0.0
+	_clear_siphon_stream()
 
 
 ## Streams element wisps from the hovered source toward the caster while dwelling.
@@ -479,32 +499,20 @@ func _clear_siphon_stream() -> void:
 	_siphon_stream_source = null
 
 
-## Ramps the ribbon ink from the committed colour toward the previewed element by
-## the dwell progress (or resets to arcane when nothing is being pulled).
-func _preview_ink(preview: Element, progress: float) -> void:
-	if _ribbon == null:
-		return
-	if _current_element == null and preview == null:
-		_ribbon.reset_ink_color()
-		return
-	var committed: Color = _current_element.color if _current_element != null else _ribbon_default_base
-	var ink := committed if preview == null else committed.lerp(preview.color, progress)
-	_ribbon.set_ink_color(ink)
-
-
-## Locks the pulled element in for this cast: recolours the ink fully and re-tints
-## an already-presented orb, so pulling after drawing still works.
+## Fuels the held rune with the pulled element: tints the palm orb and hands the
+## element to the pending cast behaviour so the launch carries it.
 func _lock_element(imbued: Element) -> void:
 	if imbued == _current_element:
 		return
 	_current_element = imbued
-	if _ribbon != null:
-		_ribbon.set_ink_color(imbued.color)
-		_ribbon.set_tip_color(imbued.color)  # embers now trail the cursor in element colour
 	if _spell_effect != null:
 		imbued.apply_to(_spell_effect)
+	if _spell_cast != null:
+		_spell_cast.element = imbued
+	if _audio != null:
+		_audio.play_ignite()
 	var label := imbued.display_name if not imbued.display_name.is_empty() else String(imbued.id)
-	WizardHud.toast(self, "%s siphoned" % label.capitalize())
+	WizardHud.toast(self, "%s drawn into the rune" % label.capitalize())
 #endregion
 
 
@@ -558,11 +566,12 @@ func _configure_recognizer() -> void:
 	_recognizer = ShapeRecognizer.new()
 	_load_recorded_templates()
 	# Hardcoded fallback for any rune without a recorded exemplar, so recording
-	# one rune (e.g. circle) does not knock out the others. Recorded templates
-	# (drawn through the real input path) always win when present.
-	if not _recognizer.has_template(&"triangle"):
-		_recognizer.add_template(&"triangle", [PackedVector2Array([
-			Vector2(0.5, 0.0), Vector2(1.0, 1.0), Vector2(0.0, 1.0), Vector2(0.5, 0.0)])])
+	# one rune (e.g. draw's circle) does not knock out the others. Recorded
+	# templates (drawn through the real input path) always win when present.
+	# Pour's placeholder glyph is a downward-pointing triangle: tipping the cup.
+	if not _recognizer.has_template(&"pour"):
+		_recognizer.add_template(&"pour", [PackedVector2Array([
+			Vector2(0.0, 0.0), Vector2(1.0, 0.0), Vector2(0.5, 1.0), Vector2(0.0, 0.0)])])
 
 
 func _load_recorded_templates() -> void:
