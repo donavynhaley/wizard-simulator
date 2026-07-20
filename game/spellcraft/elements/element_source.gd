@@ -8,13 +8,16 @@ extends Node3D
 ## One-shot sources are the sourcing rule made visible: pulling consumes the
 ## source, and its visual is sucked into the caster's palm to merge with the
 ## primed rune. While the pull dwells, the visual leans and shrinks toward the
-## hand; a cancelled pull eases it back; a completed pull rips it free. A
-## depleted source leaves the group, so Sight stops rendering it.
+## hand; a cancelled pull eases it back; a completed pull rips it free.
+## A depleted source stays in the group as an EMPTY VESSEL - Sight renders it
+## hollow, and held essence of the matching element can be poured back in
+## (restore), reversing the suck. Power is never created, only moved.
 
 ## The group ("tag") every pullable source joins, so the caster finds them all.
 const GROUP := &"element_source"
 
 signal consumed
+signal restored
 
 @export var element: Element
 ## When true the source is spent by a single completed pull.
@@ -28,7 +31,9 @@ signal consumed
 var _depleted := false
 var _visual_base: Transform3D
 var _visual_base_saved := false
+var _visual_light_energy := 0.0
 var _return_tween: Tween
+var _consume_tween: Tween
 
 
 func _ready() -> void:
@@ -80,23 +85,48 @@ func consume(hand_position: Vector3) -> void:
 	if _depleted:
 		return
 	_depleted = true
-	remove_from_group(GROUP)
 	consumed.emit()
 	if visual == null:
 		return
 	_save_visual_base()
 	_kill_return_tween()
-	var tween := create_tween()
-	tween.set_parallel(true)
-	tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tween.tween_property(visual, "global_position", hand_position, consume_time)
-	tween.tween_property(visual, "scale", Vector3.ONE * 0.02, consume_time)
+	if "light_energy" in visual:
+		_visual_light_energy = visual.light_energy
+	_consume_tween = create_tween()
+	_consume_tween.set_parallel(true)
+	_consume_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	_consume_tween.tween_property(visual, "global_position", hand_position, consume_time)
+	_consume_tween.tween_property(visual, "scale", Vector3.ONE * 0.02, consume_time)
 	# MagicalFlame exposes light_energy; dim it as the flame leaves its wick.
 	if "light_energy" in visual:
-		tween.tween_property(visual, "light_energy", 0.0, consume_time)
-	tween.chain().tween_callback(func() -> void:
+		_consume_tween.tween_property(visual, "light_energy", 0.0, consume_time)
+	_consume_tween.chain().tween_callback(func() -> void:
 		if is_instance_valid(visual):
 			visual.visible = false)
+
+
+## Held essence poured back into the empty vessel: the suck in reverse. The
+## visual reappears at the hand, flies home, and rekindles its light.
+func restore(from_position: Vector3) -> void:
+	if not _depleted:
+		return
+	_depleted = false
+	restored.emit()
+	if visual == null:
+		return
+	if _consume_tween != null and _consume_tween.is_valid():
+		_consume_tween.kill()
+	_consume_tween = null
+	_kill_return_tween()
+	visual.visible = true
+	visual.global_position = from_position
+	visual.scale = Vector3.ONE * 0.02
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(visual, "transform", _visual_base, consume_time)
+	if "light_energy" in visual:
+		tween.tween_property(visual, "light_energy", _visual_light_energy, consume_time)
 
 
 func _save_visual_base() -> void:

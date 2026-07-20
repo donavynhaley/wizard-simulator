@@ -15,6 +15,17 @@ func _init() -> void:
 
 
 func _run() -> void:
+	# A floor first: without one the player free-falls all test long and the
+	# world-anchored sources drift out of the screen-centre aim radius.
+	var floor_body := StaticBody3D.new()
+	var floor_shape := CollisionShape3D.new()
+	var floor_box := BoxShape3D.new()
+	floor_box.size = Vector3(50.0, 1.0, 50.0)
+	floor_shape.shape = floor_box
+	floor_body.add_child(floor_shape)
+	root.add_child(floor_body)
+	floor_body.global_position = Vector3(0.0, -0.5, 0.0)
+
 	var player := (load("res://game/player/player.tscn") as PackedScene).instantiate() as WizardPlayer
 	root.add_child(player)
 	await process_frame
@@ -134,12 +145,31 @@ func _run() -> void:
 	Input.action_release("sight")
 	_check(casting._current_element == fire, "the one-shot pull still fuels the rune")
 	_check(not oneshot.available(), "a completed pull depletes a one-shot source")
-	_check(not oneshot.is_in_group(ElementSource.GROUP), "a depleted source leaves the sight group")
+	_check(oneshot.is_in_group(ElementSource.GROUP), "a depleted source stays listed as an empty vessel")
 	frames = 0
 	while flame_visual.visible and frames < 2000:
 		await process_frame
 		frames += 1
 	_check(not flame_visual.visible, "the consumed visual is sucked away and hidden")
+
+	# Return the essence: cast at the empty vessel pours the fire home.
+	Input.action_press("sight")
+	await process_frame
+	await process_frame
+	_check(sight.aimed_source() == oneshot, "sight aims the empty vessel")
+	var pour_back := InputEventMouseButton.new()
+	pour_back.button_index = MOUSE_BUTTON_LEFT
+	pour_back.pressed = true
+	casting._input(pour_back)
+	await process_frame
+	_check(oneshot.available(), "returned essence restores the depleted source")
+	_check(casting._current_element == null, "returning essence leaves the rune primed and empty")
+	_check(flame_visual.visible, "the restored visual reappears")
+	_check(casting.current_state == CastingController.CASTING_STATE.SPELL_HELD,
+		"the rune survives the return, still held")
+	Input.action_release("sight")
+	await process_frame
+
 	casting._dismissing = true
 	casting._set_state(CastingController.CASTING_STATE.IDLE)
 	casting._dismissing = false

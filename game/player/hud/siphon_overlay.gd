@@ -19,6 +19,11 @@ func _draw() -> void:
 		var pos: Vector2 = m["pos"]
 		var col: Color = m["color"]
 		var progress: float = m["progress"]
+		if m.get("empty", false):
+			# An empty vessel: thin hollow outline, waiting to be refilled.
+			draw_arc(pos, RING_RADIUS, 0.0, TAU, 48, Color(col.r, col.g, col.b, 0.14), 1.5, true)
+			draw_arc(pos, RING_RADIUS * 0.45, 0.0, TAU, 32, Color(col.r, col.g, col.b, 0.22), 1.0, true)
+			continue
 		# Faint base ring marks a siphonable source on screen.
 		draw_arc(pos, RING_RADIUS, 0.0, TAU, 48, Color(col.r, col.g, col.b, 0.3), 2.0, true)
 		if progress > 0.0:

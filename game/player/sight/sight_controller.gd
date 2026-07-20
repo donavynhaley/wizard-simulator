@@ -94,7 +94,7 @@ func _update_markers() -> void:
 	var aimed_marker: Dictionary = {}
 	for node in get_tree().get_nodes_in_group(ElementSource.GROUP):
 		var src := node as ElementSource
-		if src == null or src.element == null or not src.available():
+		if src == null or src.element == null:
 			continue
 		var world_point := src.siphon_point()
 		if _camera.is_position_behind(world_point):
@@ -102,7 +102,10 @@ func _update_markers() -> void:
 		var screen := _camera.unproject_position(world_point)
 		if screen.x < 0.0 or screen.y < 0.0 or screen.x > bounds.x or screen.y > bounds.y:
 			continue
-		var marker := {"pos": screen, "color": src.element.color, "progress": 0.0}
+		# A depleted source renders as an empty vessel: hollow, still aimable,
+		# waiting for matching essence to be poured back in.
+		var marker := {"pos": screen, "color": src.element.color, "progress": 0.0,
+			"empty": not src.available()}
 		markers.append(marker)
 		var distance := center.distance_to(screen)
 		if distance <= best_distance:

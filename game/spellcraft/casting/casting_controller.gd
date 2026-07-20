@@ -181,12 +181,21 @@ func _input(event: InputEvent) -> void:
 			_play_focus_animation(false)
 
 	# While a spell is held, cast (left click) is context-sensitive:
-	# aiming at a source through Sight begins a pull (handled per-frame in
-	# _update_sight_pull); a fueled rune fires; a primed rune refuses.
+	# aiming at a live source through Sight begins a pull (handled per-frame in
+	# _update_sight_pull); aiming at an empty vessel pours matching essence
+	# home; a fueled rune fires; a primed rune refuses.
 	if current_state == CASTING_STATE.SPELL_HELD:
 		if event.is_action_pressed("cast"):
-			if _sight != null and _sight.aimed_source() != null:
+			var aimed := _sight.aimed_source() if _sight != null else null
+			if aimed != null and aimed.available():
 				pass  # this press starts (or continues) a pull, never a cast
+			elif aimed != null:
+				if _current_element == aimed.element:
+					_return_essence(aimed)
+				elif _current_element == null:
+					WizardHud.toast(self, "The rune holds no essence - pull one through Sight")
+				else:
+					WizardHud.toast(self, "The vessel refuses foreign essence")
 			elif _current_element == null:
 				WizardHud.toast(self, "The rune holds no essence - pull one through Sight")
 			else:
@@ -448,7 +457,7 @@ func _update_sight_pull(delta: float) -> void:
 		_reset_pull()
 		return
 	var target := _sight.aimed_source()
-	if target == null or not Input.is_action_pressed("cast"):
+	if target == null or not target.available() or not Input.is_action_pressed("cast"):
 		_reset_pull()
 		return
 	if target != _pull_target:
@@ -517,6 +526,20 @@ func _clear_siphon_stream() -> void:
 		_siphon_stream.queue_free()
 		_siphon_stream = null
 	_siphon_stream_source = null
+
+
+## The inverse of the pull: held essence poured back into its empty vessel.
+## Power is never created, only moved - and moving it home is always allowed.
+## The rune stays primed, colourless again, ready to pull something else.
+func _return_essence(vessel: ElementSource) -> void:
+	var element := _current_element
+	vessel.restore(_palm_position())
+	_current_element = null
+	if _spell_cast != null:
+		_spell_cast.element = null
+	_spawn_spell_effect(locked_rune_id)  # re-present the colourless primed orb
+	var label := element.display_name if not element.display_name.is_empty() else String(element.id)
+	WizardHud.toast(self, "%s returned to its vessel" % label.capitalize())
 
 
 ## Fuels the held rune with the pulled element: tints the palm orb and hands the
