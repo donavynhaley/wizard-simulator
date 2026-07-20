@@ -32,17 +32,22 @@ var _depleted := false
 var _visual_base: Transform3D
 var _visual_base_saved := false
 var _visual_light_energy := 0.0
+var _home_point := Vector3.ZERO
 var _return_tween: Tween
 var _consume_tween: Tween
 
 
 func _ready() -> void:
 	add_to_group(GROUP)
+	_home_point = global_position
 
 
-## World point the pull streams from (this node's position by default).
+## World point the pull streams from. A live source reports its actual position
+## (so the stream follows the leaning visual); a depleted one reports its HOME,
+## because sources parented under their visual ride along with the suck
+## animation and the empty-vessel ring must stay at the brazier, not the hand.
 func siphon_point() -> Vector3:
-	return global_position
+	return _home_point if _depleted else global_position
 
 
 ## False once a one-shot source has been consumed.
@@ -84,6 +89,9 @@ func consume(hand_position: Vector3) -> void:
 		return
 	if _depleted:
 		return
+	if visual == null:
+		# Nothing moves this source, so its current position is its home.
+		_home_point = global_position
 	_depleted = true
 	consumed.emit()
 	if visual == null:
@@ -133,6 +141,9 @@ func _save_visual_base() -> void:
 	if not _visual_base_saved:
 		_visual_base = visual.transform
 		_visual_base_saved = true
+		# The visual is untouched at this moment, so this is the true home -
+		# _ready runs before spawners position the node, making it too early.
+		_home_point = global_position
 
 
 func _kill_return_tween() -> void:
