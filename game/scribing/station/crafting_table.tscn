@@ -3,7 +3,6 @@
 [ext_resource type="PackedScene" uid="uid://b7nqbl45lv7lv" path="res://assets/third_party/kenney/fantasy_town/pillar-wood.glb" id="1_aa1pw"]
 [ext_resource type="PackedScene" uid="uid://cnvv5285s107" path="res://assets/third_party/kenney/fantasy_town/planks.glb" id="2_kisc1"]
 [ext_resource type="PackedScene" uid="uid://d20kofg2vneul" path="res://assets/third_party/kenney/fantasy_town/overhang.glb" id="3_kisc1"]
-[ext_resource type="Script" uid="uid://lkmq4o6q51xo" path="res://game/scribing/station/element_holder.gd" id="4_sooxi"]
 [ext_resource type="Script" uid="uid://5yuur3pjr7pd" path="res://game/scribing/station/rune_scribing_station.gd" id="5_70f7w"]
 [ext_resource type="PackedScene" uid="uid://dffhnmtk06rxe" path="res://assets/models/scroll_open.glb" id="6_05xbg"]
 [ext_resource type="PackedScene" uid="uid://dbmb51mgcsuq4" path="res://assets/third_party/seal/seal_animated_low_poly.glb" id="6_dcnth"]
@@ -48,7 +47,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.87747264, 0.20729518, -0.0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6003406, 1.2425802, 0.4)
 radius = 0.049
 height = 0.099
-script = ExtResource("4_sooxi")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="ElementHolder" unique_id=130180570]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.406273, -1.0605408, -0.4)

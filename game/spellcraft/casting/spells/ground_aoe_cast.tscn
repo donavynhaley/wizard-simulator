@@ -1,0 +1,10 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://game/spellcraft/casting/spells/ground_aoe_cast.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://game/spellcraft/casting/spells/ground_reticle.tscn" id="2_reticle"]
+[ext_resource type="PackedScene" path="res://game/spellcraft/casting/effects/arcane_burst.tscn" id="3_burst"]
+
+[node name="GroundAoeCast" type="Node3D"]
+script = ExtResource("1_script")
+reticle_scene = ExtResource("2_reticle")
+explosion_scene = ExtResource("3_burst")

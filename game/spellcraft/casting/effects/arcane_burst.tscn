@@ -1,0 +1,31 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://game/spellcraft/casting/effects/arcane_burst.gd" id="1_script"]
+[ext_resource type="Shader" path="res://game/spellcraft/casting/effects/spell_orb.gdshader" id="2_shader"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_burst"]
+radius = 1.0
+height = 2.0
+radial_segments = 24
+rings = 12
+
+[sub_resource type="ShaderMaterial" id="Mat_burst"]
+resource_local_to_scene = true
+shader = ExtResource("2_shader")
+shader_parameter/base_color = Color(0.55, 0.28, 1, 1)
+shader_parameter/rim_color = Color(0.85, 0.7, 1, 1)
+shader_parameter/emission_energy = 6.0
+shader_parameter/fresnel_power = 2.5
+shader_parameter/flow_speed = 1.4
+shader_parameter/noise_scale = 2.5
+shader_parameter/core_alpha = 0.8
+shader_parameter/pulse_speed = 0.0
+shader_parameter/pulse_amount = 0.0
+
+[node name="ArcaneBurst" type="Node3D"]
+script = ExtResource("1_script")
+
+[node name="Orb" type="MeshInstance3D" parent="."]
+cast_shadow = 0
+mesh = SubResource("SphereMesh_burst")
+surface_material_override/0 = SubResource("Mat_burst")

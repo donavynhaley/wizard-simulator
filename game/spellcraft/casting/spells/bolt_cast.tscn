@@ -1,0 +1,8 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://game/spellcraft/casting/spells/bolt_cast.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://game/spellcraft/casting/spells/spell_projectile.tscn" id="2_proj"]
+
+[node name="BoltCast" type="Node3D"]
+script = ExtResource("1_script")
+projectile_scene = ExtResource("2_proj")

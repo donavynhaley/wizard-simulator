@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="BookData" load_steps=9 format=3 uid="uid://dwi4kltjsnjfk"]
+[gd_resource type="Resource" script_class="BookData" format=3 uid="uid://dwi4kltjsnjfk"]
 
 [ext_resource type="Script" uid="uid://bfsb71ceawsfi" path="res://game/books/resources/book_data.gd" id="1_book_data"]
 [ext_resource type="Script" uid="uid://dqbhuio5lxao0" path="res://game/books/resources/book_page_data.gd" id="2_page_data"]

@@ -8,9 +8,8 @@ extends RayCast3D
 ## ancestor, or a direct component child of either):
 ##   focus_prompt(player: WizardPlayer, collider) -> String   what the HUD shows
 ##   interact(player: WizardPlayer, collider)                 do the thing
-## The player is the typed WizardPlayer, so implementers get player.hands
-## autocompletion. The collider is passed through so multi-part props (like
-## the crafting table's element holder) can tell which part was used.
+## The player is the typed WizardPlayer for autocompletion. The collider is
+## passed through so multi-part props can tell which part was used.
 
 signal focus_changed(prompt: String)
 

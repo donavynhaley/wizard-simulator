@@ -2,23 +2,12 @@
 
 [ext_resource type="PackedScene" uid="uid://1meyl64tn2vf" path="res://assets/models/golden_chalice.glb" id="1_ftsp2"]
 [ext_resource type="PackedScene" uid="uid://bykwrxhkq5qhr" path="res://shared/vfx/magical_flame.tscn" id="2_g0ips"]
-[ext_resource type="PackedScene" path="res://game/player/interaction/held_item_source.tscn" id="3_source"]
-[ext_resource type="PackedScene" uid="uid://d1qvabx7jx1qs" path="res://game/alchemy/ingredients/held_fire.tscn" id="4_fire"]
-[ext_resource type="Script" path="res://game/alchemy/ingredients/held_fire.gd" id="5_fire_script"]
 
 [sub_resource type="CylinderShape3D" id="CylinderShape3D_torch_interact"]
 height = 0.9
 radius = 0.42
 
 [node name="TorchOfEternalFlame" type="Node3D" unique_id=1941162939]
-
-[node name="HeldItemSource" parent="." instance=ExtResource("3_source")]
-item_scene = ExtResource("4_fire")
-accepted_item_script = ExtResource("5_fire_script")
-item_name = "Held Fire"
-gather_prompt = "Gather eternal flame"
-refresh_prompt = "Refresh the flame in your hands"
-gathered_message = "Eternal flame coils into your hands."
 
 [node name="golden_chalice" parent="." unique_id=317797729 instance=ExtResource("1_ftsp2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.140253, 0)
