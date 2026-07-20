@@ -15,16 +15,16 @@
 [ext_resource type="PackedScene" uid="uid://b7nt1rl222ctc" path="res://game/spellcraft/casting/effects/spell_palm_effect.tscn" id="16_palmfx"]
 [ext_resource type="Script" uid="uid://bcgeqrt5cux1s" path="res://game/spellcraft/casting/casting_audio.gd" id="17_castaudio"]
 [ext_resource type="AudioStream" uid="uid://c2u2uev4k5xx5" path="res://assets/sounds/spell_fire.wav" id="18_firesfx"]
-[ext_resource type="Resource" path="res://game/spellcraft/casting/spells/triangle_spell.tres" id="19_triangle"]
-[ext_resource type="Resource" path="res://game/spellcraft/casting/spells/circle_spell.tres" id="20_circle"]
+[ext_resource type="Resource" uid="uid://dufs4nm1diqs" path="res://game/spellcraft/casting/spells/triangle_spell.tres" id="19_triangle"]
+[ext_resource type="Resource" uid="uid://ceyt7dht7q482" path="res://game/spellcraft/casting/spells/circle_spell.tres" id="20_circle"]
 [ext_resource type="PackedScene" path="res://game/spellcraft/elements/siphon_stream.tscn" id="21_stream"]
-[ext_resource type="Script" path="res://game/player/components/viewmodel_motion.gd" id="22_vmmotion"]
+[ext_resource type="Script" uid="uid://dhlkpospgbicb" path="res://game/player/components/viewmodel_motion.gd" id="22_vmmotion"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
 radius = 0.35
 height = 1.7
 
-[sub_resource type="ImmediateMesh" id="ImmediateMesh_gh012"]
+[sub_resource type="ImmediateMesh" id="ImmediateMesh_0e4oy"]
 
 [node name="Player" type="CharacterBody3D" unique_id=1184757697 groups=["player"]]
 floor_constant_speed = true
@@ -39,13 +39,14 @@ script = ExtResource("1")
 
 [node name="ViewmodelMotion" type="Node" parent="Components" unique_id=1869611421]
 script = ExtResource("22_vmmotion")
+bob_frequency = 1.0
 
 [node name="CastingController" type="Node" parent="Components" unique_id=818843547]
 script = ExtResource("4_5ghna")
 stroke_max_lifetime = 2.0
+siphon_stream_scene = ExtResource("21_stream")
 spell_effect_bindings = Array[ExtResource("5_2mv0n")]([ExtResource("19_triangle"), ExtResource("20_circle")])
 default_spell_effect = ExtResource("16_palmfx")
-siphon_stream_scene = ExtResource("21_stream")
 
 [node name="CastingAudio" type="Node" parent="Components/CastingController" unique_id=2044185999]
 script = ExtResource("17_castaudio")
@@ -80,7 +81,7 @@ unique_name_in_owner = true
 script = ExtResource("2")
 
 [node name="SketchRibbon" parent="Head/Camera3D" unique_id=778549545 instance=ExtResource("9_ribbon")]
-mesh = SubResource("ImmediateMesh_gh012")
+mesh = SubResource("ImmediateMesh_0e4oy")
 corner_rounding = 0.165
 corner_smoothing_passes = 4
 
