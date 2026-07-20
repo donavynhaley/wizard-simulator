@@ -1,8 +1,7 @@
-[gd_resource type="AudioBusLayout" load_steps=3 format=3]
+[gd_resource type="AudioBusLayout" format=3 uid="uid://c2pm1ppaw63ct"]
 
 [sub_resource type="AudioEffectLowShelfFilter" id="SpellCastLowShelf"]
 cutoff_hz = 240.0
-resonance = 0.5
 gain = 3.2
 db = 1
 
@@ -12,12 +11,6 @@ resonance = 0.6
 db = 1
 
 [resource]
-bus/0/name = &"Master"
-bus/0/solo = false
-bus/0/mute = false
-bus/0/bypass_fx = false
-bus/0/volume_db = 0.0
-bus/0/send = &""
 bus/1/name = &"SpellCast"
 bus/1/solo = false
 bus/1/mute = false
