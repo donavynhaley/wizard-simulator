@@ -29,6 +29,57 @@ height = 1.7
 
 [sub_resource type="ImmediateMesh" id="ImmediateMesh_0e4oy"]
 
+[sub_resource type="TorusMesh" id="Torus_journal_belt_hook"]
+inner_radius = 0.015
+outer_radius = 0.022
+rings = 24
+ring_segments = 8
+
+[sub_resource type="StandardMaterial3D" id="Material_journal_belt_hook"]
+albedo_color = Color(0.24, 0.12, 0.035, 1)
+metallic = 0.7
+roughness = 0.66
+shading_mode = 0
+no_depth_test = true
+
+[sub_resource type="Animation" id="Animation_journal_reset"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:summon_progress")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [0.0]
+}
+
+[sub_resource type="Animation" id="Animation_journal_summon"]
+resource_name = "summon"
+length = 1.05
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:summon_progress")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.15, 0.315, 0.588, 1.05),
+"transitions": PackedFloat32Array(0.7, 0.85, 1.0, 0.75, 1.0),
+"update": 0,
+"values": [0.0, 0.14, 0.3, 0.56, 1.0]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_journal"]
+_data = {
+&"RESET": SubResource("Animation_journal_reset"),
+&"summon": SubResource("Animation_journal_summon")
+}
+
 [node name="Player" type="CharacterBody3D" unique_id=1184757697 groups=["player"]]
 floor_constant_speed = true
 floor_block_on_wall = false
@@ -50,6 +101,9 @@ script = ExtResource("23_sight")
 [node name="JournalMenu" type="Node" parent="Components"]
 script = ExtResource("24_journal")
 book_scene = ExtResource("25_book")
+
+[node name="SummonAnimation" type="AnimationPlayer" parent="Components/JournalMenu"]
+libraries/ = SubResource("AnimationLibrary_journal")
 
 [node name="CastingController" type="Node" parent="Components" unique_id=818843547]
 script = ExtResource("4_5ghna")
@@ -76,6 +130,16 @@ max_polyphony = 3
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=541500586]
 shape = SubResource("CapsuleShape3D_player")
+
+[node name="JournalBeltAnchor" type="Marker3D" parent="."]
+transform = Transform3D(0.99026805, 0.1391731, 0, -0.1391731, 0.99026805, 0, 0, 0, 1, -0.28, 0.18, -0.18)
+
+[node name="JournalBeltHook" type="MeshInstance3D" parent="JournalBeltAnchor"]
+position = Vector3(-0.04, 0.035, -0.055)
+rotation = Vector3(1.5707964, 0, 0)
+cast_shadow = 0
+mesh = SubResource("Torus_journal_belt_hook")
+material_override = SubResource("Material_journal_belt_hook")
 
 [node name="Head" type="Node3D" parent="." unique_id=1427366907]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.72, 0)

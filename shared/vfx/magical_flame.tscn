@@ -4,7 +4,7 @@
 [ext_resource type="Shader" uid="uid://djjvgn386jime" path="res://assets/shaders/magical_flame_body.gdshader" id="2_js1md"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_flame_body"]
-render_priority = 127
+render_priority = -10
 shader = ExtResource("2_js1md")
 shader_parameter/core_color = Color(1, 0.94, 0.46, 1)
 shader_parameter/mid_color = Color(1, 0.42, 0.06, 0.82)

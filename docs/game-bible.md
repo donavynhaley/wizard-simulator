@@ -373,3 +373,28 @@ Every case that introduces vocabulary or a rule adds a line here, same day.
   Seal's ring uses the recorded hand-drawn circles; the other five use synthetic fallback glyphs until hand exemplars are recorded (recorded always wins).
   Legacy bolt/font/mend/rend stroke templates retired.
 - Cases: locked_door (Case Minus One), sour_milk (Case Zero).
+
+
+## Donavyn Notes
+Spellcasting can come in many forms
+- Runic magic use the ancient runes to manipulate the world around you energy and matter is not created but reworked
+- Focuse casting is using the energy stores in a magical focus to channel 
+
+Elements
+- Fire
+- Water
+- Air
+- Earth
+Alchemy Problem Space
+- Speed 
+- Healing
+-  
+Spellcraft Problem Space
+Knowledge problem space
+- Learning alchemy 
+Quests
+- Royal decree from the king to supply the crown with certain potions and scrolls
+- An adventurer party comes through asking for aid on their quest. They can seek a scroll, a potion, or knowledge.
+
+Events
+- upon casting first dark magic spell one of the spell hunters shows up to your door to questions you

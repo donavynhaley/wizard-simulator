@@ -21,17 +21,29 @@ extends Node
 var _sketch: AudioStreamPlayer
 var _ignite: AudioStreamPlayer
 var _fire: AudioStreamPlayer
+var _playback_enabled := true
 
 
 func _ready() -> void:
+	_playback_enabled = DisplayServer.get_name() != "headless"
 	_sketch = get_node_or_null(sketch_loop_path) as AudioStreamPlayer
 	_ignite = get_node_or_null(rune_ignite_path) as AudioStreamPlayer
 	_fire = get_node_or_null(spell_fire_path) as AudioStreamPlayer
 
 
+func _exit_tree() -> void:
+	# Headless scenarios can free the player while one-shot WAV playback is
+	# still active. Stop players explicitly so their playback resources release
+	# before SceneTree teardown.
+	for player in [_sketch, _ignite, _fire]:
+		if player != null:
+			player.stop()
+			player.stream = null
+
+
 ## Starts the continuous sketch hum for a sketching session (ducked to idle).
 func start_sketch() -> void:
-	if _sketch != null:
+	if _playback_enabled and _sketch != null:
 		_sketch.volume_db = sketch_idle_db
 		_sketch.play()
 
@@ -57,11 +69,11 @@ func update_sketch(draw_speed: float, drawing: bool, delta: float) -> void:
 
 ## One-shot stinger when a rune locks in.
 func play_ignite() -> void:
-	if _ignite != null:
+	if _playback_enabled and _ignite != null:
 		_ignite.play()
 
 
 ## One-shot launch when a held spell fires.
 func play_fire() -> void:
-	if _fire != null:
+	if _playback_enabled and _fire != null:
 		_fire.play()

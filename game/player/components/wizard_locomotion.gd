@@ -57,9 +57,11 @@ func physics_step(body: CharacterBody3D, input_direction: Vector2, delta: float)
 	var pre_snapped_down := false
 	_update_jump_windows(delta, was_on_floor)
 	var jumped := _try_buffered_jump(body)
+	var can_follow_step_down := was_on_floor or _coyote_timer > 0.0
 
 	if enable_stair_stepping \
 			and not was_on_floor \
+			and can_follow_step_down \
 			and direction != Vector3.ZERO \
 			and body.velocity.y <= 0.0 \
 			and not jumped:
@@ -120,6 +122,7 @@ func physics_step(body: CharacterBody3D, input_direction: Vector2, delta: float)
 		stepped_up = _try_step_up(body, direction, delta)
 	if enable_stair_stepping \
 			and not stepped_up \
+			and can_follow_step_down \
 			and direction != Vector3.ZERO \
 			and body.velocity.y <= 0.0:
 		_try_step_down(body)

@@ -1,27 +1,26 @@
 [gd_scene format=3 uid="uid://oh688fkepu5k"]
 
 [ext_resource type="PackedScene" uid="uid://jtttvlmcy1jg" path="res://game/world/props/torch_of_eternal_flame.tscn" id="1_8amnu"]
-[ext_resource type="PackedScene" path="res://game/player/player.tscn" id="1_y6bsx"]
+[ext_resource type="PackedScene" uid="uid://ckph2c4ur7xr6" path="res://game/player/player.tscn" id="1_y6bsx"]
 [ext_resource type="Script" uid="uid://ivvjr42yf0nn" path="res://game/world/day_night_cycle.gd" id="2_daynight"]
 [ext_resource type="PackedScene" uid="uid://b04q02fhf6uk8" path="res://assets/third_party/kenney/fantasy_town/fountain-square-detail.glb" id="3_o6hnd"]
-[ext_resource type="PackedScene" path="res://game/alchemy/ingredients/held_water.tscn" id="4_water"]
-[ext_resource type="Script" uid="uid://daw4oadycailp" path="res://game/alchemy/ingredients/held_water.gd" id="4_water_script"]
 [ext_resource type="PackedScene" uid="uid://5fyhxou04dxg" path="res://game/scribing/station/crafting_table.tscn" id="5_r62g1"]
 [ext_resource type="Script" uid="uid://duwe13r5kkl2m" path="res://game/world/props/mood_light.gd" id="6_2r11s"]
 [ext_resource type="PackedScene" uid="uid://ckttbfrao7whi" path="res://game/alchemy/alchemy_lab.tscn" id="6_hxol8"]
 [ext_resource type="PackedScene" uid="uid://bchhcoi8ov80b" path="res://game/alchemy/storage/flask_filled_storage_shelf.tscn" id="9_2r11s"]
 [ext_resource type="PackedScene" uid="uid://dpmk1jysfkho1" path="res://game/books/book.tscn" id="11_6wrrw"]
+[ext_resource type="PackedScene" uid="uid://jt8d0xx4orcx" path="res://assets/models/environments/wizard_homestead_environment.glb" id="12_homestead_environment"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_o6hnd"]
-sky_top_color = Color(0.24, 0.57, 1, 1)
-sky_horizon_color = Color(0.69, 0.87, 1, 1)
-sky_curve = 0.12
+sky_top_color = Color(0.137476, 0.16737998, 0.20737997, 1)
+sky_horizon_color = Color(0.358834, 0.36485597, 0.35475993, 1)
+sky_curve = 0.7
 sky_energy_multiplier = 1.1
-ground_bottom_color = Color(0.356863, 0.482353, 0.388235, 1)
-ground_horizon_color = Color(0.72549, 0.815686, 0.705882, 1)
-ground_curve = 0.08
+ground_bottom_color = Color(0.012, 0.016, 0.019, 1)
+ground_horizon_color = Color(0.075, 0.082, 0.085, 1)
+ground_curve = 0.7
 sun_angle_max = 32.0
-sun_curve = 0.08
+sun_curve = 0.12
 
 [sub_resource type="Sky" id="Sky_rddas"]
 sky_material = SubResource("ProceduralSkyMaterial_o6hnd")
@@ -30,9 +29,31 @@ sky_material = SubResource("ProceduralSkyMaterial_o6hnd")
 background_mode = 2
 sky = SubResource("Sky_rddas")
 ambient_light_source = 2
-ambient_light_color = Color(0.76, 0.86, 1, 1)
-ambient_light_energy = 0.85
+ambient_light_color = Color(0.47999996, 0.53, 0.57, 1)
+ambient_light_energy = 0.7
 reflected_light_source = 2
+tonemap_mode = 4
+tonemap_exposure = 1.2
+tonemap_white = 1.35
+fog_enabled = true
+fog_light_color = Color(0.22, 0.25, 0.27, 1)
+fog_light_energy = 0.65
+fog_sun_scatter = 0.12
+fog_density = 0.0028
+fog_sky_affect = 0.72
+fog_height = -8.0
+fog_height_density = 0.045
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.0055
+volumetric_fog_albedo = Color(0.34, 0.38, 0.4, 1)
+volumetric_fog_length = 256.0
+volumetric_fog_detail_spread = 2.5
+volumetric_fog_ambient_inject = 0.85
+volumetric_fog_sky_affect = 0.72
+adjustment_enabled = true
+adjustment_brightness = 1.04
+adjustment_contrast = 1.12
+adjustment_saturation = 0.78
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_spring_interact"]
 size = Vector3(1.35, 1.45, 1.35)
@@ -86,11 +107,14 @@ rings = 3
 
 [node name="WizardTower" type="Node3D" unique_id=1917175163]
 
+[node name="WorldBlockout" parent="." unique_id=1106902874 instance=ExtResource("12_homestead_environment")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.675919)
+
 [node name="TorchOfEternalFlame" parent="." unique_id=1941162939 instance=ExtResource("1_8amnu")]
-transform = Transform3D(1.7326567, 0, 0.9989498, 0, 2, 0, -0.9989498, 0, 1.7326567, -5.115099, 0.099999964, -0.3095579)
+transform = Transform3D(1.7326567, 0, 0.9989498, 0, 2, 0, -0.9989498, 0, 1.7326567, -5.115099, 0.2677198, -0.3095579)
 
 [node name="Staircase" type="Node3D" parent="." unique_id=1786478379]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.09863281, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.26635265, 0)
 
 [node name="Step1" type="CSGBox3D" parent="Staircase" unique_id=1855529629]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.036)
@@ -204,28 +228,49 @@ size = Vector3(0.75, 0.35, 1.5)
 
 [node name="DayNightCycle" type="Node" parent="." unique_id=1992185705]
 script = ExtResource("2_daynight")
+start_hour = 17.4
 sun_path = NodePath("Sun")
 moon_path = NodePath("Moon")
 world_environment_path = NodePath("WorldEnvironment")
-sun_energy_day = 1.0
+sun_energy_day = 1.15
+sun_energy_night = 0.01
+sun_color_day = Color(0.68, 0.73, 0.78, 1)
+sun_color_sunset = Color(0.62, 0.35, 0.24, 1)
+sun_color_night = Color(0.16, 0.21, 0.31, 1)
+moon_energy_night = 0.3
+moon_color = Color(0.27, 0.36, 0.55, 1)
+day_sky_top = Color(0.14, 0.18, 0.22, 1)
+day_sky_horizon = Color(0.35, 0.38, 0.38, 1)
+sunset_sky_top = Color(0.12, 0.08, 0.12, 1)
+sunset_sky_horizon = Color(0.42, 0.26, 0.18, 1)
+night_sky_top = Color(0.008, 0.012, 0.028, 1)
+night_sky_horizon = Color(0.035, 0.045, 0.065, 1)
+ambient_energy_day = 0.7
+ambient_energy_night = 0.07
+ambient_color_day = Color(0.48, 0.53, 0.57, 1)
+ambient_color_night = Color(0.08, 0.11, 0.18, 1)
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="DayNightCycle" unique_id=1790471571]
 environment = SubResource("Environment_0jym3")
 
 [node name="Moon" type="DirectionalLight3D" parent="DayNightCycle" unique_id=548863263]
-transform = Transform3D(-0.44360673, -0.5981459, -0.6674086, 0, 0.7446916, -0.6674086, 0.8962212, -0.29606703, -0.3303503, 0, 0, 0)
-light_color = Color(0.35, 0.48, 0.95, 1)
+transform = Transform3D(-0.33401123, 0.13917214, 0.93223757, 0, 0.98903924, -0.14765191, -0.94256854, -0.049317427, -0.3303503, 0, 0, 0)
+light_color = Color(0.27, 0.36, 0.55, 1)
 light_energy = 0.0
-
-[node name="Sun" type="DirectionalLight3D" parent="DayNightCycle" unique_id=1970567729]
-transform = Transform3D(0.44360685, -0.5981459, 0.6674086, 0, 0.7446916, 0.6674086, -0.8962214, -0.29606703, 0.3303503, 0, 0, 0)
-light_color = Color(1, 0.93, 0.78, 1)
 shadow_enabled = true
 
+[node name="Sun" type="DirectionalLight3D" parent="DayNightCycle" unique_id=1970567729]
+transform = Transform3D(0.3340114, 0.13917214, -0.9322376, 0, 0.98903924, 0.14765193, 0.94256896, -0.049317434, 0.33035037, 0, 0, 0)
+light_color = Color(0.67242795, 0.6820439, 0.71185184, 1)
+light_energy = 1.15
+shadow_enabled = true
+directional_shadow_max_distance = 180.0
+
 [node name="Player" parent="." unique_id=1184757697 instance=ExtResource("1_y6bsx")]
-transform = Transform3D(0.7420006, 0, 0.67039925, 0, 1, 0, -0.67039925, 0, 0.7420006, -1.5217464, 1.5090332, 3.382835)
+transform = Transform3D(0.7420006, 0, 0.67039925, 0, 1, 0, -0.67039925, 0, 0.7420006, -1.5217464, 1.676753, 3.382835)
 
 [node name="Floor1" type="Node3D" parent="." unique_id=1131415474]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.16771984, 0)
 
 [node name="Floor" type="CSGCylinder3D" parent="Floor1" unique_id=1041068365]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0002587894, 0.017333984, 0.01991925)
@@ -238,15 +283,15 @@ transform = Transform3D(-0.9238795, 0, 0.38268343, 0, 1, 0, -0.38268343, 0, -0.9
 use_collision = true
 size = Vector3(0.15, 4, 4.726179)
 
-[node name="CSGBox3D2" type="CSGBox3D" parent="Floor1" unique_id=1389148683]
-transform = Transform3D(-0.38268343, 0, 0.9238795, 0, 1, 0, -0.9238795, 0, -0.38268343, 2.0844092, 2, 5.1898355)
+[node name="FrontWallRight" type="CSGBox3D" parent="Floor1" unique_id=1389148683]
+transform = Transform3D(-0.38268343, 0, 0.9238795, 0, 1, 0, -0.9238795, 0, -0.38268343, 2.8235128, 2, 5.495982)
 use_collision = true
-size = Vector3(0.15, 4, 4.6173973)
+size = Vector3(0.15, 4, 3)
 
-[node name="CSGBox3D3" type="CSGBox3D" parent="Floor1" unique_id=646782071]
-transform = Transform3D(0.38268343, 0, 0.9238795, 0, 1, 0, -0.9238795, 0, 0.38268343, -2.1891446, 2, 5.133298)
+[node name="FrontWallLeft" type="CSGBox3D" parent="Floor1" unique_id=646782071]
+transform = Transform3D(0.38268343, 0, 0.9238795, 0, 1, 0, -0.9238795, 0, 0.38268343, -2.9282482, 2, 5.4394445)
 use_collision = true
-size = Vector3(0.15, 4, 4.758415)
+size = Vector3(0.15, 4, 3)
 
 [node name="CSGBox3D4" type="CSGBox3D" parent="Floor1" unique_id=1670128589]
 transform = Transform3D(-0.9238795, 0, -0.38268343, 0, 1, 0, 0.38268343, 0, -0.9238795, 5.153312, 2, -2.0596106)
@@ -310,6 +355,7 @@ process_material = SubResource("ParticleProcessMaterial_nuofk")
 draw_pass_1 = SubResource("SphereMesh_6wrrw")
 
 [node name="Floor2" type="Node3D" parent="." unique_id=1937687745]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.16771984, 0)
 visible = false
 
 [node name="Floor" type="CSGCylinder3D" parent="Floor2" unique_id=414084619]
@@ -365,13 +411,13 @@ use_collision = true
 size = Vector3(0.15222168, 5.2475586, 7.625702)
 
 [node name="Table" parent="." unique_id=277921942 instance=ExtResource("5_r62g1")]
-transform = Transform3D(0.9256861, 0, -0.37829244, 0, 1, 0, 0.37829244, 0, 0.9256861, -4.4311295, 0.0013484359, -1.4691505)
+transform = Transform3D(0.9256861, 0, -0.37829244, 0, 1, 0, 0.37829244, 0, 0.9256861, -4.4311295, 0.16906828, -1.4691505)
 
 [node name="AlchemyLab" parent="." unique_id=233318363 instance=ExtResource("6_hxol8")]
-transform = Transform3D(0.9140432, 0, 0.4056172, 0, 1, 0, -0.4056172, 0, 0.9140432, -4.324766, 0, 1.705534)
+transform = Transform3D(0.9140432, 0, 0.4056172, 0, 1, 0, -0.4056172, 0, 0.9140432, -4.324766, 0.16771984, 1.705534)
 
 [node name="StorageShelf" parent="." unique_id=1373303997 instance=ExtResource("9_2r11s")]
-transform = Transform3D(-0.9247093, 0, 0.38067394, 0, 1, 0, -0.38067394, 0, -0.9247093, -3.4334383, 1.2903278, 4.443354)
+transform = Transform3D(-0.9247093, 0, 0.38067394, 0, 1, 0, -0.38067394, 0, -0.9247093, -3.4334383, 1.4580476, 4.443354)
 
 [node name="Book" parent="." unique_id=1211495710 instance=ExtResource("11_6wrrw")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.2777853, 1.0190182, 1.1335363)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.2777853, 1.186738, 1.1335363)

@@ -101,6 +101,10 @@ var _held_element: Element       ## essence carried in the LEFT hand (null = emp
 var _left_hand_effect: Node3D    ## the orb visualising the carried essence
 var _left_anchor: Node3D         ## where carried essence lives on the viewmodel
 var _left_arm_anim: AnimationPlayer  ## mirrored left-arm clips (carry pose)
+var _journal_arm_animation: StringName = &""
+var _journal_arm_stowing := false
+var _journal_arm_completed := false
+var _journal_arm_last_progress := -1.0
 var _sight: SightController      ## sibling component; the noun-space to pull through
 var _pull_target: ElementSource  ## source the held cast is currently pulling from
 var _pull_dwell := 0.0
@@ -633,9 +637,67 @@ func _clear_left_hand_effect() -> void:
 		_left_arm_anim.play(&"Reset_left")
 
 
+## The journal borrows the off hand for its summon gesture while casting is
+## suspended. Keeping this here preserves ownership of the shared arm player.
+func play_journal_summon_animation(animation_name: StringName) -> void:
+	if _left_arm_anim != null and _left_arm_anim.has_animation(animation_name):
+		_journal_arm_animation = animation_name
+		_journal_arm_stowing = false
+		_journal_arm_completed = false
+		_journal_arm_last_progress = 0.0
+		_left_arm_anim.play(animation_name)
+
+
+## Reverses the same authored reach so the off hand returns the journal to its
+## belt keeper before casting regains ownership of the arm.
+func play_journal_stow_animation(animation_name: StringName) -> void:
+	if _left_arm_anim != null and _left_arm_anim.has_animation(animation_name):
+		_journal_arm_animation = animation_name
+		_journal_arm_stowing = true
+		_journal_arm_completed = false
+		_journal_arm_last_progress = 1.0
+		_left_arm_anim.play_backwards(animation_name)
+
+
+## Returns the authored off-hand clip's normalized playhead so the physical
+## journal can never lag behind a visibly moving hand. A negative value means
+## that the requested clip is unavailable or is not the active clip.
+func journal_animation_progress(animation_name: StringName) -> float:
+	if _left_arm_anim == null or _journal_arm_animation != animation_name:
+		return -1.0
+	if _journal_arm_completed:
+		return 0.0 if _journal_arm_stowing else 1.0
+	if _left_arm_anim.current_animation != animation_name:
+		return _journal_arm_last_progress
+	var animation_length := _left_arm_anim.current_animation_length
+	if animation_length <= 0.0:
+		return -1.0
+	_journal_arm_last_progress = clampf(
+		_left_arm_anim.current_animation_position / animation_length,
+		0.0,
+		1.0)
+	return _journal_arm_last_progress
+
+
+## Restores whichever off-hand pose casting owned before the journal opened.
+func restore_left_hand_animation() -> void:
+	_journal_arm_animation = &""
+	_journal_arm_completed = false
+	_journal_arm_last_progress = -1.0
+	if _left_arm_anim == null:
+		return
+	if _held_element != null and _left_arm_anim.has_animation(&"spell_carry_left"):
+		_left_arm_anim.play(&"spell_carry_left")
+	elif _left_arm_anim.has_animation(&"Reset_left"):
+		_left_arm_anim.play(&"Reset_left")
+
+
 ## Chains the left arm's raise through its settle into the looping carry hold,
 ## and stops the left player once its reset lands so it releases the left bones.
 func _on_left_arm_anim_finished(anim_name: StringName) -> void:
+	if anim_name == _journal_arm_animation:
+		_journal_arm_completed = true
+		_journal_arm_last_progress = 0.0 if _journal_arm_stowing else 1.0
 	if _held_element != null and anim_name == &"spell_held_left" \
 			and _left_arm_anim.has_animation(&"spell_held_end_left"):
 		_left_arm_anim.play(&"spell_held_end_left")

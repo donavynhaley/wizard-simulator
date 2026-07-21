@@ -1,0 +1,81 @@
+{
+  "seed": 74218,
+  "player_move_speed_mps": 4.2,
+  "tower_origin_godot_xyz": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "hill": {
+    "height_m": 32.0,
+    "plateau_radius_m": 14.0,
+    "base_radius_m": 110.0,
+    "summit_height_m": -0.08
+  },
+  "forest": {
+    "tree_count": 360,
+    "inner_radius_m": 104.0,
+    "outer_radius_m": 158.0,
+    "source_models": [
+      "tree_1.glb",
+      "tree_2.glb",
+      "tree_3.glb"
+    ]
+  },
+  "terrain_bounds_blender_xy": [
+    -400.0,
+    -620.0,
+    400.0,
+    180.0
+  ],
+  "routes": {
+    "woods": {
+      "target_seconds": 30.0,
+      "target_length_m": 126.0,
+      "generated_length_m": 125.904,
+      "expected_walk_seconds": 29.977,
+      "blender_endpoint_xyz": [
+        110.382,
+        -53.928,
+        -32.3
+      ],
+      "godot_endpoint_xyz": [
+        110.382,
+        -32.3,
+        53.928
+      ]
+    },
+    "farm": {
+      "target_seconds": 60.0,
+      "target_length_m": 252.0,
+      "generated_length_m": 251.806,
+      "expected_walk_seconds": 59.954,
+      "blender_endpoint_xyz": [
+        -212.779,
+        -129.207,
+        -31.905
+      ],
+      "godot_endpoint_xyz": [
+        -212.779,
+        -31.905,
+        129.207
+      ]
+    },
+    "village": {
+      "target_seconds": 120.0,
+      "target_length_m": 504.0,
+      "generated_length_m": 503.579,
+      "expected_walk_seconds": 119.9,
+      "blender_endpoint_xyz": [
+        0.0,
+        -491.03,
+        -31.704
+      ],
+      "godot_endpoint_xyz": [
+        0.0,
+        -31.704,
+        491.03
+      ]
+    }
+  }
+}
