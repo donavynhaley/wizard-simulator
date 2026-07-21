@@ -701,61 +701,13 @@ func _configure_recognizer() -> void:
 	_register_fallback_glyphs()
 
 
-## The six-verb glyph language (game-bible.md rune table), as synthetic
-## fallbacks so every verb recognizes before hand-drawn exemplars exist.
-## Recorded templates (drawn through the real input path) always win.
-##   draw = inward spiral      pour = falling triangle
-##   bind = figure-eight knot  sever = lightning slash
-##   seal = closed ring        open = broken ring (the gap is the door)
+## The six-verb glyph language (RuneGlyphs, game-bible.md rune table), as
+## synthetic fallbacks so every verb recognizes before hand-drawn exemplars
+## exist. Recorded templates (drawn through the real input path) always win.
 func _register_fallback_glyphs() -> void:
-	_add_fallback_glyph(&"draw", _spiral_glyph())
-	_add_fallback_glyph(&"pour", PackedVector2Array([
-		Vector2(0.0, 0.0), Vector2(1.0, 0.0), Vector2(0.5, 1.0), Vector2(0.0, 0.0)]))
-	_add_fallback_glyph(&"bind", _eight_glyph())
-	_add_fallback_glyph(&"sever", PackedVector2Array([
-		Vector2(0.6, 0.0), Vector2(0.35, 0.4), Vector2(0.65, 0.5), Vector2(0.4, 1.0)]))
-	_add_fallback_glyph(&"seal", _ring_glyph(1.0))
-	_add_fallback_glyph(&"open", _ring_glyph(0.75))
-
-
-func _add_fallback_glyph(id: StringName, points: PackedVector2Array) -> void:
-	if not _recognizer.has_template(id):
-		_recognizer.add_template(id, [points])
-
-
-## Draw's glyph: an inward spiral, 2.25 turns coiling to the centre. The coil
-## must fill the interior so it separates cleanly from Seal's empty ring.
-func _spiral_glyph() -> PackedVector2Array:
-	var points := PackedVector2Array()
-	var steps := 64
-	for i in steps + 1:
-		var t := float(i) / float(steps)
-		var angle := t * TAU * 2.25
-		var radius := 0.5 * (1.0 - 0.85 * t)
-		points.append(Vector2(0.5 + radius * cos(angle), 0.5 + radius * sin(angle)))
-	return points
-
-
-## Bind's glyph: a vertical figure-eight, two lobes joined by a crossing.
-func _eight_glyph() -> PackedVector2Array:
-	var points := PackedVector2Array()
-	var steps := 64
-	for i in steps + 1:
-		var a := TAU * float(i) / float(steps)
-		points.append(Vector2(0.5 + 0.3 * sin(2.0 * a), 0.5 + 0.45 * cos(a)))
-	return points
-
-
-## Seal's closed ring (closure 1.0) and Open's broken ring (closure 0.75:
-## the missing quarter is the door).
-func _ring_glyph(closure: float) -> PackedVector2Array:
-	var points := PackedVector2Array()
-	var steps := 48
-	var start := TAU * (1.0 - closure) * 0.5
-	for i in steps + 1:
-		var a := start + TAU * closure * float(i) / float(steps)
-		points.append(Vector2(0.5 + 0.45 * cos(a), 0.5 + 0.45 * sin(a)))
-	return points
+	for id in RuneGlyphs.VERBS:
+		if not _recognizer.has_template(id):
+			_recognizer.add_template(id, [RuneGlyphs.points(id)])
 
 
 func _load_recorded_templates() -> void:

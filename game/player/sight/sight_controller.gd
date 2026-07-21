@@ -81,6 +81,20 @@ func aimed_source() -> ElementSource:
 	return _aimed if active else null
 
 
+## Forces sight fully down immediately (menu takeovers): clears markers and
+## the overlay without waiting for the key release or the fade.
+func deactivate() -> void:
+	if active:
+		active = false
+		_aimed = null
+		aim_progress = 0.0
+		_set_markers([])
+		sight_changed.emit(false)
+	_fade = 0.0
+	if _rect != null:
+		_rect.visible = false
+
+
 ## Projects every on-screen ElementSource to a HUD ring and picks the one
 ## nearest the screen centre (within aim_radius) as the aimed source.
 func _update_markers() -> void:

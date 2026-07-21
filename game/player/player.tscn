@@ -20,6 +20,8 @@
 [ext_resource type="PackedScene" path="res://game/spellcraft/elements/siphon_stream.tscn" id="21_stream"]
 [ext_resource type="Script" uid="uid://dhlkpospgbicb" path="res://game/player/components/viewmodel_motion.gd" id="22_vmmotion"]
 [ext_resource type="Script" path="res://game/player/sight/sight_controller.gd" id="23_sight"]
+[ext_resource type="Script" path="res://game/player/journal/journal_menu.gd" id="24_journal"]
+[ext_resource type="PackedScene" path="res://game/books/book.tscn" id="25_book"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
 radius = 0.35
@@ -44,6 +46,10 @@ bob_frequency = 1.0
 
 [node name="SightController" type="Node" parent="Components" unique_id=818843548]
 script = ExtResource("23_sight")
+
+[node name="JournalMenu" type="Node" parent="Components"]
+script = ExtResource("24_journal")
+book_scene = ExtResource("25_book")
 
 [node name="CastingController" type="Node" parent="Components" unique_id=818843547]
 script = ExtResource("4_5ghna")

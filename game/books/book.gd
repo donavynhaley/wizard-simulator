@@ -163,6 +163,21 @@ func is_page_turning() -> bool:
 	return _page_turning
 
 
+## Jumps straight to a spread without the page-turn animation (journal
+## bookmark navigation).
+func jump_to_spread(index: int) -> void:
+	_cancel_page_turn()
+	current_page = clampi(index, 0, _spread_count() - 1)
+	_update_page_content()
+	page_changed.emit(current_page)
+
+
+## Bookmark ribbon tabs rendered on the page edge (see BookPageRenderer).
+func set_bookmarks(names: Array[String], active_index: int) -> void:
+	if _page_renderer != null:
+		_page_renderer.set_bookmarks(names, active_index)
+
+
 func _input(event: InputEvent) -> void:
 	if _is_reading and event.is_action_pressed(&"book_focus"):
 		_set_close_focus(true)

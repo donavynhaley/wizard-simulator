@@ -31,6 +31,10 @@ func _ready() -> void:
 	viewmodel_motion.configure(self, head, viewmodel.get_node(^"WizardHat"))
 	_capture_mouse()
 
+func control_enabled() -> bool:
+	return _control_enabled
+
+
 ## Freezes or resumes the player wholesale. Stations that take over the camera
 ## call this instead of reaching into individual player components.
 func set_control_enabled(enabled: bool) -> void:
