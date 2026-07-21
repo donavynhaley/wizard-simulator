@@ -191,6 +191,11 @@ Payload is what the fact adds to Sight: element ids for nature facts, a link id 
    Record every addition in the Canon Sheet the day it is written.
 7. The hook must be solvable-feeling but wrong.
    Whoever reports the problem misreads it; the first learned fact should complicate the obvious theory.
+8. Every working has an author, and every author has a motive.
+   Write both into the case notes even when no fact reveals them; the world must always be able to answer "who did this, and why".
+   Motives need not be malice: neglect, love, habit, and commerce write workings too.
+9. Every false lead must be testable to a clean result.
+   An exoneration is a real fact the journal inks, and resolutions may care about diligence: an accusation backed by exoneration facts lands differently than a hasty one.
 
 ### What a case pays
 
