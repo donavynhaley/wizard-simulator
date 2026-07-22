@@ -10,7 +10,6 @@ height = 0.9
 radius = 0.42
 
 [node name="BreathOfTheLastDragon" type="Node3D" unique_id=1941162939]
-transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0, 0)
 
 [node name="MagicalFlame2" parent="." unique_id=530671999 instance=ExtResource("1_1rvjw")]
 transform = Transform3D(1.5713373, 0.10771269, 0, -0.10771269, 1.5713373, 0, 0, 0, 1.5750247, 0.31448346, 0.63874483, 0)

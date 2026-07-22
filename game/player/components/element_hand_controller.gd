@@ -62,10 +62,24 @@ func _ready() -> void:
 		_left_arm_anim.animation_finished.connect(_on_left_arm_anim_finished)
 	if _transfer_audio != null:
 		_transfer_audio.stream = transfer_sound
+	# The .wav import loop flag is not honoured in this build, so force the loop
+	# in code - otherwise the draw and carry beds play one pass and cut out.
 	if _draw_audio != null:
-		_draw_audio.stream = draw_loop_sound
+		_draw_audio.stream = _force_loop(draw_loop_sound)
 	if _carry_audio != null:
-		_carry_audio.stream = carry_loop_sound
+		_carry_audio.stream = _force_loop(carry_loop_sound)
+
+
+## Loop beds that must sustain: a WAV whose import loop flag did not stick still
+## loops once forced here. The imported loop_end is 0, so LOOP_FORWARD alone
+## makes a zero-length (silent) loop; set the end to the full sample length.
+func _force_loop(stream: AudioStream) -> AudioStream:
+	var wav := stream as AudioStreamWAV
+	if wav != null:
+		wav.loop_begin = 0
+		wav.loop_end = int(wav.get_length() * wav.mix_rate)
+		wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	return stream
 
 
 func _exit_tree() -> void:

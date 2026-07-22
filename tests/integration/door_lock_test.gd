@@ -25,7 +25,7 @@ func _run() -> void:
 	var player := level.get_node(^"Player") as WizardPlayer
 	var architecture := level.get_node(^"TowerArchitecture") as TowerArchitecture
 	var door := architecture.entry_door
-	var ward := level.get_node(^"TowerArchitecture/DoorWard") as MagicalBinding
+	var ward := level.get_node(^"TowerArchitecture/DoorWard") as MagicalLink
 	var lantern_source := level.get_node(
 		^"TowerArchitecture/GroundFloorProps/DoorLantern/MagicalFlame/FireSource") as ElementSource
 	var torch_source := level.get_node_or_null(
@@ -35,14 +35,14 @@ func _run() -> void:
 	_check(lantern_source != null, "the door lantern carries the ward's vessel")
 	_check(not lantern_source.available(), "the lantern begins as an empty vessel")
 	_check(not ward.is_powered(), "the Bind starts starved")
-	_check(door.is_sealed(), "the starved Bind holds the door sealed")
+	_check(door.is_locked(), "the starved Bind holds the door sealed")
 	_check(torch_source != null and torch_source.available(),
 		"Maren's path torch still burns as the arrival fire source")
 
 	door.interact(player, door)
 	await process_frame
 	_check(not door.is_open(), "the Bind refuses the door while starved")
-	_check(door.focus_prompt(player, door) == "The door is warded shut",
+	_check(door.focus_prompt(player, door) == "The door is locked by arcane magic",
 		"the focus prompt names the ward")
 
 	# Stand outside, land, and aim Sight at the strand's midpoint.
@@ -53,13 +53,13 @@ func _run() -> void:
 		await physics_frame
 		if player.is_on_floor() and player.velocity.length() < 0.05:
 			break
-	_aim_player_at(player, ward.midpoint())
+	_aim_player_at(player, ward.gate_point())
 	await process_frame
 	Input.action_press(&"sight")
 	await process_frame
 	await process_frame
 	_check(player.sight.active, "Sight activates outside the tower door")
-	_check(player.sight.aimed_binding() == ward,
+	_check(player.sight.aimed_link() == ward,
 		"the ward strand becomes the aimed Sight target")
 	_check(not JournalFacts.knows(&"door_ward_source"), "the ward fact starts unlearned")
 
@@ -98,7 +98,7 @@ func _run() -> void:
 		"the inscription materialises in the world after the reading")
 	# The text inks in character by character; wait for the full line.
 	await create_timer(1.4).timeout
-	_check(inscription != null and inscription.text == ward.description,
+	_check(inscription != null and inscription.text == ward.inscription_text(),
 		"the inscription carries the journal text")
 	Input.action_release(&"sight")
 	await process_frame
@@ -107,14 +107,24 @@ func _run() -> void:
 	lantern_source.restore(lantern_source.global_position + Vector3.UP * 0.5)
 	_check(ward.is_powered(), "fire placed in the lantern feeds the Bind")
 	await create_timer(0.9).timeout
-	_check(not door.is_sealed(), "the fed Bind releases the door")
+	_check(not door.is_locked(), "the fed Bind releases the door")
 	_check(door.is_open(), "feeding the ward swings the door open")
 
-	# Taking the fire back re-seals the tower - the consequence rule.
-	lantern_source.consume(lantern_source.global_position + Vector3.UP * 0.5)
+	# Taking the fire back re-seals the tower - the consequence rule. The flame
+	# is sucked toward the caster's hand, far from the lantern; the strand must
+	# stay on the vessel, not ride the departing visual toward the hand.
+	var lantern_anchor := ward.endpoint_a()
+	var hand_point := player.global_position + Vector3(0.0, 1.4, -0.5)
+	lantern_source.consume(hand_point)
+	await process_frame
+	await process_frame
+	_check(ward.endpoint_a().distance_to(lantern_anchor) < 0.1,
+		"siphoning the flame leaves the strand on the lantern, not the hand")
 	await create_timer(0.9).timeout
+	_check(ward.endpoint_a().distance_to(lantern_anchor) < 0.1,
+		"the emptied strand stays anchored to the lantern")
 	_check(not ward.is_powered(), "siphoning the lantern starves the Bind again")
-	_check(door.is_sealed(), "the starved Bind holds the Seal once more")
+	_check(door.is_locked(), "the starved Bind holds the Seal once more")
 	_check(door.is_open(), "re-sealing does not slam the already-open door")
 
 	level.queue_free()

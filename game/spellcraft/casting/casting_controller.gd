@@ -386,6 +386,17 @@ func refuse_empty_hurl() -> void:
 	WizardHud.toast(self, "Your left hand holds nothing to Hurl")
 
 
+## A held verb was spent by another system - Sight forging or severing a link
+## with a Bind or Sever rune. Clear it quietly, like a dismissal but without the
+## "fades from your hand" toast (the link interaction speaks for itself).
+func consume_held_rune() -> void:
+	if current_state != CASTING_STATE.SPELL_HELD:
+		return
+	_dismissing = true
+	_set_state(CASTING_STATE.IDLE)
+	_dismissing = false
+
+
 ## Shake off the primed rune (drop_item): the verb dissipates uncast while the
 ## left hand keeps its essence.
 func _dismiss_spell() -> void:

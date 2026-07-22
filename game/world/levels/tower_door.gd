@@ -16,8 +16,8 @@ var open_progress := 0.0:
 
 var _is_open := false
 var _is_bound := false
-var _sealed := false
-var _seal_break_audio: AudioStreamPlayer3D
+var _locked := false
+var _lock_break_audio: AudioStreamPlayer3D
 
 
 func _ready() -> void:
@@ -25,32 +25,33 @@ func _ready() -> void:
 	open_progress = 0.0
 
 
-## A warding binding holds the door while powered. When the ward starves the
-## Seal breaks audibly and the door swings itself open - the tutorial's payoff.
-func set_sealed(sealed: bool) -> void:
-	if _sealed == sealed:
+## An arcane lock holds the door shut. A magical link drives this: while the
+## lock is active the door will not budge; when the link releases it (its power
+## restored), the lock breaks audibly and the door swings itself open.
+func set_locked(locked: bool) -> void:
+	if _locked == locked:
 		return
-	_sealed = sealed
-	if not sealed and _is_bound and not _is_open:
+	_locked = locked
+	if not locked and _is_bound and not _is_open:
 		_is_open = true
 		_play_toward_target()
-		_play_seal_break()
+		_play_lock_break()
 
 
-func is_sealed() -> bool:
-	return _sealed
+func is_locked() -> bool:
+	return _locked
 
 
-func _play_seal_break() -> void:
+func _play_lock_break() -> void:
 	if DisplayServer.get_name() == "headless":
 		return
-	if _seal_break_audio == null:
-		_seal_break_audio = AudioStreamPlayer3D.new()
-		_seal_break_audio.stream = load("res://assets/sounds/siphon_rip.wav")
-		_seal_break_audio.pitch_scale = 0.55
-		_seal_break_audio.bus = &"SpellCast"
-		add_child(_seal_break_audio)
-	_seal_break_audio.play()
+	if _lock_break_audio == null:
+		_lock_break_audio = AudioStreamPlayer3D.new()
+		_lock_break_audio.stream = load("res://assets/sounds/siphon_rip.wav")
+		_lock_break_audio.pitch_scale = 0.55
+		_lock_break_audio.bus = &"SpellCast"
+		add_child(_lock_break_audio)
+	_lock_break_audio.play()
 
 
 func bind_imported_door(hinge: Node3D, visual: Node3D) -> void:
@@ -65,8 +66,8 @@ func bind_imported_door(hinge: Node3D, visual: Node3D) -> void:
 func interact(player: WizardPlayer, _collider: Object) -> void:
 	if not _is_bound:
 		return
-	if _sealed and not _is_open:
-		WizardHud.toast(player, "The Seal holds the door fast")
+	if _locked and not _is_open:
+		WizardHud.toast(player, "An arcane lock holds the door fast")
 		return
 	_is_open = not _is_open
 	_play_toward_target()
@@ -75,8 +76,8 @@ func interact(player: WizardPlayer, _collider: Object) -> void:
 func focus_prompt(player: WizardPlayer, _collider: Object) -> String:
 	if player == null or not _is_bound:
 		return ""
-	if _sealed and not _is_open:
-		return "The door is warded shut"
+	if _locked and not _is_open:
+		return "The door is locked by arcane magic"
 	return "Close tower door" if _is_open else "Open tower door"
 
 

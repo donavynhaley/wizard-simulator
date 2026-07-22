@@ -13,9 +13,9 @@ script = ExtResource("1_tower_script")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.675919)
 
 [node name="TowerArchitecture" parent="." unique_id=782352879 instance=ExtResource("3_architecture")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.26498866, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.26498866, 3.4096355)
 
 [node name="SkyAndTime" parent="." unique_id=462735672 instance=ExtResource("4_sky")]
 
 [node name="Player" parent="." unique_id=255790664 instance=ExtResource("5_player")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8670563, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8670563, 17.862843)

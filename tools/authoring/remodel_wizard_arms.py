@@ -440,6 +440,83 @@ def nail_frame(direction: Vector) -> tuple[Vector, Vector]:
     return width_axis, height_axis
 
 
+NAIL_ACROSS = 5  # points spanning the nail width; the arc between them domes it
+
+
+def nail_stations(variant: str) -> list[tuple[float, float, float, float]]:
+    """Longitudinal profile of a nail as (fraction, width_scale, dome_scale,
+    lift). Fraction runs 0 (root, tucked under the nail fold) to 1 (free edge).
+    lift is the height offset of the plate's centreline: negative sinks the root
+    into the finger so the nail emerges from it instead of sitting on top."""
+    if variant == EVIL_VARIANT:
+        # A claw: sits on the finger, then narrows to a downward-curled point.
+        return [
+            (0.00, 0.52, 0.20, -0.028),
+            (0.16, 1.00, 0.85, 0.006),
+            (0.46, 0.96, 1.05, 0.026),
+            (0.78, 0.52, 0.80, -0.004),
+            (1.00, 0.10, 0.32, -0.034),
+        ]
+    # A natural nail: recessed root, domed belly, gently rounded free edge.
+    return [
+        (0.00, 0.50, 0.20, -0.022),
+        (0.20, 0.94, 0.80, 0.006),
+        (0.55, 1.00, 1.00, 0.020),
+        (0.82, 0.90, 0.82, 0.013),
+        (1.00, 0.66, 0.42, 0.009),
+    ]
+
+
+def build_one_nail(
+    vertices: list[tuple[float, float, float]],
+    faces: list[tuple[int, ...]],
+    vertex_bones: list[str],
+    bone_name: str,
+    bed_start: Vector,
+    free_end: Vector,
+    width_axis: Vector,
+    height_axis: Vector,
+    half_width: float,
+    thickness: float,
+    dome: float,
+    stations: list[tuple[float, float, float, float]],
+) -> None:
+    """Lofts a curved nail plate along the finger. Each station is a convex arc
+    across the width whose edges fall to the finger surface, so the nail reads as
+    a domed plate embedded in the flesh rather than a box stuck on the tip."""
+    rings: list[list[int]] = []
+    for fraction, width_scale, dome_scale, lift in stations:
+        center = bed_start.lerp(free_end, fraction) + height_axis * lift
+        half = half_width * width_scale
+        top_height = dome * dome_scale
+        bottom_height = -thickness * (0.4 + 0.6 * dome_scale)
+        top_points: list[Vector] = []
+        bottom_points: list[Vector] = []
+        for index in range(NAIL_ACROSS):
+            u = (index / (NAIL_ACROSS - 1)) * 2.0 - 1.0
+            # Convex profile: peaks at the centre (u=0), meets the finger at the
+            # edges (u=+/-1, where the shape term is zero) so there is no wall.
+            shape = 1.0 - u * u
+            base = center + width_axis * (u * half)
+            top_points.append(base + height_axis * (top_height * shape))
+            bottom_points.append(base + height_axis * (bottom_height * shape))
+        # Closed cross-section: the top arc, then the underside back between the
+        # shared edge points (edges of top and bottom coincide where shape=0).
+        ring_points = top_points + list(reversed(bottom_points[1 : NAIL_ACROSS - 1]))
+        start = len(vertices)
+        vertices.extend(tuple(point) for point in ring_points)
+        vertex_bones.extend([bone_name] * len(ring_points))
+        rings.append(list(range(start, start + len(ring_points))))
+    ring_length = len(rings[0])
+    for near, far in zip(rings[:-1], rings[1:]):
+        for k in range(ring_length):
+            k2 = (k + 1) % ring_length
+            faces.append((near[k], near[k2], far[k2], far[k]))
+    # Cap the recessed root and the free edge so the shell is closed.
+    faces.append(tuple(reversed(rings[0])))
+    faces.append(tuple(rings[-1]))
+
+
 def create_pointed_nails(
     armature: bpy.types.Object,
     nail_material: bpy.types.Material,
@@ -449,6 +526,7 @@ def create_pointed_nails(
     faces: list[tuple[int, ...]] = []
     vertex_bones: list[str] = []
     fingers = ("pinky", "ring", "middle", "index", "thumb")
+    stations = nail_stations(variant)
     for side in ("r", "l"):
         for finger in fingers:
             bone_name = f"finger_{finger}3.{side}"
@@ -457,40 +535,20 @@ def create_pointed_nails(
             width_axis, height_axis = nail_frame(direction)
             if variant == EVIL_VARIANT:
                 length = 0.34 if finger != "thumb" else 0.29
-                width = 0.105 if finger in ("middle", "ring") else 0.09
+                half_width = 0.088 if finger in ("middle", "ring") else 0.076
             else:
                 length = 0.16 if finger != "thumb" else 0.13
-                width = 0.09 if finger in ("middle", "ring") else 0.078
-            height = width * 0.28
-            base_center = bone.tail_local - direction * 0.1 + height_axis * 0.035
-            mid_center = bone.tail_local + direction * length * 0.48
-            tip = bone.tail_local + direction * length + height_axis * 0.015
-            base_index = len(vertices)
-            ring_points = (
-                base_center + width_axis * width + height_axis * height,
-                base_center - width_axis * width + height_axis * height,
-                base_center - width_axis * width - height_axis * height,
-                base_center + width_axis * width - height_axis * height,
-                mid_center + width_axis * width * 0.62 + height_axis * height * 0.7,
-                mid_center - width_axis * width * 0.62 + height_axis * height * 0.7,
-                mid_center - width_axis * width * 0.62 - height_axis * height * 0.7,
-                mid_center + width_axis * width * 0.62 - height_axis * height * 0.7,
-                tip,
-            )
-            vertices.extend(tuple(point) for point in ring_points)
-            vertex_bones.extend([bone_name] * len(ring_points))
-            faces.extend(
-                [
-                    (base_index, base_index + 1, base_index + 2, base_index + 3),
-                    (base_index, base_index + 4, base_index + 5, base_index + 1),
-                    (base_index + 1, base_index + 5, base_index + 6, base_index + 2),
-                    (base_index + 2, base_index + 6, base_index + 7, base_index + 3),
-                    (base_index + 3, base_index + 7, base_index + 4, base_index),
-                    (base_index + 4, base_index + 8, base_index + 5),
-                    (base_index + 5, base_index + 8, base_index + 6),
-                    (base_index + 6, base_index + 8, base_index + 7),
-                    (base_index + 7, base_index + 8, base_index + 4),
-                ]
+                half_width = 0.078 if finger in ("middle", "ring") else 0.068
+            thickness = half_width * (0.20 if variant == EVIL_VARIANT else 0.16)
+            dome = half_width * (0.40 if variant == EVIL_VARIANT else 0.34)
+            # The nail bed rides the last of the finger; the plate runs from there
+            # out past the tip to the free edge.
+            bed_start = bone.tail_local - direction * (length * 0.5)
+            free_end = bone.tail_local + direction * length
+            build_one_nail(
+                vertices, faces, vertex_bones, bone_name,
+                bed_start, free_end, width_axis, height_axis,
+                half_width, thickness, dome, stations,
             )
 
     mesh = bpy.data.meshes.new(NAIL_OBJECT)
