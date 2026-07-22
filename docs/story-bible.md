@@ -132,7 +132,7 @@ well, although the movie is very campy and not as dark as the tone we strive to 
 **The Princess Bride** - 1987 - The costume design and fantasy elements are great, however the movie is a bit too campy in tone
 for what we are trying to achieve
 
-**The VVitch** - 2015 - For the dark corrupting take on magic and the supernatural/occult.
+**The VVitch** - 2015 - For the dark corrupting take on magic and the realisitc supernatural/occult.
 
 ## Written Works
 
@@ -175,9 +175,9 @@ Inn Bartender
 Fortune Teller
 
 Herbalist - Sells mushrooms and herbs they find in the woods and trails near the village. Doesn't posses enough alchemical knowledge, skill
-or the approriate devices to manufacture potions.
+or the approriate equipment to manufacture potions.
 
-Snake Oil Salesman - Sells ineffective potions with shoddy ingredients. Not really potions, just herbs and colors and shit in a vial.Travelling 
+Snake Oil Salesman - Sells ineffective potions with shoddy ingredients. Not really potions, just herbs and colors and shit in a vial. Travelling 
 merchant? (IDK still working on this idea)
 
 ---
@@ -268,3 +268,55 @@ will toward you, as it does towards all the wizards and witches it teaches and p
 the afterlife in pursuit of peace and preventing Zilnar's return.
 
 As a new court wizard you must complete quests, maintain your dues, and complete independent studies for yourself.
+
+
+# Vertical Slice
+
+For the vertical slice we want the focus to be solely on the tower and the farm outside the village. We need 3 quests with multipile solutions
+that tie in with the villagers and their problems. I need to flesh out all the characters on the farm and I am thinking one guard who occasionally
+roams in to add life.
+
+# Quests
+
+The quests should focus on immersive gameplay that drives all parts of gameplay.
+
+## Quest 1
+
+The plants on the vineyard have grown dark, thorny berries that produce foul, bitter tasting juice; one could only imagine how awful the wine
+would be.
+- You could pull the earth element out of the berry and boil it to find a clue.
+- You could harvest a plant stalk, chop it up in your base, and boil/grind it to find a clue.
+- You could take the berries, produce a bottle of wine and study it to find a clue.
+
+Upon studying the berry, you find that the juice has been linked to an infernal pool. You must figure out how to unlink it.
+
+Upon studying the plant stalk, 
+
+Upon studying the wine .
+
+## Quest 2
+
+## Quest 3
+
+# Characters
+
+# Ideas and Theory Crafting
+
+Mole people run the farms, love the wine and farming,bu don't know how to process the grapes into wine so its a symbitotic relationship.
+The mole people fought giant worms in days past, leaving the ground teemed with magical blood that allows the growing of crops at a great rate.
+The mole poeple developed a deep love and bond for this magical earth and the plants it teemed with and became excellent farmers. They are a 
+generally peaceful kind of people, unless truly provoked. They live in above ground mounds of dirt that connect with and allow them quick passage
+through their huge underground burrows. The size of the dirt mound, as well as any decorative jewels buried in it, denotes status in the community.
+
+Mole people are semi-nocturnal and can only be found outside after the sun goes down, or when it is overcast and stromy(Just an idea)
+
+The Mole people are bipedal and roughly the same height as a dwarf in popular media. They have razor sharp teeth and sharp claws on the end
+of their chubby little hands. They love to get drunk on Human wine and they have made quite a sport of seeing who can drink the firecest. Although
+very peaceful, one of the surefire ways to insult any Mole person is to imply that he isn't a good digger. Or a digga' as they say.
+
+---
+
+The Moon Cracked and overflowed magic into the world. That was the start of the second era, which ended with Zilnar the Defiler's reign.
+
+Before the third era The Orcs, Humans, and Goblins teamed up in a great war against the Treefolk, a race of giants who lived in the dense forests 
+of the region and would kidnap and cannibalize the people of Cardea.
