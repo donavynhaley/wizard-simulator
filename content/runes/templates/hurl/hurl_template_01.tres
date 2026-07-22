@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="RuneTemplate" format=3]
+
+[ext_resource type="Script" path="res://game/scribing/runes/rune_template.gd" id="1_template"]
+
+[resource]
+script = ExtResource("1_template")
+rune_id = "hurl"
+display_name = "Hurl"
+recorded_at_unix_time = 1784635200
+canvas_size_mm = Vector2(600, 300)
+strokes = Array[PackedVector2Array]([PackedVector2Array(0.12, 0.78, 0.86, 0.22, 0.62, 0.24, 0.86, 0.22, 0.76, 0.45)])

@@ -21,12 +21,12 @@ func _run() -> void:
 	await physics_frame
 	await physics_frame
 
-	var exterior := level.get_node_or_null(^"HomesteadExterior/ExteriorHomestead")
+	var exterior := level.get_node_or_null(^"WorldBlockout")
 	_check(exterior != null, "wizard tower composes the homestead exterior asset")
 	if exterior == null:
 		_finish()
 		return
-	var world_environment := level.get_node_or_null(^"DayNightCycle/WorldEnvironment") as WorldEnvironment
+	var world_environment := level.get_node_or_null(^"SkyAndTime/WorldEnvironment") as WorldEnvironment
 	_check(world_environment != null, "wizard tower has a world environment")
 	if world_environment != null:
 		var environment := world_environment.environment
@@ -113,8 +113,19 @@ func _run() -> void:
 	_check(woods_endpoint.x > 100.0, "woods lie to the right of the tower")
 	_check(farm_endpoint.x < -200.0, "farm lies to the left of the tower")
 	_check(village_endpoint.z > 490.0, "village lies along the center route")
-	_check(not _ray_hits_between(level, Vector3(0.0, 1.4, 3.8), Vector3(0.0, 1.4, 7.2)),
-		"tower has an unobstructed entrance facing the exterior paths")
+	var entrance_inside := Vector3(0.0, 1.4, 3.8)
+	var entrance_outside := Vector3(0.0, 1.4, 7.2)
+	_check(_ray_hits_between(level, entrance_inside, entrance_outside),
+		"closed tower door blocks the entrance facing the exterior paths")
+	# The entrance is warded shut behind a starved Bind; feeding the lantern
+	# (Case Minus One's feed_the_ward resolution) swings the door open.
+	var ward_source := level.get_node(
+		^"TowerArchitecture/GroundFloorProps/DoorLantern/MagicalFlame/FireSource") as ElementSource
+	ward_source.restore(ward_source.global_position + Vector3.UP * 0.5)
+	for _frame in 150:
+		await physics_frame
+	_check(not _ray_hits_between(level, entrance_inside, entrance_outside),
+		"open tower door clears the entrance facing the exterior paths")
 
 	level.queue_free()
 	await process_frame

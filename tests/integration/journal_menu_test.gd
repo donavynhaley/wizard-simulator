@@ -3,7 +3,7 @@ extends SceneTree
 ## The journal pause menu (game-bible.md: the journal is the infinite book and
 ## the main menu). Escape opens the journal book into the reading pose and
 ## freezes the player; Tab flips bookmarks between sections; Escape inside the
-## book closes it and restores control. The rune section carries all six verb
+## book closes it and restores control. The rune section carries all five verb
 ## glyphs with playback templates.
 
 var _fail := 0
@@ -38,6 +38,10 @@ func _run() -> void:
 	if journal._book == null:
 		_finish(player)
 		return
+	_check(_action_has_key(&"move_left", KEY_A),
+		"A is mapped to the journal's previous-page action")
+	_check(_action_has_key(&"move_right", KEY_D),
+		"D is mapped to the journal's next-page action")
 	var belt_anchor := player.get_node("JournalBeltAnchor") as Node3D
 	var belt_hook := belt_anchor.get_node("JournalBeltHook") as MeshInstance3D
 	var closed_visual := journal._book.get_node(
@@ -75,7 +79,7 @@ func _run() -> void:
 		for page in [spread.left_page, spread.right_page]:
 			if page != null and page.rune_template != null and page.show_rune_playback:
 				rune_pages += 1
-	_check(rune_pages == 6, "all six verb glyphs have playback pages")
+	_check(rune_pages == 5, "all five verb glyphs have playback pages")
 
 	# Escape opens the journal and freezes the player.
 	var escape := InputEventKey.new()
@@ -97,10 +101,10 @@ func _run() -> void:
 	_check(journal.summon_arm_animation
 			== &"journal/journal_unhook_open_left",
 		"journal uses its dedicated unhook-and-open arm animation")
-	_check(journal._casting._left_arm_anim.current_animation
+	_check(journal._element_hand._left_arm_anim.current_animation
 		== journal.summon_arm_animation,
 		"journal plays its Inspector-selected left-arm summon clip")
-	var journal_arm_animation := journal._casting._left_arm_anim.get_animation(
+	var journal_arm_animation: Animation = journal._element_hand._left_arm_anim.get_animation(
 		journal.summon_arm_animation)
 	_check(journal_arm_animation != null
 			and journal_arm_animation.has_meta(&"purpose")
@@ -228,6 +232,8 @@ func _run() -> void:
 		"journal final pose is centered in the player's view")
 	_check(data.get_spread(0).left_page.title == "The Wizard's Journal",
 		"journal menu content remains on the physical left page")
+	_check(data.get_spread(0).left_page.body.contains("[A] and [D] turn pages."),
+		"journal menu teaches the physical A/D page controls")
 	var bookmarks := journal._book.get_node("PageRenderer").get(
 		"_bookmark_column") as VBoxContainer
 	_check(bookmarks != null and is_equal_approx(bookmarks.anchor_left, 1.0),
@@ -243,6 +249,20 @@ func _run() -> void:
 	journal._unhandled_input(tab)
 	await _wait_for_page_turn(journal._book)
 	_check(journal._book.current_page == 0, "tab wraps back to the menu bookmark")
+	var next_page := InputEventAction.new()
+	next_page.action = &"move_right"
+	next_page.pressed = true
+	journal._book._input(next_page)
+	await _wait_for_page_turn(journal._book)
+	_check(journal._book.current_page == 1,
+		"D turns the held journal forward")
+	var previous_page := InputEventAction.new()
+	previous_page.action = &"move_left"
+	previous_page.pressed = true
+	journal._book._input(previous_page)
+	await _wait_for_page_turn(journal._book)
+	_check(journal._book.current_page == 0,
+		"A turns the held journal backward")
 
 	# The physical spread itself is the mouse target. Clicking either half turns
 	# one spread, while the ribbon tabs jump directly between sections.
@@ -322,6 +342,15 @@ func _check(condition: bool, message: String) -> void:
 	else:
 		push_error("[FAIL] %s" % message)
 		_fail = 1
+
+
+func _action_has_key(action: StringName, keycode: Key) -> bool:
+	for event in InputMap.action_get_events(action):
+		if event is InputEventKey:
+			var key_event := event as InputEventKey
+			if key_event.keycode == keycode or key_event.physical_keycode == keycode:
+				return true
+	return false
 
 
 func _wait_for_page_turn(book: Book) -> void:

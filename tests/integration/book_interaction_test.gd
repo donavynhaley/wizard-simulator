@@ -61,7 +61,7 @@ func _run() -> void:
 	_check(outer_top - center_top > 0.009,
 		"authored open-book model dips with the curved page overlay at the spine " \
 		+ "(center=%.4f, outer=%.4f)" % [center_top, outer_top])
-	_check(book.get_display_name() == "Bolt Rune Book",
+	_check(book.get_display_name() == "Hurl Rune Book",
 		"rune book display name comes from the rune template")
 
 	# Table reference reading (the crafter-facing flow, no hands involved).
@@ -82,6 +82,7 @@ func _run() -> void:
 		"physical world books retain their authored lighting response")
 
 	var left_title := book.get_node("PageRenderer/SpreadRoot/Pages/LeftPage/Margin/Column/LeftTitle") as Label
+	var left_body := book.get_node("PageRenderer/SpreadRoot/Pages/LeftPage/Margin/Column/LeftBody") as Label
 	var right_title := book.get_node("PageRenderer/SpreadRoot/Pages/RightPage/Margin/Column/RightTitle") as Label
 	var rune_view := book.get_node("PageRenderer/SpreadRoot/Pages/RightPage/Margin/Column/RightRuneView") as RuneTemplateView
 	var page_viewport := book.get_node("PageRenderer") as SubViewport
@@ -93,8 +94,12 @@ func _run() -> void:
 	_check(left_paper.bg_color.is_equal_approx(expected_paper_color)
 		and right_paper.bg_color.is_equal_approx(expected_paper_color),
 		"both physical book pages use the authored palette paper color")
-	_check(left_title.text == "Bolt Rune", "book writes its authored left page title")
+	_check(left_title.text == "Hurl Rune", "book writes its authored left page title")
 	_check(right_title.text == "Scribing Pattern", "book writes its authored right page title")
+	_check(left_title.get_theme_font(&"font").resource_path.ends_with("Almendra-Bold.ttf"),
+		"book titles use the dark-fantasy display face")
+	_check(left_body.get_theme_font(&"font").resource_path.ends_with("Alegreya-Variable.ttf"),
+		"book body copy uses the legible old-style serif face")
 	_check(rune_view.visible, "rune book shows the rune template on its page")
 	_check(bool(rune_view.call("is_playback_active")), "rune page starts stroke playback")
 	_check(page_viewport.render_target_update_mode == SubViewport.UPDATE_ALWAYS,

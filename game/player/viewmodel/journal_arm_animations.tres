@@ -1,4 +1,4 @@
-[gd_resource type="AnimationLibrary" format=3]
+[gd_resource type="AnimationLibrary" format=3 uid="uid://c3vgedcr1xucp"]
 
 [sub_resource type="Animation" id="Animation_i2k1y"]
 resource_name = "journal_unhook_open_left"

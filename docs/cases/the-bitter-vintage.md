@@ -30,11 +30,11 @@ The season was fair and the grapes looked perfect.
 | wine_nature | wine | nature | bench_test | testimony_bitter | water, gall | Burned, the sample gives oily black smoke: the wine is thick with gall, and nothing this year drew it off. |
 | barrels_clean | barrels | nature | bench_test | testimony_bitter | - | The oak shavings burn clean and sweet. The barrels are honest. |
 | rival_grudge | rival | name | testimony | testimony_bitter | - | The rival crows over Bram's ruin and hides nothing. Loud, spiteful, and proud of his own vines. |
-| charm_working | rival_charm | working | rune_reading | rival_grudge | bind, pour | A Bind and a Pour on his own stakes: a blessing poured into his own rows. Petty, legal, and innocent of Bram's wine. |
+| charm_working | rival_charm | working | rune_reading | rival_grudge | bind, seal | A Bind on his own stakes held by a Seal: a blessing fixed to his own rows. Petty, legal, and innocent of Bram's wine. |
 | vine_nature | vines | nature | bench_test | wine_nature | earth, gall | A root cutting runs earth-natured, sap heavy with gall. The bitterness rides in from the field, not the cellar. |
 | vine_threads | vines | links | sight_thread | vine_nature | vines_to_stone | Threads from every old row converge underground at the corner marker. Something has been drinking from these vines. |
 | stone_unearthed | tithe_stone | name | observation | vine_threads | - | Beneath the marker: a sealed stone vessel, wizard-cut, older than Bram's tenure on this land. |
-| stone_working | tithe_stone | working | rune_reading | stone_unearthed | draw, seal | A sustained Draw sealed into the vessel: built to tithe the gall out of the vines, year after year. |
+| stone_working | tithe_stone | working | rune_reading | stone_unearthed | bind, seal | A sustained Bind held by a Seal: the vessel tithes gall from the vines year after year. |
 | stone_full | tithe_stone | nature | observation | stone_working | gall | In Sight the vessel's glyph blazes full to the brim. It can drink no more, and so it drinks nothing. |
 | tithe_ledger | tithe_stone | history | library | stone_unearthed | - | Maren's ledger: "Emptied the vintner's tithe-stone at first frost, as every year." There is no entry since he left. |
 
@@ -42,7 +42,7 @@ The season was fair and the grapes looked perfect.
 
 | id | requires | outcome |
 | --- | --- | --- |
-| empty_the_tithe | stone_working, stone_full | Draw the stored gall into a flask and re-Seal the stone; the tithe resumes and this vintage sweetens late. You now own the first-frost chore - and a bottle of gall. |
+| empty_the_tithe | stone_working, stone_full | Use Sight to move the stored gall into a flask and re-Seal the stone; the tithe resumes and this vintage sweetens late. You now own the first-frost chore - and a bottle of gall. |
 | sever_the_tithe | stone_working, vine_threads | Sever the converging threads; the vines keep their gall forever. The wine turns dark and rustic - some will love it, Bram must relearn his craft, and no one tends a tithe again. |
 | sweeten_the_batch | wine_nature | Brew a clarifying draught for this vintage only. Bram pays gladly; the stone still sits full underground, and next season is a consequence case. |
 

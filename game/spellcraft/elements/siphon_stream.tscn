@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://game/spellcraft/elements/siphon_stream.gd" id="1_script"]
 
@@ -12,12 +12,14 @@ curve = SubResource("Curve_scale")
 [sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_stream"]
 resource_local_to_scene = true
 emission_shape = 1
-emission_sphere_radius = 0.18
+emission_sphere_radius = 0.05
 direction = Vector3(0, 0, -1)
-spread = 14.0
-initial_velocity_min = 2.5
-initial_velocity_max = 4.5
+spread = 18.0
+initial_velocity_min = 0.8
+initial_velocity_max = 1.6
 gravity = Vector3(0, 0, 0)
+damping_min = 0.4
+damping_max = 1.2
 scale_min = 0.35
 scale_max = 0.8
 scale_curve = SubResource("CurveTexture_scale")
@@ -36,10 +38,26 @@ billboard_keep_scale = true
 material = SubResource("StandardMaterial3D_stream")
 size = Vector2(0.07, 0.07)
 
-[node name="SiphonStream" type="GPUParticles3D"]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ribbon"]
+transparency = 1
+blend_mode = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+no_depth_test = true
+cull_mode = 2
+disable_receive_shadows = true
+
+[node name="SiphonStream" type="Node3D"]
+script = ExtResource("1_script")
+
+[node name="Ribbon" type="MeshInstance3D" parent="."]
+cast_shadow = 0
+material_override = SubResource("StandardMaterial3D_ribbon")
+
+[node name="Wisps" type="GPUParticles3D" parent="."]
 cast_shadow = 0
 amount = 34
-lifetime = 0.5
+lifetime = 0.35
+local_coords = false
 process_material = SubResource("ParticleProcessMaterial_stream")
 draw_pass_1 = SubResource("QuadMesh_stream")
-script = ExtResource("1_script")

@@ -14,8 +14,18 @@ func _run() -> void:
 	await physics_frame
 
 	var player := scene.get_node("Player") as CharacterBody3D
-	player.global_position = Vector3(0.0, 0.9, 5.4)
-	player.rotation = Vector3.ZERO
+	var stair_visual := scene.find_child("central_spiral_stair", true, false) as MeshInstance3D
+	var stair_ramp := scene.find_child("central_spiral_stair_ramp", true, false)
+	_check(stair_visual != null and stair_visual.find_child("StaticBody3D", true, false) == null,
+		"visible tower steps do not use their risers as player collision")
+	_check(stair_ramp != null and stair_ramp.find_child("CollisionShape3D", true, false) != null,
+		"tower stairs provide a separate walkable ramp collision")
+
+	# Follow the authored spiral with ordinary forward movement. The locomotion
+	# component has no stair awareness; the ramp is simply a walkable floor.
+	var start_angle := -0.1
+	player.global_position = Vector3(
+		cos(start_angle) * 1.25, 1.05, -sin(start_angle) * 1.25)
 
 	for index in 5:
 		await physics_frame
@@ -23,16 +33,27 @@ func _run() -> void:
 	var start_position := player.global_position
 	var highest_y := start_position.y
 	Input.action_press("move_forward")
-	for index in 180:
+	for index in 300:
+		var offset := Vector3(player.global_position.x, 0.0, player.global_position.z)
+		var angle := atan2(-offset.z, offset.x)
+		var tangent := Vector3(-sin(angle), 0.0, -cos(angle))
+		var radial_correction := offset.normalized() * (1.25 - offset.length()) * 2.0
+		var travel_direction := (tangent + radial_correction).normalized()
+		player.look_at(player.global_position + travel_direction, Vector3.UP)
 		await physics_frame
 		highest_y = maxf(highest_y, player.global_position.y)
+		if player.global_position.y > start_position.y + 3.25:
+			break
 	Input.action_release("move_forward")
 
 	print("Start player position: ", start_position)
 	print("Final player position: ", player.global_position)
 	print("Highest player Y: ", highest_y)
-	_check(highest_y > start_position.y + 0.35, "player gains height on tower steps")
-	_check(player.global_position.z < start_position.z - 1.0, "player keeps moving toward the staircase")
+	_check(highest_y > start_position.y + 3.25,
+		"normal forward movement climbs the full tower stair flight")
+	var final_radius := Vector2(player.global_position.x, player.global_position.z).length()
+	_check(final_radius > 0.45 and final_radius < 2.15,
+		"the walkable ramp follows the visible spiral staircase")
 
 	await process_frame
 	current_scene = null

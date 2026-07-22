@@ -1,25 +1,19 @@
 class_name RuneGlyphs
 extends RefCounted
 
-## The canonical glyphs of the six-verb rune language (game-bible.md rune
+## The canonical glyphs of the five-verb rune language (game-bible.md rune
 ## table), shared by the casting recognizer (as fallback templates - recorded
 ## exemplars always win) and the journal (as drawing guides with playback).
 ## All glyphs are one stroke in unit-square coordinates.
 
-const VERBS: Array[StringName] = [&"draw", &"pour", &"bind", &"sever", &"seal", &"open"]
+const VERBS: Array[StringName] = [&"hurl", &"bind", &"sever", &"seal", &"open"]
 
 const _INFO := {
-	&"draw": {
-		"name": "Draw",
-		"glyph": "the Inward Spiral",
-		"meaning": "Pull essence out of a subject and into the off hand.",
-		"hint": "Coil inward to the centre, two full turns or more. Everything converges on the hand.",
-	},
-	&"pour": {
-		"name": "Pour",
-		"glyph": "the Falling Triangle",
-		"meaning": "Push carried essence into a subject, or send it home to an empty vessel.",
-		"hint": "Across the top, then down to the point. The tipped cup narrows to where it goes.",
+	&"hurl": {
+		"name": "Hurl",
+		"glyph": "the Outward Spear",
+		"meaning": "Weaponize carried essence and drive it outward.",
+		"hint": "Thrust from the hand to the point, then cut both barbs. The element decides how the strike travels.",
 	},
 	&"bind": {
 		"name": "Bind",
@@ -67,11 +61,10 @@ static func drawing_hint(id: StringName) -> String:
 ## Unit-square stroke for a verb's glyph.
 static func points(id: StringName) -> PackedVector2Array:
 	match id:
-		&"draw":
-			return _spiral()
-		&"pour":
+		&"hurl":
 			return PackedVector2Array([
-				Vector2(0.0, 0.0), Vector2(1.0, 0.0), Vector2(0.5, 1.0), Vector2(0.0, 0.0)])
+				Vector2(0.12, 0.78), Vector2(0.86, 0.22), Vector2(0.62, 0.24),
+				Vector2(0.86, 0.22), Vector2(0.76, 0.45)])
 		&"bind":
 			return _eight()
 		&"sever":
@@ -93,19 +86,6 @@ static func template(id: StringName) -> RuneTemplate:
 	out.display_name = display_name(id)
 	var strokes: Array[PackedVector2Array] = [points(id)]
 	out.set_strokes(strokes)
-	return out
-
-
-## Draw's glyph: 2.25 turns coiling to the centre. The coil must fill the
-## interior so it separates cleanly from Seal's empty ring.
-static func _spiral() -> PackedVector2Array:
-	var out := PackedVector2Array()
-	var steps := 64
-	for i in steps + 1:
-		var t := float(i) / float(steps)
-		var angle := t * TAU * 2.25
-		var radius := 0.5 * (1.0 - 0.85 * t)
-		out.append(Vector2(0.5 + radius * cos(angle), 0.5 + radius * sin(angle)))
 	return out
 
 

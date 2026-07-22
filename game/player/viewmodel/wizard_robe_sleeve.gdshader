@@ -1,9 +1,10 @@
 shader_type spatial;
 render_mode depth_draw_opaque, cull_back, diffuse_burley, specular_schlick_ggx;
 
-uniform vec4 robe_color : source_color = vec4(0.11, 0.16, 0.24, 1.0);
-uniform vec4 raised_thread_color : source_color = vec4(0.15, 0.205, 0.29, 1.0);
-uniform vec4 trim_color : source_color = vec4(0.29, 0.255, 0.17, 1.0);
+uniform vec4 robe_color : source_color = vec4(0.2, 0.075, 0.32, 1.0);
+uniform vec4 raised_thread_color : source_color = vec4(0.3, 0.13, 0.43, 1.0);
+uniform vec4 trim_color : source_color = vec4(0.34, 0.27, 0.13, 1.0);
+uniform float viewmodel_fill : hint_range(0.0, 1.0, 0.01) = 0.45;
 uniform float sway_amount : hint_range(0.0, 0.08, 0.001) = 0.021;
 uniform float sway_speed : hint_range(0.0, 4.0, 0.05) = 0.95;
 
@@ -34,6 +35,6 @@ void fragment() {
 	ROUGHNESS = mix(0.91, 0.64, trim);
 	METALLIC = trim * 0.2;
 	SPECULAR = mix(0.14, 0.26, trim);
-	EMISSION = ALBEDO * 0.035;
+	EMISSION = ALBEDO * viewmodel_fill;
 	NORMAL_MAP = normalize(vec3((warp - 0.5) * 0.035, (weft - 0.5) * 0.035, 1.0));
 }

@@ -1,13 +1,10 @@
 extends SceneTree
 
-## Two-hands casting sentence (game-bible.md): the right hand speaks the verb,
-## the left hand carries the noun, and each traced rune is consumed by its use.
-## Exercises the CastingController + SightController pair headlessly:
-## Draw pulls a source's essence into the left hand and is spent; Pour returns
-## it to an empty vessel or pushes it out as the cast and is spent; essence
-## survives traces and dismissals; refusals guard every wrong combination.
+## End-to-end coverage for the approved two-hand casting model.
+## Wizard Sight moves essence without a rune, Hurl consumes carried essence,
+## and Fire Hurl airbursts at range with a large self-affecting explosion.
 
-var _fail := 0
+var _fail: int = 0
 
 
 func _init() -> void:
@@ -15,36 +12,26 @@ func _init() -> void:
 
 
 func _run() -> void:
-	# A floor first: without one the player free-falls all test long and the
-	# world-anchored sources drift out of the screen-centre aim radius.
-	var floor_body := StaticBody3D.new()
-	var floor_shape := CollisionShape3D.new()
-	var floor_box := BoxShape3D.new()
-	floor_box.size = Vector3(50.0, 1.0, 50.0)
-	floor_shape.shape = floor_box
-	floor_body.add_child(floor_shape)
-	root.add_child(floor_body)
-	floor_body.global_position = Vector3(0.0, -0.5, 0.0)
+	var floor := _build_static_box(Vector3(50.0, 1.0, 50.0))
+	root.add_child(floor)
+	floor.global_position = Vector3(0.0, -0.5, 0.0)
 
 	var player := (load("res://game/player/player.tscn") as PackedScene).instantiate() as WizardPlayer
 	root.add_child(player)
 	await process_frame
 	await process_frame
 
-	var casting := player.get_node_or_null("Components/CastingController") as CastingController
-	var sight := player.get_node_or_null("Components/SightController") as SightController
+	var casting := player.casting
+	var sight := player.sight
+	var hand := player.element_hand
 	_check(casting != null, "player carries a CastingController")
 	_check(sight != null, "player carries a SightController")
-	if casting == null or sight == null:
-		_finish(player)
-		return
-	_check(casting._sight == sight, "casting controller resolved its Sight sibling")
+	_check(hand != null, "player carries an ElementHandController")
+	_check(player.health != null, "player carries a HealthComponent")
 
-	# A one-shot source with a visual, dead centre in front of the camera.
-	var camera := player.get_node("Head/Camera3D") as Camera3D
-	var fire := Element.new()
-	fire.id = &"fire"
-	fire.display_name = "Fire"
+	var camera := player.get_node(^"Head/Camera3D") as Camera3D
+	var fire := load("res://game/spellcraft/elements/fire.tres") as Element
+	var water := load("res://game/spellcraft/elements/water.tres") as Element
 	var flame_visual := Node3D.new()
 	root.add_child(flame_visual)
 	var source := ElementSource.new()
@@ -55,151 +42,224 @@ func _run() -> void:
 	root.add_child(source)
 	source.global_position = camera.global_position + camera.global_transform.basis * Vector3(0, 0, -3)
 	flame_visual.global_position = source.global_position
-	casting.sight_pull_time = 0.05
 	await process_frame
 
-	# Hold Sight: the component activates and finds the centred source.
-	Input.action_press("sight")
+	# Sight itself now grabs the element without a Draw rune. The grab is a
+	# held gesture: essence rips free only after pull_time of commitment.
+	Input.action_press(&"sight")
 	await process_frame
 	await process_frame
-	_check(sight.active, "holding sight activates the overlay state")
-	_check(sight.aimed_source() == source, "sight aims the centred element source")
-	Input.action_release("sight")
-	await process_frame
+	_check(sight.active, "holding Sight activates elemental targeting")
+	_check(sight.aimed_source() == source, "Sight aims the centered source")
+	await _hold_cast(sight.pull_time + 0.15)
+	_check(hand.held_element() == fire, "Sight gathers the source into the left hand")
+	_check(not source.available(), "gathering depletes a one-shot source")
+	_check(casting.current_state == CastingController.CASTING_STATE.IDLE,
+		"gathering essence requires no primed rune")
 
-	# Draw with nothing aimed refuses but keeps the verb.
-	casting.locked_rune_id = &"draw"
+	# Foreign vessels refuse the carried essence without consuming it.
+	var foreign := ElementSource.new()
+	foreign.element = water
+	foreign.one_shot = true
+	root.add_child(foreign)
+	foreign.global_position = source.global_position
+	foreign.consume(Vector3.ZERO)
+	await process_frame
+	_check(not foreign.available(), "foreign test vessel starts empty")
+	# The foreign vessel temporarily owns the center marker.
+	source.remove_from_group(ElementSource.GROUP)
+	await process_frame
+	await _click_cast()
+	_check(hand.held_element() == fire, "foreign placement keeps fire in the hand")
+	_check(not foreign.available(), "foreign placement leaves the water vessel empty")
+
+	# Matching placement returns essence directly through Sight - a shorter
+	# pour-back hold, because giving is easier than taking.
+	foreign.remove_from_group(ElementSource.GROUP)
+	source.add_to_group(ElementSource.GROUP)
+	await process_frame
+	await _hold_cast(sight.push_time + 0.15)
+	_check(hand.held_element() == null, "matching placement empties the left hand")
+	_check(source.available(), "matching placement restores the source")
+
+	# Hurl remains primed when there is no elemental noun.
+	Input.action_release(&"sight")
+	await process_frame
+	casting.locked_rune_id = &"hurl"
 	casting.locked_rune_score = 1.0
 	casting._set_state(CastingController.CASTING_STATE.SPELL_HELD)
-	await process_frame
-	_check(casting._held_element == null, "the left hand starts empty")
-	var press := InputEventMouseButton.new()
-	press.button_index = MOUSE_BUTTON_LEFT
-	press.pressed = true
-	casting._input(press)
-	await process_frame
+	await _click_cast()
 	_check(casting.current_state == CastingController.CASTING_STATE.SPELL_HELD,
-		"draw with nothing aimed keeps the verb in hand")
+		"empty Hurl refuses to fire and remains primed")
 
-	# The pull: sight + cast dwell drains the source into the LEFT hand and
-	# spends the Draw rune.
-	Input.action_press("sight")
-	Input.action_press("cast")
-	var frames := 0
-	var peak_progress := 0.0
-	while casting._held_element == null and frames < 2000:
-		await process_frame
-		peak_progress = maxf(peak_progress, sight.aim_progress)
-		frames += 1
-	Input.action_release("cast")
-	Input.action_release("sight")
-	_check(casting._held_element == fire, "the pull lands the essence in the left hand")
-	_check(peak_progress > 0.0, "the pull dwell fills the aimed ring")
-	_check(casting.current_state == CastingController.CASTING_STATE.IDLE,
-		"a completed pull spends the Draw rune")
-	_check(casting._left_hand_effect != null, "carried essence shows in the off hand")
-	_check(casting._left_anchor != null
-		and String(casting._left_anchor.get_path()).contains("LeftHandAttachment"),
-		"the essence orb rides the skeleton's left wrist attachment")
-	_check(casting._left_arm_anim != null and casting._left_arm_anim.is_playing()
-		and String(casting._left_arm_anim.current_animation).ends_with("_left"),
-		"the left arm raises into its mirrored hold")
-	_check(not source.available(), "a completed pull depletes a one-shot source")
-	_check(source.is_in_group(ElementSource.GROUP), "a depleted source stays listed as an empty vessel")
-	frames = 0
-	while flame_visual.visible and frames < 2000:
-		await process_frame
-		frames += 1
-	_check(not flame_visual.visible, "the consumed visual is sucked away and hidden")
-
-	# Essence survives a fresh trace: the left hand keeps its fire.
-	casting._set_state(CastingController.CASTING_STATE.SKETCHING)
-	_check(casting._held_element == fire, "sketching keeps the left hand's essence")
-	_check(absf(Engine.time_scale - casting.sketch_time_scale) < 0.001,
-		"sketching slows time to the locked feel decision")
-	casting._set_state(CastingController.CASTING_STATE.IDLE)
-	_check(absf(Engine.time_scale - 1.0) < 0.001, "leaving the sketch restores time")
-
-	# Draw at an empty vessel refuses; dismissal drops the verb, not the essence.
-	casting.locked_rune_id = &"draw"
-	casting._set_state(CastingController.CASTING_STATE.SPELL_HELD)
-	Input.action_press("sight")
+	# A completed rune can coexist with Sight. Sight temporarily owns left click
+	# for gathering, then lowering Sight exposes the same held Hurl for firing.
+	Input.action_press(&"sight")
 	await process_frame
 	await process_frame
-	_check(sight.aimed_source() == source, "sight aims the empty vessel")
-	casting._input(press)
-	await process_frame
+	_check(sight.active, "Q activates Sight while Hurl remains primed")
 	_check(casting.current_state == CastingController.CASTING_STATE.SPELL_HELD,
-		"draw at an empty vessel refuses and keeps the verb")
-	var shake := InputEventKey.new()
-	shake.keycode = KEY_G
-	shake.pressed = true
-	casting._input(shake)
-	await process_frame
-	_check(casting.current_state == CastingController.CASTING_STATE.IDLE,
-		"drop_item shakes off the held verb")
-	_check(casting._held_element == fire, "dismissal keeps the left hand's essence")
-
-	# Pour at the empty vessel: the essence flows home, the Pour rune is spent.
-	casting.locked_rune_id = &"pour"
-	casting._set_state(CastingController.CASTING_STATE.SPELL_HELD)
-	await process_frame
-	casting._input(press)
-	await process_frame
-	_check(source.available(), "poured essence restores the depleted source")
-	_check(casting._held_element == null, "pouring empties the left hand")
-	_check(casting._left_hand_effect == null, "the off-hand orb clears when poured")
-	_check(flame_visual.visible, "the restored visual reappears")
-	_check(casting.current_state == CastingController.CASTING_STATE.IDLE,
-		"a completed pour spends the Pour rune")
-	Input.action_release("sight")
-	await process_frame
-
-	# Pour with an empty left hand refuses.
-	casting.locked_rune_id = &"pour"
-	casting._set_state(CastingController.CASTING_STATE.SPELL_HELD)
-	await process_frame
-	casting._input(press)
-	await process_frame
+		"activating Sight leaves the primed Hurl intact")
+	await _hold_cast(sight.pull_time + 0.15)
+	_check(hand.held_element() == fire, "Sight gathers fire while Hurl remains primed")
 	_check(casting.current_state == CastingController.CASTING_STATE.SPELL_HELD,
-		"pour with an empty left hand refuses")
-	casting._input(shake)
+		"gathering through Sight preserves the primed Hurl")
+	Input.action_release(&"sight")
 	await process_frame
-
-	# Draw again, then Pour with nothing aimed pushes the essence out as the cast.
-	casting.locked_rune_id = &"draw"
-	casting._set_state(CastingController.CASTING_STATE.SPELL_HELD)
-	Input.action_press("sight")
-	Input.action_press("cast")
-	frames = 0
-	while casting._held_element == null and frames < 2000:
-		await process_frame
-		frames += 1
-	Input.action_release("cast")
-	Input.action_release("sight")
-	_check(casting._held_element == fire, "the restored source can be drawn again")
-	casting.locked_rune_id = &"pour"
-	casting._set_state(CastingController.CASTING_STATE.SPELL_HELD)
-	await process_frame
-	casting._input(press)
-	await process_frame
+	await _click_cast()
+	_check(hand.held_element() == null, "Hurl atomically consumes carried fire")
 	_check(casting.current_state == CastingController.CASTING_STATE.IDLE,
-		"pour with nothing aimed pushes the essence out as the cast")
-	_check(casting._held_element == null, "the pushed essence leaves the left hand")
+		"firing consumes the Hurl rune")
 
+	var fire_bolt := await _wait_for_group(&"fire_bolt", 240)
+	_check(fire_bolt != null, "Fire Hurl launches a small compressed bolt")
+	var ranged_explosion := await _wait_for_group(&"fire_explosion", 240)
+	_check(ranged_explosion != null, "the fire bolt explodes at maximum range")
+	if ranged_explosion is Node3D:
+		_check((ranged_explosion as Node3D).global_position.distance_to(player.global_position) > 20.0,
+			"the unobstructed fire bolt travels to its long-range airburst")
+
+	# A solid object triggers the same blast immediately instead of letting the
+	# bolt pass through or waiting for its range limit.
+	if is_instance_valid(ranged_explosion):
+		ranged_explosion.queue_free()
+	await process_frame
+	await process_frame
+	var impact_wall := _build_static_box(Vector3(3.0, 4.0, 0.5))
+	root.add_child(impact_wall)
+	impact_wall.global_position = Vector3(8.0, 1.0, -4.0)
+	var collision_bolt := (load(
+		"res://game/spellcraft/casting/spells/fire_bolt.tscn") as PackedScene).instantiate() as HurlProjectile
+	collision_bolt.element = fire
+	collision_bolt.caster = player
+	root.add_child(collision_bolt)
+	collision_bolt.global_position = Vector3(8.0, 1.0, 0.0)
+	collision_bolt.launch(Vector3.FORWARD * 38.0)
+	var collision_explosion := await _wait_for_group(&"fire_explosion", 60)
+	_check(collision_explosion != null, "the fire bolt explodes when it strikes an object")
+	if collision_explosion is Node3D:
+		_check(absf((collision_explosion as Node3D).global_position.z + 3.75) < 0.5,
+			"the collision blast blooms at the struck surface")
+
+	# The amplified blast affects its caster, including damage and launch force.
+	var health_before := player.health.current
+	var velocity_before := player.velocity
+	var close_blast := (load(
+		"res://game/spellcraft/casting/effects/fire_explosion.tscn") as PackedScene).instantiate() as FireExplosion
+	close_blast.configure(fire, player)
+	root.add_child(close_blast)
+	close_blast.global_position = player.global_position + Vector3(0.0, 0.0, -1.0)
+	await physics_frame
+	await physics_frame
+	_check(player.health.current < health_before, "Fire Hurl damages its caster inside the blast")
+	_check(player.velocity.distance_to(velocity_before) > 1.0,
+		"Fire Hurl launches its caster with radial force")
+	_check(is_equal_approx(close_blast.damage_radius, 6.0),
+		"Fire Hurl uses the approved six-meter damage radius")
+	_check(close_blast.visual_radius >= 10.0,
+		"Fire Hurl blooms beyond ten meters visually")
+
+	# Every canonical element selects a distinct Hurl expression.
+	var earth := load("res://game/spellcraft/elements/earth.tres") as Element
+	var air := load("res://game/spellcraft/elements/air.tres") as Element
+	var cast_paths: Dictionary[StringName, String] = {
+		fire.id: fire.hurl_cast_scene.resource_path,
+		water.id: water.hurl_cast_scene.resource_path,
+		earth.id: earth.hurl_cast_scene.resource_path,
+		air.id: air.hurl_cast_scene.resource_path,
+	}
+	_check(cast_paths.size() == 4, "all four elements define Hurl expressions")
+	_check(cast_paths.values().duplicate().all(func(path: String) -> bool:
+		return not path.is_empty()), "every Hurl expression points to a cast scene")
+	var unique_paths: Dictionary[String, bool] = {}
+	for path: String in cast_paths.values():
+		unique_paths[path] = true
+	_check(unique_paths.size() == 4, "each element has a mechanically distinct Hurl scene")
+
+	_check(RuneGlyphs.VERBS.has(&"hurl"), "Hurl belongs to the canonical rune vocabulary")
+	var hurl_match := casting._recognizer.evaluate([RuneGlyphs.points(&"hurl")])
+	_check(hurl_match["id"] == &"hurl" and float(hurl_match["score"]) >= casting.match_threshold,
+		"the Outward Spear recognizes as Hurl through the live casting recognizer")
+	_check(not RuneGlyphs.VERBS.has(&"draw") and not RuneGlyphs.VERBS.has(&"pour"),
+		"Draw and Pour are absent from the canonical rune vocabulary")
+
+	Input.action_release(&"cast")
+	Input.action_release(&"sight")
+	if is_instance_valid(close_blast):
+		close_blast.queue_free()
+	if is_instance_valid(ranged_explosion):
+		ranged_explosion.queue_free()
+	if is_instance_valid(collision_explosion):
+		collision_explosion.queue_free()
+	if is_instance_valid(fire_bolt):
+		fire_bolt.queue_free()
+	if is_instance_valid(collision_bolt):
+		collision_bolt.queue_free()
+	impact_wall.queue_free()
+	player.queue_free()
 	source.queue_free()
+	foreign.queue_free()
 	flame_visual.queue_free()
-	_finish(player)
-
-
-func _finish(player: Node) -> void:
-	if player != null:
-		player.queue_free()
+	floor.queue_free()
 	await process_frame
 	await process_frame
 	if _fail == 0:
-		print("VERB CASTING TEST OK")
+		print("WIZARD SIGHT HURL TEST OK")
 	quit(_fail)
+
+
+func _click_cast() -> void:
+	await _click_action(&"cast")
+
+
+## Presses cast, keeps the action held for the pull/push duration, releases.
+## Pins the Input action state explicitly so the hold is deterministic in both
+## graphical and headless runs.
+func _hold_cast(duration: float) -> void:
+	var press := InputEventAction.new()
+	press.action = &"cast"
+	press.pressed = true
+	Input.parse_input_event(press)
+	Input.action_press(&"cast")
+	await create_timer(duration).timeout
+	Input.action_release(&"cast")
+	var release := InputEventAction.new()
+	release.action = &"cast"
+	release.pressed = false
+	Input.parse_input_event(release)
+	await process_frame
+
+
+func _click_action(action: StringName) -> void:
+	var press := InputEventAction.new()
+	press.action = action
+	press.pressed = true
+	Input.parse_input_event(press)
+	await process_frame
+	var release := InputEventAction.new()
+	release.action = action
+	release.pressed = false
+	Input.parse_input_event(release)
+	await process_frame
+
+
+func _wait_for_group(group: StringName, maximum_frames: int) -> Node:
+	for _frame in maximum_frames:
+		var found := get_first_node_in_group(group)
+		if found != null:
+			return found
+		await process_frame
+	return null
+
+
+func _build_static_box(size: Vector3) -> StaticBody3D:
+	var body := StaticBody3D.new()
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = size
+	collision.shape = shape
+	body.add_child(collision)
+	return body
 
 
 func _check(condition: bool, message: String) -> void:

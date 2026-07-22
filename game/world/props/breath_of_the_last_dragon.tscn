@@ -1,0 +1,39 @@
+[gd_scene format=3 uid="uid://jtttvlmcy1jg"]
+
+[ext_resource type="PackedScene" uid="uid://bykwrxhkq5qhr" path="res://shared/vfx/magical_flame.tscn" id="1_1rvjw"]
+[ext_resource type="Script" uid="uid://blm5c8etxdetm" path="res://game/spellcraft/elements/element_source.gd" id="2_rjk5b"]
+[ext_resource type="Resource" uid="uid://bxrnqs1iovw7f" path="res://game/spellcraft/elements/fire.tres" id="3_wnt8i"]
+[ext_resource type="PackedScene" uid="uid://7l5s4b8qvnu7" path="res://assets/models/eternal_flame.glb" id="4_mndnj"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_torch_interact"]
+height = 0.9
+radius = 0.42
+
+[node name="BreathOfTheLastDragon" type="Node3D" unique_id=1941162939]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0, 0)
+
+[node name="MagicalFlame2" parent="." unique_id=530671999 instance=ExtResource("1_1rvjw")]
+transform = Transform3D(1.5713373, 0.10771269, 0, -0.10771269, 1.5713373, 0, 0, 0, 1.5750247, 0.31448346, 0.63874483, 0)
+light_energy = 1.15
+light_range = 2.8
+
+[node name="FireSource" type="Node3D" parent="MagicalFlame2" unique_id=379250139 node_paths=PackedStringArray("visual")]
+transform = Transform3D(0.63491046, 0, 0, 0, 0.63491046, 0, 0, 0, 0.6349105, 0, 0, 0)
+script = ExtResource("2_rjk5b")
+element = ExtResource("3_wnt8i")
+visual = NodePath("..")
+
+[node name="eternal_flame" parent="." unique_id=952543202 instance=ExtResource("4_mndnj")]
+
+[node name="MagicalFlame" parent="." unique_id=544839145 instance=ExtResource("1_1rvjw")]
+transform = Transform3D(-1.0676396, 0.65967464, 0, -0.65967464, -1.0676396, 0, 0, 0, 1.2549999, 0.06012094, 2.1301484, 0)
+light_energy = 1.15
+light_range = 2.8
+
+[node name="InteractionBody" type="StaticBody3D" parent="." unique_id=1850250808]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.34, 0)
+collision_layer = 2
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractionBody" unique_id=1369288209]
+shape = SubResource("CylinderShape3D_torch_interact")

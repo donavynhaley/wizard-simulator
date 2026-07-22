@@ -66,7 +66,8 @@ func get_display_name() -> String:
 
 func get_held_hint() -> String:
 	if _is_reading:
-		return "%s  [Arrows pages / hold RMB focus / LMB close / G drop]" % get_display_name()
+		return "%s  [A/D or Arrows pages / hold RMB focus / LMB close / G drop]" \
+			% get_display_name()
 	return "%s  [LMB read / G drop]" % get_display_name()
 
 
@@ -267,15 +268,13 @@ func _set_close_focus(enabled: bool) -> void:
 
 
 func _previous_page_pressed(event: InputEvent) -> bool:
-	if event.is_action_pressed("ui_left"):
-		return true
-	return not _is_reading and event.is_action_pressed("move_left")
+	return event.is_action_pressed("ui_left") \
+		or event.is_action_pressed("move_left")
 
 
 func _next_page_pressed(event: InputEvent) -> bool:
-	if event.is_action_pressed("ui_right"):
-		return true
-	return not _is_reading and event.is_action_pressed("move_right")
+	return event.is_action_pressed("ui_right") \
+		or event.is_action_pressed("move_right")
 
 
 func _update_page_content() -> void:

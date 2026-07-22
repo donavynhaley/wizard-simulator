@@ -30,6 +30,9 @@ SLEEVE_OBJECT = "WizardRobeSleeves"
 NAIL_OBJECT = "WizardPointedNails"
 RING_SEGMENTS = 20
 UPPER_ARM_RING_COUNT = 7
+FOREARM_RING_AMOUNTS = (
+    0.14, 0.28, 0.42, 0.56, 0.7, 0.82, 0.9, 0.96, 1.0, 1.06,
+)
 BASE_VARIANT = "base"
 EVIL_VARIANT = "evil"
 
@@ -58,14 +61,17 @@ def remove_previous_generated_objects() -> None:
             bpy.data.objects.remove(existing, do_unlink=True)
 
 
-def trim_skin_to_exposed_hands(skin: bpy.types.Object) -> None:
+def trim_skin_to_exposed_hands(
+    skin: bpy.types.Object,
+    armature: bpy.types.Object,
+) -> None:
     """Remove geometry hidden by the robe while preserving the rigged hands.
 
     The source mesh includes complete bare upper arms and forearms. Keeping
     those surfaces under a skinned sleeve causes them to poke through during
-    the extreme journal reach pose. The derived asset retains every wrist and
-    finger vertex while deleting vertices whose strongest weight belongs to a
-    covered arm bone.
+    the extreme journal reach pose. The derived asset retains the fingers and
+    exposed hand while deleting covered arm and wrist vertices beneath the
+    cuff.
     """
     covered_bones = {
         f"{bone}.{side}"
@@ -81,6 +87,15 @@ def trim_skin_to_exposed_hands(skin: bpy.types.Object) -> None:
     covered_group_indices = {
         group.index for group in skin.vertex_groups if group.name in covered_bones
     }
+    wrist_group_indices = {
+        side: skin.vertex_groups[f"wrist.{side}"].index for side in ("r", "l")
+    }
+    skin_to_armature = armature.matrix_world.inverted() @ skin.matrix_world
+    wrist_planes = {}
+    for side in ("r", "l"):
+        forearm = armature.data.bones[f"forearm.{side}"]
+        direction = (forearm.tail_local - forearm.head_local).normalized()
+        wrist_planes[side] = (forearm.tail_local, direction)
     mesh = skin.data
     working_mesh = bmesh.new()
     working_mesh.from_mesh(mesh)
@@ -91,7 +106,17 @@ def trim_skin_to_exposed_hands(skin: bpy.types.Object) -> None:
         if not weights:
             continue
         dominant_group = max(weights.items(), key=lambda item: item[1])[0]
-        if dominant_group in covered_group_indices:
+        hidden_wrist_vertex = False
+        for side, wrist_group_index in wrist_group_indices.items():
+            if dominant_group != wrist_group_index:
+                continue
+            wrist_center, direction = wrist_planes[side]
+            armature_position = skin_to_armature @ vertex.co
+            hidden_wrist_vertex = (
+                armature_position - wrist_center
+            ).dot(direction) < 0.16
+            break
+        if dominant_group in covered_group_indices or hidden_wrist_vertex:
             covered_vertices.append(vertex)
     bmesh.ops.delete(working_mesh, geom=covered_vertices, context="VERTS")
     working_mesh.to_mesh(mesh)
@@ -106,7 +131,8 @@ def material(
     metallic: float = 0.0,
 ) -> bpy.types.Material:
     result = bpy.data.materials.get(name) or bpy.data.materials.new(name)
-    result.use_nodes = True
+    if bpy.app.version < (5, 0, 0):
+        result.use_nodes = True
     result.diffuse_color = color
     principled = next(
         node for node in result.node_tree.nodes if node.type == "BSDF_PRINCIPLED"
@@ -153,6 +179,7 @@ def sleeve_points(
     bones = armature.data.bones
     bicep = bones[f"bicep.{side}"]
     forearm = bones[f"forearm.{side}"]
+    wrist_bone = bones[f"wrist.{side}"]
     upper_start = bicep.head_local
     elbow = bicep.tail_local
     wrist = forearm.tail_local
@@ -162,8 +189,9 @@ def sleeve_points(
     ]
     forearm_points = [
         elbow.lerp(wrist, amount)
-        for amount in (0.14, 0.28, 0.42, 0.56, 0.7, 0.82, 0.9, 0.96)
+        for amount in FOREARM_RING_AMOUNTS[:-1]
     ]
+    forearm_points.append(wrist.lerp(wrist_bone.tail_local, 0.42))
     return upper_arm_points + forearm_points
 
 
@@ -173,27 +201,28 @@ def create_sleeves(
     variant: str,
 ) -> bpy.types.Object:
     vertices: list[tuple[float, float, float]] = []
-    faces: list[tuple[int, int, int, int]] = []
+    faces: list[tuple[int, ...]] = []
+    cuff_face_indices: set[int] = set()
     uvs: list[tuple[float, float]] = []
     weights: dict[str, list[tuple[int, float]]] = {}
     # Keep the first-person silhouette close to the original forearms. The
     # profile gets a little fuller at the shoulder, narrows through the elbow,
-    # and ends in a restrained bell cuff instead of a broad rigid tube.
+    # then opens into a soft bell cuff with an asymmetric hanging hem.
     side_radii = (
         0.46, 0.47, 0.47, 0.45, 0.42, 0.4, 0.38,
-        0.38, 0.38, 0.39, 0.4, 0.42, 0.45, 0.48, 0.53,
+        0.38, 0.38, 0.39, 0.4, 0.42, 0.45, 0.48, 0.54, 0.58, 0.44,
     )
     up_radii = (
         0.42, 0.43, 0.43, 0.41, 0.39, 0.37, 0.35,
-        0.35, 0.35, 0.36, 0.37, 0.39, 0.41, 0.44, 0.47,
+        0.35, 0.35, 0.36, 0.37, 0.39, 0.41, 0.44, 0.48, 0.52, 0.39,
     )
     wrinkle_amount = 0.025
     drape_amount = 0.035
+    hanging_length = 0.58
     if variant == BASE_VARIANT:
-        side_radii = side_radii[:-2] + (0.46, 0.48)
-        up_radii = up_radii[:-2] + (0.42, 0.43)
         wrinkle_amount = 0.012
         drape_amount = 0.025
+        hanging_length = 0.52
 
     for side_index, side in enumerate(("r", "l")):
         points = sleeve_points(armature, side)
@@ -210,6 +239,9 @@ def create_sleeves(
                 drape = drape_amount * longitudinal * longitudinal * (
                     0.35 + 0.65 * math.sin(angle) ** 2
                 )
+                cuff_progress = max(0.0, min(1.0, (longitudinal - 0.75) / 0.25))
+                hanging_profile = math.sin(math.pi * cuff_progress)
+                underside = max(0.0, -math.sin(angle)) ** 1.5
                 radial = (
                     side_axis
                     * math.cos(angle)
@@ -220,7 +252,15 @@ def create_sleeves(
                     * up_radii[ring_index]
                     * wrinkle
                 )
-                position = center + radial + Vector((0.0, 0.0, -drape))
+                hanging_drape = (
+                    up_axis
+                    * hanging_length
+                    * hanging_profile
+                    * underside
+                )
+                position = (
+                    center + radial - hanging_drape + Vector((0.0, 0.0, -drape))
+                )
                 vertex_index = len(vertices)
                 vertices.append(tuple(position))
                 uvs.append((u, longitudinal))
@@ -241,8 +281,7 @@ def create_sleeves(
                             (vertex_index, forearm_weight)
                         )
                 else:
-                    forearm_amounts = (0.14, 0.28, 0.42, 0.56, 0.7, 0.82, 0.9, 0.96)
-                    forearm_amount = forearm_amounts[
+                    forearm_amount = FOREARM_RING_AMOUNTS[
                         ring_index - UPPER_ARM_RING_COUNT
                     ]
                     if forearm_amount <= 0.42:
@@ -262,7 +301,7 @@ def create_sleeves(
                             (vertex_index, twist1_weight)
                         )
                     else:
-                        wrist_weight = (forearm_amount - 0.82) / 0.35
+                        wrist_weight = (forearm_amount - 0.82) / 0.24
                         weights.setdefault(twist1_name, []).append(
                             (vertex_index, 1.0 - wrist_weight)
                         )
@@ -281,12 +320,104 @@ def create_sleeves(
                 forward_adjacent = adjacent + RING_SEGMENTS
                 faces.append((current, adjacent, forward_adjacent, forward))
 
+        # Close the visible gap around the hand with a narrow cuff lining.
+        # The remaining hand begins just beyond this annulus, so skin fills the
+        # center while the lining prevents the world from showing through.
+        inner_ring_start = len(vertices)
+        end_center = points[-1]
+        side_axis, up_axis = transported_frame(points, len(points) - 1)
+        tangent = (points[-1] - points[-2]).normalized()
+        inner_center = end_center + tangent * 0.025
+        for segment in range(RING_SEGMENTS):
+            u = segment / RING_SEGMENTS
+            angle = math.tau * u
+            position = (
+                inner_center
+                + side_axis * math.cos(angle) * 0.34
+                + up_axis * math.sin(angle) * 0.31
+            )
+            vertex_index = len(vertices)
+            vertices.append(tuple(position))
+            uvs.append((u, 0.935))
+            weights.setdefault(f"wrist.{side}", []).append((vertex_index, 1.0))
+
+        outer_ring_start = (
+            side_vertex_start + (len(points) - 1) * RING_SEGMENTS
+        )
+        for segment in range(RING_SEGMENTS):
+            next_segment = (segment + 1) % RING_SEGMENTS
+            outer = outer_ring_start + segment
+            outer_next = outer_ring_start + next_segment
+            inner = inner_ring_start + segment
+            inner_next = inner_ring_start + next_segment
+            cuff_face = (outer, outer_next, inner_next, inner)
+            faces.append(cuff_face)
+            cuff_face_indices.add(len(faces) - 1)
+
+        # Use separate vertices for the reverse side so Blender and glTF treat
+        # the lining as valid two-sided cloth instead of duplicate faces.
+        back_outer_start = len(vertices)
+        for segment in range(RING_SEGMENTS):
+            source_index = outer_ring_start + segment
+            vertex_index = len(vertices)
+            vertices.append(vertices[source_index])
+            uvs.append(uvs[source_index])
+            weights.setdefault(f"wrist.{side}", []).append((vertex_index, 1.0))
+        back_inner_start = len(vertices)
+        for segment in range(RING_SEGMENTS):
+            source_index = inner_ring_start + segment
+            vertex_index = len(vertices)
+            vertices.append(vertices[source_index])
+            uvs.append(uvs[source_index])
+            weights.setdefault(f"wrist.{side}", []).append((vertex_index, 1.0))
+        for segment in range(RING_SEGMENTS):
+            next_segment = (segment + 1) % RING_SEGMENTS
+            back_outer = back_outer_start + segment
+            back_outer_next = back_outer_start + next_segment
+            back_inner = back_inner_start + segment
+            back_inner_next = back_inner_start + next_segment
+            faces.append((
+                back_inner,
+                back_inner_next,
+                back_outer_next,
+                back_outer,
+            ))
+            cuff_face_indices.add(len(faces) - 1)
+
+        # Recess the cuff panel behind the palm so it fills every empty pixel
+        # in the opening without drawing over the hand in first person.
+        cap_center_index = len(vertices)
+        cap_center = end_center - tangent * 0.04
+        vertices.append(tuple(cap_center))
+        uvs.append((0.5, 0.935))
+        weights.setdefault(f"wrist.{side}", []).append((cap_center_index, 1.0))
+        back_cap_center_index = len(vertices)
+        vertices.append(tuple(cap_center))
+        uvs.append((0.5, 0.935))
+        weights.setdefault(f"wrist.{side}", []).append(
+            (back_cap_center_index, 1.0)
+        )
+        for segment in range(RING_SEGMENTS):
+            next_segment = (segment + 1) % RING_SEGMENTS
+            inner = inner_ring_start + segment
+            inner_next = inner_ring_start + next_segment
+            faces.append((inner, inner_next, cap_center_index))
+            cuff_face_indices.add(len(faces) - 1)
+            back_inner = back_inner_start + segment
+            back_inner_next = back_inner_start + next_segment
+            faces.append((
+                back_inner_next,
+                back_inner,
+                back_cap_center_index,
+            ))
+            cuff_face_indices.add(len(faces) - 1)
+
     mesh = bpy.data.meshes.new(SLEEVE_OBJECT)
     mesh.from_pydata(vertices, [], faces)
     mesh.update()
     uv_layer = mesh.uv_layers.new(name="RobeUV")
     for polygon in mesh.polygons:
-        polygon.use_smooth = True
+        polygon.use_smooth = polygon.index not in cuff_face_indices
         for loop_index in polygon.loop_indices:
             uv_layer.data[loop_index].uv = uvs[mesh.loops[loop_index].vertex_index]
     mesh.materials.append(robe_material)
@@ -432,12 +563,12 @@ def main() -> None:
     armature = bpy.data.objects[SOURCE_ARMATURE]
     skin = bpy.data.objects[SOURCE_SKIN]
     remove_previous_generated_objects()
-    trim_skin_to_exposed_hands(skin)
+    trim_skin_to_exposed_hands(skin, armature)
     if variant == EVIL_VARIANT:
         robe = material("Wizard_Robe_Oxblood", (0.12, 0.018, 0.028, 1.0), 0.94)
         nails = material("Wizard_Nail_Claw", (0.32, 0.22, 0.16, 1.0), 0.38)
     else:
-        robe = material("Wizard_Robe_Midnight", (0.11, 0.16, 0.24, 1.0), 0.91)
+        robe = material("Wizard_Robe_Amethyst", (0.2, 0.075, 0.32, 1.0), 0.91)
         nails = material("Wizard_Nail_Natural", (0.46, 0.34, 0.25, 1.0), 0.52)
     sleeves = create_sleeves(armature, robe, variant)
     pointed_nails = create_pointed_nails(armature, nails, variant)

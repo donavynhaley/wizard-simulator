@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="Element" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="Element" format=3 uid="uid://b5rok0e5f26l6"]
 
-[ext_resource type="Script" path="res://game/spellcraft/elements/element.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://cg6n7dudswdyf" path="res://game/spellcraft/elements/element.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://game/spellcraft/casting/spells/water_jet_cast.tscn" id="2_hurl"]
 
 [resource]
 script = ExtResource("1_script")
@@ -11,3 +12,4 @@ rim_color = Color(0.55, 0.86, 1, 1)
 emission_energy = 3.2
 flow_speed = 1.1
 noise_scale = 2.4
+hurl_cast_scene = ExtResource("2_hurl")

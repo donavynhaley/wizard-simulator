@@ -46,9 +46,9 @@ func _run() -> void:
 	escape_up.pressed = false
 	Input.parse_input_event(escape_up)
 
-	for frame in 90:
-		if frame % 10 == 0:
-			var arm_player := journal._casting._left_arm_anim as AnimationPlayer
+	for frame in 360:
+		if frame % 30 == 0:
+			var arm_player := journal._element_hand._left_arm_anim as AnimationPlayer
 			print(
 				"LIVE_JOURNAL frame=", frame,
 				" open=", journal.is_open(),
@@ -61,7 +61,12 @@ func _run() -> void:
 				" arm_position=", arm_player.current_animation_position,
 				" arm_length=", arm_player.current_animation_length,
 				" arm_playing=", arm_player.is_playing())
+		if not journal.is_transitioning() and journal.summon_progress >= 0.999:
+			break
 		await process_frame
+	# Let the viewport page texture and final book transform settle together.
+	await process_frame
+	await process_frame
 
 	var image := root.get_texture().get_image()
 	if image == null:

@@ -1,0 +1,28 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://game/spellcraft/casting/spells/hurl_projectile.gd" id="1_script"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial_stone"]
+albedo_color = Color(0.36, 0.25, 0.13, 1)
+roughness = 0.88
+
+[sub_resource type="BoxMesh" id="BoxMesh_shard"]
+material = SubResource("StandardMaterial_stone")
+size = Vector3(0.18, 0.14, 0.7)
+
+[node name="StoneShard" type="Node3D" groups=["stone_shard"]]
+script = ExtResource("1_script")
+maximum_range = 24.0
+gravity = 7.0
+damage = 80.0
+impulse_strength = 14.0
+impact_tags = Array[StringName]([&"earth", &"impact", &"stagger", &"break"])
+
+[node name="Orb" type="MeshInstance3D" parent="."]
+cast_shadow = 1
+mesh = SubResource("BoxMesh_shard")
+
+[node name="Light" type="OmniLight3D" parent="."]
+light_color = Color(0.8, 0.52, 0.2, 1)
+light_energy = 0.7
+omni_range = 2.0

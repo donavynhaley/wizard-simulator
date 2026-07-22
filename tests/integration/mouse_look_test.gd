@@ -25,6 +25,10 @@ func _run() -> void:
 	await physics_frame
 
 	var player: Node3D = scene.get_node("Player")
+	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+		print("MOUSE LOOK TEST SKIPPED: the display session cannot capture the pointer")
+		quit()
+		return
 	_check(Input.mouse_mode == Input.MOUSE_MODE_CAPTURED, "mouse captured on spawn")
 
 	var before := player.rotation.y

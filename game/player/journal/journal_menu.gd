@@ -8,7 +8,7 @@ extends Node
 ## page acts on number keys. The world keeps breathing while the wizard reads
 ## - only the player stops.
 ##
-## Sections today: Menu (resume / settings stub / quit) and Runes (the six
+## Sections today: Menu (resume / settings stub / quit) and Runes (the five
 ## verb glyphs with stroke playback). The journal's knowledge pages arrive
 ## with the knowledge system.
 
@@ -39,6 +39,7 @@ const BOOK_FRAME_WIDTH_MARGIN := 0.05
 var _player: WizardPlayer
 var _camera: Camera3D
 var _casting: CastingController
+var _element_hand: ElementHandController
 var _sight: SightController
 var _book: Book
 var _book_visual: BookVisual
@@ -60,6 +61,8 @@ func _ready() -> void:
 	assert(_player != null, "JournalMenu must live under a WizardPlayer.")
 	_camera = _player.get_node_or_null("Head/Camera3D") as Camera3D
 	_casting = get_parent().get_node_or_null("CastingController") as CastingController
+	_element_hand = get_parent().get_node_or_null(
+		"ElementHandController") as ElementHandController
 	_sight = get_parent().get_node_or_null("SightController") as SightController
 	_summon_animation = get_node_or_null(summon_animation_path) as AnimationPlayer
 	_belt_anchor = get_node_or_null(belt_anchor_path) as Node3D
@@ -108,7 +111,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			_open_menu()
 			get_viewport().set_input_as_handled()
 		return
-	# Escape and page arrows are the Book's own input; the journal only adds
+	# Escape and page-turn controls are the Book's own input; the journal adds
 	# the menu actions and bookmark flipping.
 	if event is InputEventKey and event.pressed and not event.echo:
 		match (event as InputEventKey).keycode:
@@ -141,6 +144,7 @@ func _open_menu() -> void:
 	if _casting != null:
 		_casting.set_process(false)
 		_casting.set_process_input(false)
+		_casting.set_process_unhandled_input(false)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_book.visible = true
 	_book.jump_to_spread(0)
@@ -165,8 +169,8 @@ func _on_reading_finished(_closed_book: Book) -> void:
 		_summon_animation.play_backwards(&"summon")
 		_summon_animation.seek(
 			_summon_animation.current_animation_length, true)
-		if _casting != null:
-			_casting.play_journal_stow_animation(summon_arm_animation)
+		if _element_hand != null:
+			_element_hand.play_journal_stow_animation(summon_arm_animation)
 	else:
 		_finish_stow()
 
@@ -179,10 +183,12 @@ func _finish_stow() -> void:
 	if _book_visual != null:
 		_book_visual.show_held_closed()
 	_summon_book_opened = false
+	if _element_hand != null:
+		_element_hand.restore_animation()
 	if _casting != null:
-		_casting.restore_left_hand_animation()
 		_casting.set_process(true)
 		_casting.set_process_input(true)
+		_casting.set_process_unhandled_input(true)
 	_player.set_control_enabled(true)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	Input.set_default_cursor_shape(Input.CURSOR_ARROW)
@@ -299,8 +305,8 @@ func _start_summon() -> void:
 		_book_visual.show_held_closed()
 	summon_progress = 0.0
 	set_process(true)
-	if _casting != null:
-		_casting.play_journal_summon_animation(summon_arm_animation)
+	if _element_hand != null:
+		_element_hand.play_journal_summon_animation(summon_arm_animation)
 	if _summon_animation != null and _summon_animation.has_animation(&"summon"):
 		_summon_animation.play(&"summon")
 		_summon_animation.seek(0.0, true)
@@ -363,9 +369,9 @@ func _update_summon_pose() -> void:
 
 
 func _sync_summon_to_arm() -> void:
-	if _casting == null:
+	if _element_hand == null:
 		return
-	var arm_progress := _casting.journal_animation_progress(
+	var arm_progress := _element_hand.journal_animation_progress(
 		summon_arm_animation)
 	if arm_progress < 0.0:
 		return
@@ -497,13 +503,13 @@ func _build_journal_data() -> BookData:
 		"",
 		"[Esc] closes the journal.",
 		"[Tab] flips to the next bookmark.",
-		"[Left] and [Right] turn pages.",
+		"[A] and [D] turn pages.",
 	])
 	var menu_right := BookPageData.new()
 	menu_right.title = "Bookmarks"
 	menu_right.body = "\n".join([
 		"Menu - this page.",
-		"Runes - the six verbs and their glyphs.",
+		"Runes - the five verbs and their glyphs.",
 		"",
 		"More pages will ink themselves in",
 		"as the journal learns.",

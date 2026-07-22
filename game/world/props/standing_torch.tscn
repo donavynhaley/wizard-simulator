@@ -1,0 +1,32 @@
+[gd_scene format=3 uid="uid://cstandtorch01"]
+
+[ext_resource type="PackedScene" uid="uid://l0uci3sbdmys" path="res://assets/models/standing_torch.glb" id="1_model"]
+[ext_resource type="PackedScene" uid="uid://bykwrxhkq5qhr" path="res://shared/vfx/magical_flame.tscn" id="2_flame"]
+[ext_resource type="Script" uid="uid://blm5c8etxdetm" path="res://game/spellcraft/elements/element_source.gd" id="3_source"]
+[ext_resource type="Resource" uid="uid://bxrnqs1iovw7f" path="res://game/spellcraft/elements/fire.tres" id="4_fire"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_pole"]
+height = 1.7
+radius = 0.17
+
+[node name="StandingTorch" type="Node3D"]
+
+[node name="Model" parent="." instance=ExtResource("1_model")]
+
+[node name="MagicalFlame" parent="." instance=ExtResource("2_flame")]
+transform = Transform3D(0.9, 0, 0, 0, 0.9, 0, 0, 0, 0.9, 0, 1.58, 0)
+light_energy = 1.1
+light_range = 3.6
+
+[node name="FireSource" type="Node3D" parent="MagicalFlame" node_paths=PackedStringArray("visual")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
+script = ExtResource("3_source")
+element = ExtResource("4_fire")
+one_shot = true
+visual = NodePath("..")
+
+[node name="Body" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Body"]
+shape = SubResource("CylinderShape3D_pole")

@@ -12,6 +12,8 @@ extends Resource
 @export var emission_energy := 3.5
 @export var flow_speed := 0.7
 @export var noise_scale := 3.5
+## Cast behaviour selected when the Hurl rune consumes this element.
+@export var hurl_cast_scene: PackedScene
 
 
 ## Pushes this element's look onto a spell effect. set_color updates the base/rim

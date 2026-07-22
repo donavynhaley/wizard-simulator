@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="BookData" format=3 uid="uid://cypdmvxsq2o7g"]
+
+[ext_resource type="Script" uid="uid://bfsb71ceawsfi" path="res://game/books/resources/book_data.gd" id="1_book_data"]
+[ext_resource type="Script" uid="uid://dqbhuio5lxao0" path="res://game/books/resources/book_page_data.gd" id="2_page_data"]
+[ext_resource type="Script" uid="uid://dr7ronxaidf54" path="res://game/books/resources/book_spread_data.gd" id="3_spread_data"]
+[ext_resource type="Resource" path="res://content/runes/templates/hurl/hurl_template_01.tres" id="4_hurl"]
+[ext_resource type="Resource" path="res://content/books/default_book_visual_profile.tres" id="5_visual_profile"]
+
+[sub_resource type="Resource" id="BookPageData_hurl_intro"]
+script = ExtResource("2_page_data")
+title = "Hurl Rune"
+body = "Category: Verb
+
+Trace the outward spear shown on the facing page in one continuous stroke.
+Hurl weaponizes the element carried in the left hand; the element decides how the attack travels."
+
+[sub_resource type="Resource" id="BookPageData_hurl_rune"]
+script = ExtResource("2_page_data")
+title = "Scribing Pattern"
+body = "Watch the glowing tip, then copy the full stroke in order on the scroll."
+rune_template = ExtResource("4_hurl")
+
+[sub_resource type="Resource" id="BookSpreadData_hurl_first"]
+script = ExtResource("3_spread_data")
+left_page = SubResource("BookPageData_hurl_intro")
+right_page = SubResource("BookPageData_hurl_rune")
+
+[resource]
+script = ExtResource("1_book_data")
+id = "hurl_rune_book"
+title = "Hurl Rune Book"
+display_name = "Hurl Rune Book"
+visual_profile = ExtResource("5_visual_profile")
+spreads = Array[ExtResource("3_spread_data")]([SubResource("BookSpreadData_hurl_first")])

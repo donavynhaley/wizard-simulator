@@ -1,9 +1,10 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://game/books/presentation/book_page_renderer.gd" id="1_renderer"]
 [ext_resource type="Script" path="res://game/scribing/runes/rune_template_view.gd" id="2_rune_view"]
 [ext_resource type="Theme" path="res://assets/themes/book_page_theme.tres" id="3_theme"]
 [ext_resource type="Script" path="res://game/books/presentation/book_page_patina.gd" id="4_patina"]
+[ext_resource type="FontFile" path="res://assets/fonts/almendra/Almendra-Bold.ttf" id="5_title_font"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBox_page_left"]
 bg_color = Color(0.77, 0.7, 0.56, 1)
@@ -87,7 +88,8 @@ theme_override_constants/separation = 12
 [node name="LeftTitle" type="Label" parent="SpreadRoot/Pages/LeftPage/Margin/Column"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_font_sizes/font_size = 40
+theme_override_fonts/font = ExtResource("5_title_font")
+theme_override_font_sizes/font_size = 42
 text = "Rune Book"
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -100,7 +102,7 @@ mouse_filter = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_font_sizes/font_size = 30
+theme_override_font_sizes/font_size = 31
 text = "The pages are blank."
 vertical_alignment = 1
 autowrap_mode = 3
@@ -153,7 +155,8 @@ theme_override_constants/separation = 11
 [node name="RightTitle" type="Label" parent="SpreadRoot/Pages/RightPage/Margin/Column"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_font_sizes/font_size = 40
+theme_override_fonts/font = ExtResource("5_title_font")
+theme_override_font_sizes/font_size = 42
 text = "Rune"
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -177,7 +180,7 @@ glow_width = 13.0
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_font_sizes/font_size = 27
+theme_override_font_sizes/font_size = 29
 text = "Category"
 vertical_alignment = 1
 autowrap_mode = 3

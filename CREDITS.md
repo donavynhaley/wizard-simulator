@@ -15,7 +15,7 @@ The runtime wizard model is stored at `assets/third_party/polypizza/Wizardus Max
 The original local Poly Pizza folder, including the unused `fps_arms.glb`, is retained at `source_assets/third_party_packs/polypizza/` for provenance.
 
 `fps_arms.glb` is Rigged Fps Arms by Player11132 from [poly.pizza](https://poly.pizza/m/AMGNKfQqVc), licensed under CC BY.
-CIt is retained as source material and is not referenced by the current runtime.
+It is retained as source material and is not referenced by the current runtime.
 
 ### WRAD ARMS (First-Person Viewmodel Arms)
 
@@ -26,6 +26,11 @@ The rigged first-person arms are stored at `assets/external/WRAD_ARMS/` (runtime
 
 The runtime copy is stored at `assets/third_party/seal/seal_animated_low_poly.glb`.
 The original local file is retained under `source_assets/third_party_packs/`.
+
+### Book Typography
+
+Book titles use Almendra Bold and body copy uses Alegreya from the [Google Fonts repository](https://github.com/google/fonts).
+Both families are released under the SIL Open Font License 1.1, preserved at `assets/fonts/almendra/OFL.txt` and `assets/fonts/alegreya/OFL.txt`.
 
 ## Complete Asset Packs
 

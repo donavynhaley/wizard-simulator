@@ -9,7 +9,10 @@ The current playable tower focuses on physical interaction, rune scribing, reada
 - A composed first-person player with movement, interaction, visible arms, beard inventory presentation, magical item handling, and HUD feedback.
 - Physical rune scribing with a scroll, ink, quill, reference book, camera poses, stroke recognition, rune glow, sealing, and completion signals.
 - Physical books with page data, page rendering, placement, opening, and page turning.
-- Early alchemy interactions for gathering elements, filling and heating a flask, and breaking a dropped flask.
+- Wizard Sight manipulation that moves elements between world sources and the wizard's left hand.
+- A five-rune casting language led by Hurl, with distinct fire, water, earth, and air attacks.
+- An amplified Fire Hurl that travels as a compact bolt and detonates in a large blast on collision or at maximum range.
+- Early alchemy interactions for filling and heating a flask and breaking a dropped flask.
 
 The previous compiled-spell, castable-scroll, spell-delivery, and spell-effect implementation has been removed intentionally.
 Sealing a scribed scroll currently preserves the ink and recognition results, restores player control, and emits `scribing_completed` without creating an inventory item.
@@ -39,13 +42,18 @@ See [docs/project-organization.md](docs/project-organization.md) for ownership r
 - `WASD` moves and the mouse looks.
 - `Space` jumps during normal play and seals a scroll when held during scribing.
 - `E` interacts with focused objects.
-- `Left click` opens or closes a held book and draws while scribing.
+- Hold `Q` for Wizard Sight, then `Left click` to grab an element into the left hand or place it into a matching empty source.
+- Hold `Right click` until the tracing cursor appears, keep holding it, then hold `Left click` and move the mouse to trace a rune.
+- Wizard Sight and rune casting are exclusive: release `Q` before raising the casting hand, and use or dismiss a primed rune before pressing `Q`.
+- Release `Right click` to prime the recognized verb.
+- `Left click` casts a primed Hurl while Wizard Sight is inactive.
+- `Left click` opens or closes a held book and traces ink while scribing.
 - `Left` and `Right` turn held-book pages while reading.
 - `B` lifts the beard while looking down.
 - `A` and `D` turn reference-book pages while scribing.
 - `W` and `S` move between the reference book and scroll camera poses while scribing.
 - `G` drops the held item.
-- `Esc` releases the mouse and `Left click` recaptures it.
+- `Esc` opens or closes the journal.
 
 ## Run
 

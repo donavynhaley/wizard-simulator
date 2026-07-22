@@ -11,6 +11,10 @@ const LookComponent := preload("res://game/player/components/wizard_look.gd")
 @onready var locomotion: LocomotionComponent = $Components/Locomotion
 @onready var look: LookComponent = $Components/Look
 @onready var viewmodel_motion: ViewmodelMotion = $Components/ViewmodelMotion
+@onready var sight: SightController = $Components/SightController
+@onready var element_hand: ElementHandController = $Components/ElementHandController
+@onready var casting: CastingController = $Components/CastingController
+@onready var health: HealthComponent = $Components/HealthComponent
 @onready var head: Node3D = $Head
 @onready var viewmodel: Node3D = $Head/Camera3D/Viewmodel
 @onready var hud: WizardHud = $WizardHud
@@ -29,7 +33,12 @@ func _ready() -> void:
 	assert(look != null, "WizardPlayer requires a Look component.")
 	hud.configure(interactor)
 	viewmodel_motion.configure(self, head, viewmodel.get_node(^"WizardHat"))
-	_capture_mouse()
+	sight.element_action_requested.connect(element_hand.interact_with_source)
+	sight.element_pull_started.connect(element_hand.on_pull_started)
+	sight.element_pull_updated.connect(element_hand.on_pull_updated)
+	sight.element_pull_canceled.connect(element_hand.on_pull_canceled)
+	casting.hurl_requested.connect(_on_hurl_requested)
+	_capture_mouse.call_deferred()
 
 func control_enabled() -> bool:
 	return _control_enabled
@@ -52,6 +61,24 @@ func apply_mouse_look(relative: Vector2) -> void:
 	if not look_enabled:
 		return
 	look.apply(self, head, relative)
+
+
+func receive_spell_impact(impact: SpellImpact) -> void:
+	if impact == null:
+		return
+	health.take_damage(impact.damage)
+	velocity += impact.impulse
+	if impact.damage > 0.0:
+		WizardHud.toast(self, "The blast scorches you for %d" % roundi(impact.damage))
+
+
+func _on_hurl_requested() -> void:
+	var element := element_hand.take_for_hurl()
+	if element == null:
+		casting.refuse_empty_hurl()
+		return
+	if not casting.fire_hurl(element):
+		element_hand.restore_from_failed_hurl(element)
 
 
 func _physics_process(delta: float) -> void:
@@ -87,4 +114,10 @@ func _notification(what: int) -> void:
 
 
 func _capture_mouse() -> void:
+	# Offscreen capture and preview SubViewports have no operating-system window
+	# to own captured input. A newly created Wayland window may also need one
+	# frame before the compositor grants focus.
+	var window := get_viewport() as Window
+	if window == null or not window.has_focus():
+		return
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED

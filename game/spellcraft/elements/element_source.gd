@@ -1,32 +1,34 @@
 class_name ElementSource
 extends Node3D
 
-## A world source the player can pull an element from through Sight (a flame
+## A world source the player can move an element from through Sight (a flame
 ## for fire, water for water, ...). Registered in the "element_source" group so
 ## Sight can project every source to screen and pick the aimed one.
 ##
-## One-shot sources are the sourcing rule made visible: pulling consumes the
-## source, and its visual is sucked into the caster's palm to merge with the
-## primed rune. While the pull dwells, the visual leans and shrinks toward the
-## hand; a cancelled pull eases it back; a completed pull rips it free.
+## One-shot sources are the sourcing rule made visible: taking consumes the
+## source, and its visual is sucked into the caster's left palm. A depleted
+## source remains a valid Sight target.
 ## A depleted source stays in the group as an EMPTY VESSEL - Sight renders it
-## hollow, and held essence of the matching element can be poured back in
-## (restore), reversing the suck. Power is never created, only moved.
+## hollow, and held essence of the matching element can be placed back in,
+## reversing the movement. Power is never created, only moved.
 
-## The group ("tag") every pullable source joins, so the caster finds them all.
+## The group ("tag") every movable source joins, so Sight finds them all.
 const GROUP := &"element_source"
 
 signal consumed
 signal restored
 
 @export var element: Element
-## When true the source is spent by a single completed pull.
+## When true the source is spent by a single completed grab.
 @export var one_shot := false
 ## The prop visual that leans, shrinks, and is finally sucked into the palm
 ## (e.g. the MagicalFlame node). Optional: without it the source still depletes.
 @export var visual: Node3D
 ## Seconds for the final suck-into-the-hand animation.
 @export var consume_time := 0.35
+## Seconds for the reverse flight when essence is poured back. Taking is a
+## fight; giving back is a release, so it defaults faster than the pull.
+@export var restore_time := 0.25
 
 var _depleted := false
 var _visual_base: Transform3D
@@ -55,8 +57,25 @@ func available() -> bool:
 	return not _depleted
 
 
-## Called every frame of an active pull: the visual leans toward the hand and
-## compresses, so the player feels the element resisting before it gives.
+## Authors a vessel that begins empty (Case Minus One's dark lantern): no
+## animation, no signal fanfare beyond consumed - the world starts this way.
+func deplete_silently() -> void:
+	if _depleted or not one_shot:
+		return
+	if visual != null:
+		_save_visual_base()
+		if "light_energy" in visual:
+			_visual_light_energy = visual.light_energy
+			visual.light_energy = 0.0
+		visual.visible = false
+	else:
+		_home_point = global_position
+	_depleted = true
+	consumed.emit()
+
+
+## Optional anticipation hook for interactions that animate a source toward the
+## hand before a grab completes.
 func set_pull(progress: float, hand_position: Vector3) -> void:
 	if _depleted or visual == null:
 		return
@@ -70,7 +89,7 @@ func set_pull(progress: float, hand_position: Vector3) -> void:
 	visual.scale = _visual_base.basis.get_scale() * (1.0 - 0.35 * eased)
 
 
-## Pull abandoned: ease the visual back to where it lives.
+## Movement abandoned: ease the visual back to where it lives.
 func release_pull() -> void:
 	if _depleted or visual == null or not _visual_base_saved:
 		return
@@ -80,9 +99,9 @@ func release_pull() -> void:
 	_return_tween.tween_property(visual, "transform", _visual_base, 0.25)
 
 
-## Pull completed: the element rips free and is sucked into the palm. One-shot
-## sources deplete immediately (Sight drops the ring) and hide once the suck
-## lands; persistent sources just settle back.
+## Grab completed: the element rips free and is sucked into the left palm.
+## One-shot sources deplete immediately and hide once the movement lands.
+## Persistent sources simply settle back.
 func consume(hand_position: Vector3) -> void:
 	if not one_shot:
 		release_pull()
@@ -105,16 +124,21 @@ func consume(hand_position: Vector3) -> void:
 	_consume_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	_consume_tween.tween_property(visual, "global_position", hand_position, consume_time)
 	_consume_tween.tween_property(visual, "scale", Vector3.ONE * 0.02, consume_time)
-	# MagicalFlame exposes light_energy; dim it as the flame leaves its wick.
+	# MagicalFlame exposes light_energy; flare once at the instant of the rip,
+	# then dim as the flame leaves its wick.
 	if "light_energy" in visual:
-		_consume_tween.tween_property(visual, "light_energy", 0.0, consume_time)
+		var light_tween := create_tween()
+		light_tween.tween_property(
+			visual, "light_energy", _visual_light_energy * 1.6, 0.07)
+		light_tween.tween_property(
+			visual, "light_energy", 0.0, maxf(consume_time - 0.07, 0.05))
 	_consume_tween.chain().tween_callback(func() -> void:
 		if is_instance_valid(visual):
 			visual.visible = false)
 
 
-## Held essence poured back into the empty vessel: the suck in reverse. The
-## visual reappears at the hand, flies home, and rekindles its light.
+## Held essence placed back into the empty vessel: the movement in reverse.
+## The visual reappears at the hand, flies home, and rekindles its light.
 func restore(from_position: Vector3) -> void:
 	if not _depleted:
 		return
@@ -130,11 +154,14 @@ func restore(from_position: Vector3) -> void:
 	visual.global_position = from_position
 	visual.scale = Vector3.ONE * 0.02
 	var tween := create_tween()
-	tween.set_parallel(true)
 	tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.tween_property(visual, "transform", _visual_base, consume_time)
+	tween.tween_property(visual, "transform", _visual_base, restore_time)
+	# Rekindling over-blooms briefly before settling - the vessel drinks deep.
 	if "light_energy" in visual:
-		tween.tween_property(visual, "light_energy", _visual_light_energy, consume_time)
+		var light_tween := create_tween()
+		light_tween.tween_property(
+			visual, "light_energy", _visual_light_energy * 1.5, restore_time)
+		light_tween.tween_property(visual, "light_energy", _visual_light_energy, 0.15)
 
 
 func _save_visual_base() -> void:

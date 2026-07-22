@@ -64,8 +64,26 @@ func _check_wizard_arm_remodel(wizard_arms: Node3D) -> void:
 	_check(sleeves != null, "remodeled arms include skinned robe sleeves")
 	_check(nails != null, "remodeled arms include pointed fingernails")
 	if sleeves != null:
-		_check(sleeves.material_override is ShaderMaterial,
+		var sleeve_vertices := sleeves.mesh.surface_get_arrays(0)[
+			Mesh.ARRAY_VERTEX] as PackedVector3Array
+		_check(sleeve_vertices.size() >= 1240,
+			"robe sleeves include sealed hanging cuff geometry")
+		var sleeve_material := sleeves.material_override as ShaderMaterial
+		_check(sleeve_material != null,
 			"robe sleeves use the procedural fabric and sway material")
+		if sleeve_material != null:
+			var viewmodel_fill: Variant = sleeve_material.get_shader_parameter(
+				&"viewmodel_fill")
+			_check(viewmodel_fill is float and viewmodel_fill >= 0.3,
+				"robe sleeve shader remains visible in unlit viewmodel areas")
+
+	var hands := wizard_arms.find_child("arms_mesh", true, false) as MeshInstance3D
+	_check(hands != null, "remodeled arms retain the skinned hand mesh")
+	if hands != null:
+		var hand_vertices := hands.mesh.surface_get_arrays(0)[
+			Mesh.ARRAY_VERTEX] as PackedVector3Array
+		_check(hand_vertices.size() <= 610,
+			"hand mesh removes wrist vertices hidden beneath the robe cuffs")
 
 	var right_animation := wizard_arms.get_node_or_null(
 		^"AnimationPlayer") as AnimationPlayer
