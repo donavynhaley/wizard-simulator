@@ -40,6 +40,15 @@ func set_particle_density(ratio: float) -> void:
 			(child as GPUParticles3D).amount_ratio = clamped_ratio
 
 
+## Turns the particle wisps on or off. Held in the palm the wisps are fixed-size
+## billboards that read wrong up close, so a carried flame stops emitting and
+## leans on the flame body alone.
+func set_particles_emitting(enabled: bool) -> void:
+	for child in find_children("*", "GPUParticles3D", true, false):
+		if child is GPUParticles3D:
+			(child as GPUParticles3D).emitting = enabled
+
+
 func _update_core_motion() -> void:
 	if core_root == null:
 		return

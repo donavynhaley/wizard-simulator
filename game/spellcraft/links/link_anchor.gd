@@ -22,6 +22,11 @@ const GROUP := &"link_anchor"
 @export var target_path: NodePath
 ## Local offset of the strand attach point from this node.
 @export var attach_offset := Vector3.ZERO
+## Radius of the Sight knotwork - the luminous loops a link laces around the
+## anchored object (a bound thing looks tied; Bind is a knot).
+@export var knot_radius := 0.22
+## Local axis the knot loops wrap around.
+@export var knot_axis := Vector3.UP
 ## Human label for prompts and inscriptions ("the lantern", "the north door").
 @export var display_name: String = ""
 

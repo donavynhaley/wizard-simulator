@@ -52,8 +52,8 @@ func _draw() -> void:
 			var in_window: bool = m.get("window", false)
 			pos.x += m.get("shake_x", 0.0)
 			var half := radius * (0.85 + 0.18 * glow + (0.07 if in_window else 0.0))
-			var alpha := 0.7 if aimed else 0.32
-			alpha = maxf(alpha, 0.35 + 0.5 * glow)
+			var alpha := 0.9 if aimed else 0.55
+			alpha = maxf(alpha, 0.5 + 0.5 * glow)
 			if in_window:
 				alpha = 0.95
 			var points := PackedVector2Array([
@@ -69,18 +69,9 @@ func _draw() -> void:
 					Color(minf(col.r * 1.3, 1.0), minf(col.g * 1.3, 1.0),
 						minf(col.b * 1.3, 1.0), 0.9 * dim), 3.0, true)
 			continue
-		if m.get("empty", false):
-			# An empty vessel: thin hollow outline, waiting to be refilled.
-			var receptive := 2.0 if aimed else 1.0
-			draw_arc(pos, radius, 0.0, TAU, 48,
-				Color(col.r, col.g, col.b, 0.14 * receptive * dim), 1.5, true)
-			draw_arc(pos, radius * 0.45, 0.0, TAU, 32,
-				Color(col.r, col.g, col.b, 0.22 * receptive * dim), 1.0, true)
-		else:
-			# Faint base ring marks a source that Sight can manipulate.
-			draw_arc(pos, radius, 0.0, TAU, 48,
-				Color(col.r, col.g, col.b, (0.65 if aimed else 0.3) * dim),
-				2.5 if aimed else 2.0, true)
+		# Element sources signify in-world (their vessel's rim burns the element's
+		# colour in Sight), so the HUD no longer paints a ring per source. All
+		# that remains here is the pull gauge while the aimed source siphons.
 		if progress > 0.0:
 			# The hold gauge: sweeps from twelve o'clock as the pull commits.
 			draw_arc(pos, radius * 0.78, -PI * 0.5, -PI * 0.5 + TAU * progress, 40,

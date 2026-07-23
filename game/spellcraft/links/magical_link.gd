@@ -91,6 +91,7 @@ var _time := 0.0
 var _locally_analyzed := false
 var _solid_mesh: ImmediateMesh
 var _ghost_mesh: ImmediateMesh
+var _knot_mesh: ImmediateMesh
 var _attuning := false
 var _attune_phase := 0.0
 var _attune_hits := 0
@@ -661,7 +662,10 @@ func _update_label(delta: float) -> void:
 func _build_strand_meshes() -> void:
 	_solid_mesh = ImmediateMesh.new()
 	_ghost_mesh = ImmediateMesh.new()
-	for config: Array in [[_solid_mesh, false], [_ghost_mesh, true]]:
+	_knot_mesh = ImmediateMesh.new()
+	# All passes depth-test, so the opaque shadow-puppet cutouts (and any solid
+	# geometry) hide a link running behind them - no x-raying through shapes.
+	for config: Array in [[_solid_mesh, false], [_ghost_mesh, false], [_knot_mesh, false]]:
 		var instance := MeshInstance3D.new()
 		instance.mesh = config[0]
 		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -707,7 +711,9 @@ func _process(delta: float) -> void:
 	if _fade <= 0.005:
 		_solid_mesh.clear_surfaces()
 		_ghost_mesh.clear_surfaces()
+		_knot_mesh.clear_surfaces()
 		return
+	_rebuild_knots()
 	var from := endpoint_a()
 	var to := endpoint_b()
 	if from.distance_to(to) < 0.05:
@@ -715,6 +721,61 @@ func _process(delta: float) -> void:
 	var control := _control_point(from, to)
 	_rebuild(_solid_mesh, from, control, to, 1.0, false)
 	_rebuild(_ghost_mesh, from, control, to, 0.16, true)
+
+
+## --- The knotwork: a bound object looks tied ---
+## The thread's language continued onto its endpoints: luminous loops lace
+## around each anchored object in the link's colour, slowly creeping like rope
+## under tension, ashen while the link starves. Bind is a knot made visible.
+func _rebuild_knots() -> void:
+	_knot_mesh.clear_surfaces()
+	var camera := get_viewport().get_camera_3d()
+	if camera == null:
+		return
+	for anchor in [_anchor_a, _anchor_b]:
+		if anchor != null and is_instance_valid(anchor):
+			_draw_knot(anchor, camera.global_position)
+
+
+func _draw_knot(anchor: LinkAnchor, cam: Vector3) -> void:
+	const RINGS := 2
+	const SEGMENTS := 28
+	var center := anchor.anchor_point()
+	var axis := (anchor.global_transform.basis * anchor.knot_axis).normalized()
+	var u := axis.cross(Vector3.UP)
+	if u.length() < 0.01:
+		u = axis.cross(Vector3.RIGHT)
+	u = u.normalized()
+	var powered := is_powered()
+	var base := marker_color() if powered else ASHEN
+	for ring in RINGS:
+		var dir := 1.0 if ring % 2 == 0 else -1.0
+		# Alternate tilts interleave the loops like lacing.
+		var normal := axis.rotated(u, 0.35 * dir)
+		var ring_u := u
+		var ring_v := normal.cross(ring_u).normalized()
+		var radius := anchor.knot_radius * (1.0 + 0.14 * float(ring))
+		var spin := _time * 0.3 * dir
+		_knot_mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLE_STRIP)
+		for segment in SEGMENTS + 1:
+			var angle := spin + TAU * float(segment) / float(SEGMENTS)
+			var point := center + (ring_u * cos(angle) + ring_v * sin(angle)) * radius
+			var tangent := -ring_u * sin(angle) + ring_v * cos(angle)
+			var across := tangent.cross(cam - point)
+			across = across.normalized() if across.length() > 0.001 else Vector3.UP
+			# A slow pulse creeps around the loop; a starved knot barely glows.
+			var glow := 0.55 + 0.45 * maxf(0.0, sin(angle * 2.0 - _time * 2.2 * dir))
+			if not powered:
+				glow = 0.3
+			var alpha := _fade * 0.85 * (0.45 + 0.55 * glow)
+			var width := 0.011 + 0.007 * glow
+			var color := Color(base.r * (0.9 + glow), base.g * (0.9 + glow),
+				base.b * (0.9 + glow), alpha)
+			_knot_mesh.surface_set_color(color)
+			_knot_mesh.surface_add_vertex(point + across * width)
+			_knot_mesh.surface_set_color(color)
+			_knot_mesh.surface_add_vertex(point - across * width)
+		_knot_mesh.surface_end()
 
 
 func _control_point(from: Vector3, to: Vector3) -> Vector3:
@@ -755,11 +816,11 @@ func _rebuild(
 		# A missed strike also washes the strand ashen for a beat.
 		var ashen := t < _ash - 0.02 or _ash >= 1.0 or _ash_flash > 0.0
 		var color := ASHEN if ashen else base
-		var glow := 0.5
+		var glow := 1.2
 		var ripple := 0.0
 		if powered and not ashen:
 			# The pulse runs toward the drinker - direction is information.
-			glow = 0.55 + 0.45 * maxf(0.0, sin(TAU * (t * 2.5 - _time * 1.3)))
+			glow = 1.3 + 0.7 * maxf(0.0, sin(TAU * (t * 2.5 - _time * 1.3)))
 		if _attuning:
 			# The read-pulse comet with a trailing tail, rippling the strand.
 			var lag := t - _attune_phase
@@ -779,12 +840,12 @@ func _rebuild(
 			glow += 2.6 * exp(-pow((t - front_down) * 10.0, 2.0))
 		if _white_flash > 0.0:
 			color = color.lerp(Color.WHITE, _white_flash)
-		var alpha := _fade * alpha_scale * clampf(0.5 + 0.5 * glow, 0.0, 1.0)
+		var alpha := _fade * alpha_scale * clampf(0.7 + 0.5 * glow, 0.0, 1.0)
 		if dashed and int(t * SEGMENTS) % 4 >= 2:
 			alpha = 0.0
-		var width := 0.014 + 0.01 * minf(glow, 2.0) + ripple
-		var final := Color(color.r * (0.8 + glow), color.g * (0.8 + glow),
-			color.b * (0.8 + glow), alpha)
+		var width := 0.03 + 0.02 * minf(glow, 2.5) + ripple
+		var final := Color(color.r * (1.0 + glow * 1.6), color.g * (1.0 + glow * 1.6),
+			color.b * (1.0 + glow * 1.6), alpha)
 		mesh.surface_set_color(final)
 		mesh.surface_add_vertex(point + across * width)
 		mesh.surface_set_color(final)

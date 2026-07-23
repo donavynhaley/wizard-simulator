@@ -61,6 +61,9 @@ func bind_imported_door(hinge: Node3D, visual: Node3D) -> void:
 	transform = Transform3D.IDENTITY
 	visual.reparent(self, true)
 	_is_bound = true
+	# Maren woke this door. In Sight its silhouette breathes - in a theater
+	# where everything is still, the alive thing moves (docs/awakened-objects.md).
+	add_child(AwakenedPresence.new())
 
 
 func interact(player: WizardPlayer, _collider: Object) -> void:

@@ -29,6 +29,20 @@ signal restored
 ## Seconds for the reverse flight when essence is poured back. Taking is a
 ## fight; giving back is a release, so it defaults faster than the pull.
 @export var restore_time := 0.25
+## The mundane vessel holding this essence (the lantern body, the torch pole).
+## THE RULE: any object holding an element is untouched by the Wizard Sight
+## fade - while the source is lit its container renders fully real, warmed by
+## its own flame; drained, it flattens back into a cutout like any mundane
+## thing. Every prop with a source should point this at its model.
+@export var essence_container: Node3D
+## The empty vessel's hunger: a faint rim in the element's colour on the
+## flattened cutout, flaring under the aim - "essence can be placed here". Lit
+## vessels never show it (they are exempt from the overlay entirely), so the
+## rim always and only means empty-and-refillable.
+@export var rim_burn := true
+
+## Rim presence while the vessel stands empty: a thin, starved outline.
+const EMPTY_RIM := 0.25
 
 var _depleted := false
 var _visual_base: Transform3D
@@ -37,11 +51,76 @@ var _visual_light_energy := 0.0
 var _home_point := Vector3.ZERO
 var _return_tween: Tween
 var _consume_tween: Tween
+var _container_meshes: Array[MeshInstance3D] = []
+var _flare := 0.0
+var _flare_tween: Tween
 
 
 func _ready() -> void:
 	add_to_group(GROUP)
 	_home_point = global_position
+	# The visual IS the essence made physical (a burning flame is elemental
+	# fire), so it keeps its light in the shadow-puppet world: torches burn on
+	# while everything around them flattens to cutout.
+	if visual != null:
+		visual.add_to_group(&"sight_no_fade")
+	if essence_container != null and element != null:
+		_collect_container_meshes(essence_container)
+		if rim_burn:
+			_set_essence(&"essence_tint", element.color)
+		_apply_essence_presence()
+		_apply_container_exemption()
+
+
+## The wizard's aim rests on this source: the vessel's coloured rim flares
+## (called by SightController as the aimed Sight target changes).
+func set_sight_aimed(aimed: bool) -> void:
+	if _container_meshes.is_empty():
+		return
+	if _flare_tween != null and _flare_tween.is_valid():
+		_flare_tween.kill()
+	_flare_tween = create_tween()
+	_flare_tween.tween_method(_set_flare, _flare, 1.0 if aimed else 0.0, 0.15)
+
+
+func _set_flare(value: float) -> void:
+	_flare = value
+	_set_essence(&"essence_flare", value)
+
+
+## The rim's element presence: full and breathing while the vessel holds its
+## essence, a thin starved outline once it stands empty.
+func _apply_essence_presence() -> void:
+	if rim_burn:
+		_set_essence(&"essence_amount", EMPTY_RIM if _depleted else 1.0)
+
+
+## A lit vessel is real in the other world: while this source holds its essence
+## the container skips the shadow fade and glows by its own flame; drained, it
+## rejoins the theater as a cutout. Refresh keeps this honest mid-squint (the
+## wizard feeds and siphons vessels through Sight).
+func _apply_container_exemption() -> void:
+	if essence_container == null:
+		return
+	if _depleted:
+		essence_container.remove_from_group(&"sight_no_fade")
+	else:
+		essence_container.add_to_group(&"sight_no_fade")
+	SightFade.refresh(essence_container)
+
+
+func _set_essence(param: StringName, value: Variant) -> void:
+	for mesh in _container_meshes:
+		if is_instance_valid(mesh):
+			mesh.set_instance_shader_parameter(param, value)
+
+
+func _collect_container_meshes(node: Node) -> void:
+	var mesh := node as MeshInstance3D
+	if mesh != null:
+		_container_meshes.append(mesh)
+	for child in node.get_children():
+		_collect_container_meshes(child)
 
 
 ## World point the pull streams from. A live source reports its actual position
@@ -71,6 +150,8 @@ func deplete_silently() -> void:
 	else:
 		_home_point = global_position
 	_depleted = true
+	_apply_essence_presence()
+	_apply_container_exemption()
 	consumed.emit()
 
 
@@ -112,6 +193,8 @@ func consume(hand_position: Vector3) -> void:
 		# Nothing moves this source, so its current position is its home.
 		_home_point = global_position
 	_depleted = true
+	_apply_essence_presence()
+	_apply_container_exemption()
 	consumed.emit()
 	if visual == null:
 		return
@@ -143,6 +226,8 @@ func restore(from_position: Vector3) -> void:
 	if not _depleted:
 		return
 	_depleted = false
+	_apply_essence_presence()
+	_apply_container_exemption()
 	restored.emit()
 	if visual == null:
 		return

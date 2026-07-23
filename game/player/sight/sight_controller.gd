@@ -58,6 +58,7 @@ var _carry_thread: SiphonStream
 var _flash_screen := Vector2.ZERO
 var _flash_color := Color.WHITE
 var _flash_age := -1.0
+var _sight_fade: SightFade
 
 
 func _ready() -> void:
@@ -69,6 +70,9 @@ func _ready() -> void:
 	if _camera != null:
 		_base_fov = _camera.fov
 	_build_overlay()
+	_sight_fade = SightFade.new()
+	_sight_fade.player_node = _player
+	add_child(_sight_fade)
 
 
 ## The grade lives on its own CanvasLayer under the HUD (WizardHud defaults to
@@ -102,6 +106,8 @@ func _process(delta: float) -> void:
 	_rect.visible = _fade > 0.001
 	if _rect.visible:
 		_material.set_shader_parameter(&"intensity", _fade)
+	if _sight_fade != null:
+		_sight_fade.set_amount(_fade)
 	if _flash_age >= 0.0:
 		_flash_age += delta
 		if _flash_age > FLASH_TIME:
@@ -460,10 +466,16 @@ func _set_aimed_target(aimed: Node3D) -> void:
 	var previous := _aimed as MagicalLink
 	if previous != null and is_instance_valid(previous):
 		previous.set_aimed(false)
+	var previous_source := _aimed as ElementSource
+	if previous_source != null and is_instance_valid(previous_source):
+		previous_source.set_sight_aimed(false)
 	_aimed = aimed
 	var current := _aimed as MagicalLink
 	if current != null:
 		current.set_aimed(true)
+	var current_source := _aimed as ElementSource
+	if current_source != null:
+		current_source.set_sight_aimed(true)
 
 
 func _set_active(value: bool) -> void:

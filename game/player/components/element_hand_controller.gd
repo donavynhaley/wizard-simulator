@@ -25,6 +25,23 @@ signal element_consumed(element: Element)
 @export var rip_fov_kick := 1.6
 ## How far carried essence trails hand motion (seconds of velocity).
 @export var held_lag_strength := 0.045
+## A carried flame is a cupped handful, not a room-lighting fount: damp its
+## light and range so its shape reads in the palm instead of blooming out.
+@export var held_light_energy := 0.4
+@export var held_light_range := 0.9
+
+@export_group("Held Torch")
+## A held torch element (fire) casts this light so it lights the way. It is a
+## wide, soft cone - a broad warm wash like a real flame, not a focused beam.
+@export var torch_light_color := Color(1.0, 0.62, 0.34)
+@export var torch_light_energy := 3.2
+@export var torch_light_range := 14.0
+## Near a hemisphere so the light spills broadly instead of pooling in a spot.
+@export_range(0.0, 89.0) var torch_light_angle := 78.0
+## Soft cone edge - high values fade the falloff so there is no hard rim.
+@export var torch_light_edge_softness := 2.5
+## Where the torch light originates relative to the camera (slightly below/ahead).
+@export var torch_light_offset := Vector3(0.0, -0.12, -0.25)
 
 var _player: WizardPlayer
 var _camera: Camera3D
@@ -35,6 +52,8 @@ var _held_effect: Node3D
 var _held_element: Element
 var _prev_anchor_position := Vector3.ZERO
 var _lag_offset := Vector3.ZERO
+var _keep_held_upright := false
+var _held_torch_light: SpotLight3D
 var _journal_arm_animation: StringName = &""
 var _journal_arm_stowing: bool = false
 var _journal_arm_completed: bool = false
@@ -275,20 +294,36 @@ func _spawn_held_effect(element: Element) -> void:
 	_clear_held_effect(false)
 	if _left_arm_anim != null and _left_arm_anim.has_animation(&"spell_held_left"):
 		_left_arm_anim.play(&"spell_held_left")
-	if _left_anchor == null or held_effect_scene == null:
+	# An element may carry its own palm visual (fire holds the shared flame);
+	# otherwise the generic tinted orb stands in.
+	var scene: PackedScene = element.held_scene if element.held_scene != null else held_effect_scene
+	if _left_anchor == null or scene == null:
 		return
-	_held_effect = held_effect_scene.instantiate() as Node3D
+	_held_effect = scene.instantiate() as Node3D
 	if _held_effect == null:
 		return
 	_left_anchor.add_child(_held_effect)
 	_prev_anchor_position = _left_anchor.global_position
 	_lag_offset = Vector3.ZERO
 	# Arrive small, overshoot, settle - the essence lands in the palm.
+	var settled_scale := Vector3.ONE * element.held_scale
 	_held_effect.scale = Vector3.ONE * 0.02
 	var pop := _held_effect.create_tween()
 	pop.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	pop.tween_property(_held_effect, "scale", Vector3.ONE * 0.7, 0.3).set_delay(0.05)
+	pop.tween_property(_held_effect, "scale", settled_scale, 0.3).set_delay(0.05)
 	element.apply_to(_held_effect)
+	# A flame-style visual (the shared MagicalFlame) lights a whole room and
+	# throws big billboard wisps by default; in the palm, dim the light and stop
+	# the particles so the scaling flame body reads as a cupped handful of fire.
+	if _held_effect.has_method(&"set_light_scale"):
+		_held_effect.call(&"set_light_scale", held_light_energy, held_light_range)
+	if _held_effect.has_method(&"set_particles_emitting"):
+		_held_effect.call(&"set_particles_emitting", false)
+	# A bespoke visual (the flame) grows along +Y; keep it world-upright so it
+	# rises from the palm instead of inheriting the wrist bone's tilt.
+	_keep_held_upright = element.held_scene != null
+	if element.held_torch:
+		_spawn_held_torch_light()
 
 
 ## Carried essence trails the hand a few centimetres - secondary motion that
@@ -304,12 +339,39 @@ func _update_held_lag(delta: float) -> void:
 		target = target.normalized() * 0.08
 	_lag_offset = _lag_offset.lerp(target, 1.0 - exp(-10.0 * delta))
 	_held_effect.position = _left_anchor.global_transform.basis.inverse() * _lag_offset
+	if _keep_held_upright:
+		# Fire rises: keep the carried flame vertical however the wrist turns.
+		_held_effect.global_rotation = Vector3.ZERO
+
+
+## A forward spotlight from the camera so a carried torch element lights the way.
+## SpotLight3D casts along its -Z; parented to the camera unrotated, that is the
+## look direction, so the torch beam follows the wizard's gaze.
+func _spawn_held_torch_light() -> void:
+	if _camera == null:
+		return
+	if _held_torch_light == null:
+		_held_torch_light = SpotLight3D.new()
+		_held_torch_light.shadow_enabled = true
+		_camera.add_child(_held_torch_light)
+	_held_torch_light.position = torch_light_offset
+	_held_torch_light.light_color = torch_light_color
+	_held_torch_light.light_energy = torch_light_energy
+	_held_torch_light.spot_range = torch_light_range
+	_held_torch_light.spot_angle = torch_light_angle
+	_held_torch_light.spot_angle_attenuation = torch_light_edge_softness
+	_held_torch_light.spot_attenuation = 0.8
+	_held_torch_light.visible = true
 
 
 func _clear_held_effect(lower_hand: bool = true) -> void:
 	if _held_effect != null:
 		_held_effect.queue_free()
 		_held_effect = null
+	if _held_torch_light != null:
+		_held_torch_light.queue_free()
+		_held_torch_light = null
+	_keep_held_upright = false
 	if lower_hand and _held_element == null and _left_arm_anim != null \
 			and _left_arm_anim.has_animation(&"Reset_left"):
 		_left_arm_anim.play(&"Reset_left")

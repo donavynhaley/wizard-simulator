@@ -14,9 +14,10 @@ transform = Transform3D(0.75, 0, 0, 0, 0.75, 0, 0, 0, 0.75, 0, 0.475, -0.532)
 light_energy = 1.0
 light_range = 3.2
 
-[node name="FireSource" type="Node3D" parent="MagicalFlame" node_paths=PackedStringArray("visual")]
+[node name="FireSource" type="Node3D" parent="MagicalFlame" node_paths=PackedStringArray("visual", "essence_container")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
 script = ExtResource("3_source")
 element = ExtResource("4_fire")
 one_shot = true
 visual = NodePath("..")
+essence_container = NodePath("../../Model")

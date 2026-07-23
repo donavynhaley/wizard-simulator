@@ -42,19 +42,37 @@ func _init() -> void:
 		if right_anim != null and right_anim.has_animation(StringName(args[0])):
 			right_anim.play(StringName(args[0]))
 
-	# A fire orb on the left anchor, as the controller would spawn it.
+	# The carried fire on the left anchor, exactly as the controller spawns it -
+	# its bespoke held_scene (the shared MagicalFlame) at the element's held_scale,
+	# kept upright, with the forward torch spotlight on the camera.
 	var anchor := arms.get_node_or_null("arms/Skeleton3D/LeftHandAttachment/SpellAnchor")
-	var orb_scene := load("res://game/spellcraft/casting/effects/spell_palm_effect.tscn") as PackedScene
 	var fire := load("res://game/spellcraft/elements/fire.tres") as Element
-	if anchor != null and orb_scene != null:
-		var orb := orb_scene.instantiate() as Node3D
-		anchor.add_child(orb)
-		orb.scale = Vector3.ONE * 0.7
-		if fire != null:
-			fire.apply_to(orb)
+	var camera := player.get_node_or_null("Head/Camera3D") as Camera3D
+	var held: Node3D = null
+	if anchor != null and fire != null and fire.held_scene != null:
+		held = fire.held_scene.instantiate() as Node3D
+		anchor.add_child(held)
+		held.scale = Vector3.ONE * fire.held_scale
+		fire.apply_to(held)
+		if held.has_method(&"set_light_scale"):
+			held.call(&"set_light_scale", 0.4, 0.9)
+		if held.has_method(&"set_particles_emitting"):
+			held.call(&"set_particles_emitting", false)
+		if fire.held_torch and camera != null:
+			var torch := SpotLight3D.new()
+			camera.add_child(torch)
+			torch.position = Vector3(0.0, -0.12, -0.25)
+			torch.light_color = Color(1.0, 0.62, 0.34)
+			torch.light_energy = 4.0
+			torch.spot_range = 14.0
+			torch.spot_angle = 36.0
 
 	await physics_frame
 	for frame in 20:
+		# Keep the flame upright every frame, as the controller does, since the
+		# carry animation keeps re-rotating the wrist bone under it.
+		if held != null:
+			held.global_rotation = Vector3.ZERO
 		await process_frame
 
 	var image := viewport.get_texture().get_image()

@@ -14,6 +14,16 @@ extends Resource
 @export var noise_scale := 3.5
 ## Cast behaviour selected when the Hurl rune consumes this element.
 @export var hurl_cast_scene: PackedScene
+## Optional bespoke visual spawned in the palm while this element is carried.
+## Fire points at the shared MagicalFlame so held fire is the very same flame
+## seen on every torch and lantern - it feels like holding real fire. Unset
+## falls back to the hand controller's generic tinted orb.
+@export var held_scene: PackedScene
+## Target scale the carried visual settles to in the palm.
+@export var held_scale := 0.7
+## When true, carrying this element projects a forward light so the wizard can
+## use it in hand as a torch to light the way.
+@export var held_torch := false
 
 
 ## Pushes this element's look onto a spell effect. set_color updates the base/rim

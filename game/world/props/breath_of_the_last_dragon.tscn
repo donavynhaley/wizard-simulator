@@ -16,11 +16,12 @@ transform = Transform3D(1.5713373, 0.10771269, 0, -0.10771269, 1.5713373, 0, 0, 
 light_energy = 1.15
 light_range = 2.8
 
-[node name="FireSource" type="Node3D" parent="MagicalFlame2" unique_id=379250139 node_paths=PackedStringArray("visual")]
+[node name="FireSource" type="Node3D" parent="MagicalFlame2" unique_id=379250139 node_paths=PackedStringArray("visual", "essence_container")]
 transform = Transform3D(0.63491046, 0, 0, 0, 0.63491046, 0, 0, 0, 0.6349105, 0, 0, 0)
 script = ExtResource("2_rjk5b")
 element = ExtResource("3_wnt8i")
 visual = NodePath("..")
+essence_container = NodePath("../../eternal_flame")
 
 [node name="eternal_flame" parent="." unique_id=952543202 instance=ExtResource("4_mndnj")]
 
