@@ -124,8 +124,12 @@ func _run() -> void:
 	_check(terrain_body in player.get_collision_exceptions(),
 		"revealed basement passage locally ignores the intersecting hill terrain")
 
-	var hidden_stair_center := Vector3(3.45, 0.0, 1.45)
-	player.global_position = Vector3(4.15, -2.62, 1.45)
+	# Stair and wall positions are authored in TowerArchitecture-local space
+	# (this test predates the tower moving off the world origin), so resolve
+	# them through the architecture transform instead of world literals.
+	var hidden_stair_center: Vector3 = architecture.to_global(Vector3(3.45, 0.0, 1.45))
+	var climb_exit_y: float = architecture.to_global(Vector3(0.0, 0.7, 0.0)).y
+	player.global_position = architecture.to_global(Vector3(4.15, -2.62, 1.45))
 	player.rotation = Vector3.ZERO
 	player.locomotion.move_speed = 2.4
 	player.velocity = Vector3.ZERO
@@ -142,11 +146,11 @@ func _run() -> void:
 		var desired_direction := (tangent + radial_correction).normalized()
 		player.rotation.y = atan2(-desired_direction.x, -desired_direction.z)
 		await physics_frame
-		if player.global_position.y > 0.7:
+		if player.global_position.y > climb_exit_y:
 			break
 	Input.action_release(&"move_forward")
 	print("Hidden stair climb final player position: ", player.global_position)
-	_check(player.global_position.y > 0.7,
+	_check(player.global_position.y > climb_exit_y,
 		"player can climb the revealed hidden stair back to the ground floor")
 	var final_stair_offset := player.global_position - hidden_stair_center
 	_check(Vector2(final_stair_offset.x, final_stair_offset.z).length() < 1.5,
@@ -163,7 +167,7 @@ func _run() -> void:
 	_check(player.global_position.distance_to(architecture.basement_respawn.global_position) < 0.05,
 		"later deaths reuse the basement respawn point")
 
-	player.global_position = Vector3(7.2, 1.05, 0.0)
+	player.global_position = architecture.to_global(Vector3(7.2, 1.05, 0.0))
 	player.rotation.y = PI * 0.5
 	player.velocity = Vector3.ZERO
 	player.reset_physics_interpolation()
@@ -174,7 +178,7 @@ func _run() -> void:
 		await physics_frame
 	Input.action_release(&"move_forward")
 	print("Exterior wall approach final player position: ", player.global_position)
-	_check(player.global_position.x >= 6.25,
+	_check(player.global_position.x >= architecture.to_global(Vector3(6.25, 0.0, 0.0)).x,
 		"exterior wall collision meets the visible face of the stones")
 
 	level.queue_free()

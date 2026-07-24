@@ -113,8 +113,11 @@ func _run() -> void:
 	_check(woods_endpoint.x > 100.0, "woods lie to the right of the tower")
 	_check(farm_endpoint.x < -200.0, "farm lies to the left of the tower")
 	_check(village_endpoint.z > 490.0, "village lies along the center route")
-	var entrance_inside := Vector3(0.0, 1.4, 3.8)
-	var entrance_outside := Vector3(0.0, 1.4, 7.2)
+	# Entrance points are TowerArchitecture-local; the tower moved off the
+	# world origin in the 2026-07-21 scene split.
+	var entrance_architecture := level.get_node(^"TowerArchitecture") as Node3D
+	var entrance_inside: Vector3 = entrance_architecture.to_global(Vector3(0.0, 1.4, 3.8))
+	var entrance_outside: Vector3 = entrance_architecture.to_global(Vector3(0.0, 1.4, 7.2))
 	_check(_ray_hits_between(level, entrance_inside, entrance_outside),
 		"closed tower door blocks the entrance facing the exterior paths")
 	# The entrance is warded shut behind a starved Bind; feeding the lantern

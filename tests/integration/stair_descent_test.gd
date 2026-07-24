@@ -14,9 +14,21 @@ func _run() -> void:
 	await physics_frame
 
 	var player := scene.get_node("Player") as CharacterBody3D
+	var stair_visual := scene.find_child("central_spiral_stair", true, false) as MeshInstance3D
+	if stair_visual == null:
+		push_error("[FAIL] descent test needs the central_spiral_stair mesh")
+		quit(1)
+		return
+	# The tower no longer sits at the world origin (2026-07-21 scene split), so
+	# derive the spiral axis from the stair mesh instead of hardcoding it.
+	var stair_aabb := stair_visual.get_aabb()
+	var spiral_center: Vector3 = stair_visual.global_transform * stair_aabb.get_center()
+	var base_y := spiral_center.y - stair_aabb.size.y * 0.5
 	var start_angle := 0.1
 	player.global_position = Vector3(
-		cos(start_angle) * 1.25, 4.75, -sin(start_angle) * 1.25)
+		spiral_center.x + cos(start_angle) * 1.25,
+		base_y + 4.75,
+		spiral_center.z - sin(start_angle) * 1.25)
 	for index in 30:
 		await physics_frame
 		if player.is_on_floor():
@@ -27,7 +39,8 @@ func _run() -> void:
 	var airborne_frames := 0
 	Input.action_press("move_forward")
 	for index in 300:
-		var offset := Vector3(player.global_position.x, 0.0, player.global_position.z)
+		var offset := Vector3(player.global_position.x - spiral_center.x, 0.0,
+			player.global_position.z - spiral_center.z)
 		var angle := atan2(-offset.z, offset.x)
 		var tangent := Vector3(sin(angle), 0.0, cos(angle))
 		var radial_correction := offset.normalized() * (1.25 - offset.length()) * 2.0
