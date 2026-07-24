@@ -1,8 +1,7 @@
 class_name TowerDoor
 extends AnimatableBody3D
 
-signal opened
-signal closed
+const LOCK_BREAK_STREAM := preload("res://assets/sounds/siphon_rip.wav")
 
 @export_range(90.0, 120.0, 1.0) var open_angle_degrees := 105.0
 
@@ -21,7 +20,6 @@ var _lock_break_audio: AudioStreamPlayer3D
 
 
 func _ready() -> void:
-	_animation_player.animation_finished.connect(_on_animation_finished)
 	open_progress = 0.0
 
 
@@ -47,7 +45,7 @@ func _play_lock_break() -> void:
 		return
 	if _lock_break_audio == null:
 		_lock_break_audio = AudioStreamPlayer3D.new()
-		_lock_break_audio.stream = load("res://assets/sounds/siphon_rip.wav")
+		_lock_break_audio.stream = LOCK_BREAK_STREAM
 		_lock_break_audio.pitch_scale = 0.55
 		_lock_break_audio.bus = &"SpellCast"
 		add_child(_lock_break_audio)
@@ -55,8 +53,9 @@ func _play_lock_break() -> void:
 
 
 func bind_imported_door(hinge: Node3D, visual: Node3D) -> void:
-	assert(hinge != null, "TowerDoor requires the Blender-authored hinge.")
-	assert(visual != null, "TowerDoor requires the Blender-authored door visual.")
+	if hinge == null or visual == null:
+		push_error("TowerDoor: bind_imported_door needs the Blender-authored hinge and visual.")
+		return
 	reparent(hinge, false)
 	transform = Transform3D.IDENTITY
 	visual.reparent(self, true)
@@ -94,12 +93,3 @@ func _play_toward_target() -> void:
 	var playback_speed := 1.0 if _is_open else -1.0
 	_animation_player.play(&"open", -1.0, playback_speed, not _is_open)
 	_animation_player.seek(playback_position, true)
-
-
-func _on_animation_finished(animation_name: StringName) -> void:
-	if animation_name != &"open":
-		return
-	if _is_open:
-		opened.emit()
-	else:
-		closed.emit()

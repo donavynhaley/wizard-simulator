@@ -24,7 +24,9 @@ func _capture() -> void:
 	if player != null:
 		player.process_mode = Node.PROCESS_MODE_DISABLED
 		player.visible = false
-		var hud := player.get_node_or_null(^"WizardHUD") as CanvasLayer
+		# The node is named WizardHud (not WizardHUD); the old lookup was a
+		# silent no-op that left the HUD burned into every capture.
+		var hud := player.get_node_or_null(^"WizardHud") as CanvasLayer
 		if hud != null:
 			hud.visible = false
 

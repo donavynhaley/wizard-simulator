@@ -14,10 +14,16 @@ var _terrain_exception_active := false
 func _ready() -> void:
 	assert(tower_architecture != null, "WizardTower requires its architecture scene.")
 	assert(player != null, "WizardTower requires a player.")
+	# Typed lookup + push_error, not assert-on-any-descendant: asserts strip in
+	# release builds, where a renamed import would silently keep the basement
+	# passage shut, and find_child("*") depended on glb import order.
 	var terrain_mesh := $WorldBlockout.find_child("terrain-ground", true, false)
 	if terrain_mesh != null:
-		_terrain_body = terrain_mesh.find_child("*", true, false) as StaticBody3D
-	assert(_terrain_body != null, "WizardTower requires imported terrain collision.")
+		var bodies := terrain_mesh.find_children("*", "StaticBody3D", true, false)
+		if not bodies.is_empty():
+			_terrain_body = bodies[0] as StaticBody3D
+	if _terrain_body == null:
+		push_error("WizardTower: no StaticBody3D under terrain-ground; the basement terrain passage cannot open.")
 	player.health.died.connect(_on_player_died)
 
 

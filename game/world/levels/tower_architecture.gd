@@ -1,8 +1,6 @@
 class_name TowerArchitecture
 extends Node3D
 
-signal basement_revealed
-
 @onready var basement_respawn: Marker3D = $BasementRespawn
 @onready var _hatch_blocker: CollisionShape3D = $SecretHatchBlocker/CollisionShape3D
 @onready var entry_door: TowerDoor = $EntryDoor
@@ -17,11 +15,14 @@ func _ready() -> void:
 	_open_hatch = find_child("secret_hatch_open", true, false) as MeshInstance3D
 	var door_hinge := find_child("warded_entry_door_hinge", true, false) as Node3D
 	var door_visual := find_child("warded_entry_door", true, false) as Node3D
-	assert(_closed_hatch != null, "Tower architecture requires a closed secret hatch mesh.")
-	assert(_open_hatch != null, "Tower architecture requires an open secret hatch mesh.")
-	assert(door_hinge != null, "Tower architecture requires an authored entrance hinge.")
-	assert(door_visual != null, "Tower architecture requires an authored entrance door.")
-	entry_door.bind_imported_door(door_hinge, door_visual)
+	# push_error, not assert: these must fail loudly in release builds too,
+	# where a regenerated glb with renamed nodes would otherwise no-op.
+	if _closed_hatch == null or _open_hatch == null:
+		push_error("TowerArchitecture: missing secret_hatch_closed/secret_hatch_open meshes in the imported tower model.")
+	if door_hinge == null or door_visual == null:
+		push_error("TowerArchitecture: missing warded_entry_door_hinge/warded_entry_door in the imported tower model.")
+	else:
+		entry_door.bind_imported_door(door_hinge, door_visual)
 	_apply_basement_state()
 
 
@@ -30,7 +31,6 @@ func reveal_basement() -> void:
 		return
 	_basement_is_revealed = true
 	_apply_basement_state()
-	basement_revealed.emit()
 
 
 func is_basement_revealed() -> bool:

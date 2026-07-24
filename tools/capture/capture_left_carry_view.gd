@@ -29,6 +29,10 @@ func _init() -> void:
 		return
 
 	var arms := player.get_node_or_null("Head/Camera3D/Viewmodel/WizardArms")
+	if arms == null:
+		print("NO_LEFT_ANIMATION_PLAYER")
+		quit(1)
+		return
 	var left_anim := arms.get_node_or_null("LeftAnimationPlayer") as AnimationPlayer
 	if left_anim == null:
 		print("NO_LEFT_ANIMATION_PLAYER")
