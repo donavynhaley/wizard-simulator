@@ -19,7 +19,7 @@ const _INFO := {
 		"name": "Bind",
 		"glyph": "the Knot",
 		"meaning": "Create a link between two subjects.",
-		"hint": "One flowing figure-eight: two lobes tied by a single crossing.",
+		"hint": "One flowing sideways figure-eight (∞): two side lobes tied by a single crossing at the centre.",
 	},
 	&"sever": {
 		"name": "Sever",
@@ -152,13 +152,17 @@ static func template(id: StringName) -> RuneTemplate:
 	return out
 
 
-## Bind's glyph: a vertical figure-eight, two lobes joined by a crossing.
+## Bind's glyph: a horizontal figure-eight (the bond, ∞), two side lobes joined
+## by a central crossing. Laid sideways and wide on purpose - a vertical loop
+## read too close to Seal's ritual circle and Open's broken ring (both upright
+## loops); the wide double lobe and its central crossing separate the knot from
+## the whole ring family.
 static func _eight() -> PackedVector2Array:
 	var out := PackedVector2Array()
 	var steps := 64
 	for i in steps + 1:
 		var a := TAU * float(i) / float(steps)
-		out.append(Vector2(0.5 + 0.3 * sin(2.0 * a), 0.5 + 0.45 * cos(a)))
+		out.append(Vector2(0.5 + 0.48 * sin(a), 0.5 + 0.2 * sin(2.0 * a)))
 	return out
 
 

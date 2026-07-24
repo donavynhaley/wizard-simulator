@@ -71,6 +71,20 @@ func _init() -> void:
 	_check(_score_for(recognizer, broad_partial_hurl, &"hurl") < MATCH_THRESHOLD,
 		"one broad arrowhead cut cannot substitute for both Hurl cuts")
 
+	# Bind is a sideways figure-eight (the bond), reshaped to stay clear of the
+	# upright ring family - Seal's ritual circle and Open's broken ring. A
+	# vertical loop read too close to them; the knot must clear both comfortably,
+	# well past the caster's decisive margin, so a drawn Bind never wavers into a
+	# Seal or Open.
+	var canonical_bind := RuneGlyphs.points(&"bind")
+	_check(_score_for(recognizer, [canonical_bind], &"bind") > 0.95,
+		"the canonical Knot recognizes as Bind")
+	var bind_ring_rival := maxf(
+		_score_for(recognizer, [canonical_bind], &"seal"),
+		_score_for(recognizer, [canonical_bind], &"open"))
+	_check(_score_for(recognizer, [canonical_bind], &"bind") - bind_ring_rival >= 0.45,
+		"the Knot clears the ring family (Seal, Open) by a comfortable margin")
+
 	if _fail == 0:
 		print("SHAPE RECOGNIZER TEST OK")
 	quit(_fail)

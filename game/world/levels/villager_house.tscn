@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://cvillagerhs01"]
+
+[ext_resource type="Script" uid="uid://6jyq6s5qlofh" path="res://game/world/levels/villager_house.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://do8sf70chruwd" path="res://assets/models/environments/villager_house.glb" id="2_model"]
+[ext_resource type="PackedScene" uid="uid://cwardeddoor01" path="res://game/world/levels/door.tscn" id="3_door_scene"]
+
+[node name="VillagerHouse" type="Node3D"]
+script = ExtResource("1_script")
+
+[node name="Model" parent="." instance=ExtResource("2_model")]
+
+[node name="EntryDoor" parent="." instance=ExtResource("3_door_scene")]
+display_name = "cottage door"
+link_attach_offset = Vector3(1.3, -0.1, 0)
