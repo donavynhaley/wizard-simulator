@@ -6,8 +6,6 @@ extends Node3D
 ## heat reads in Wizard Sight and in the world, and reports is_hot() for anything
 ## that cares (a kettle boiling, snow melting, a puzzle gate).
 
-signal heat_changed(hot: bool)
-
 ## Optional Node3D shown only while hot (heat-shimmer particles, an ember glow).
 @export var indicator_path: NodePath
 ## Optional MeshInstance3D whose material emission ramps up while hot.
@@ -48,7 +46,6 @@ func set_hot(hot: bool) -> void:
 		_tween = create_tween()
 		_tween.tween_method(_apply_energy, _energy,
 			hot_emission_energy if hot else 0.0, 0.5)
-	heat_changed.emit(hot)
 
 
 func is_hot() -> bool:

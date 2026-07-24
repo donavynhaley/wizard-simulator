@@ -65,11 +65,5 @@ func target() -> Node:
 	return get_parent()
 
 
-## A fount is powered while its source holds its element; a sourceless anchor is
-## always "powered" (it contributes no gating of its own).
-func is_powered() -> bool:
-	return _source == null or _source.available()
-
-
 func label() -> String:
 	return display_name if not display_name.is_empty() else String(kind)

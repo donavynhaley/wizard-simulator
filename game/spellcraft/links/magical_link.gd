@@ -24,24 +24,23 @@ extends Node3D
 const GROUP := &"magical_link"
 const SEGMENTS := 20
 const ASHEN := Color(0.5, 0.52, 0.58)
-const INSCRIPTION_FONT := "res://assets/fonts/alegreya/Alegreya-Variable.ttf"
+const INSCRIPTION_FONT := preload("res://assets/fonts/alegreya/Alegreya-Variable.ttf")
 const BURST_SCENE := preload("res://game/spellcraft/elements/siphon_burst.tscn")
+## All strike/drone audio is preloaded: a load() on the strike frame is a disk
+## hitch at the exact moment the rhythm judges the player.
 ## Chord-building strikes: root, root+fifth, full resolve.
-const HIT_SOUNDS: Array[String] = [
-	"res://assets/sounds/attune_hit_1.wav",
-	"res://assets/sounds/attune_hit_2.wav",
-	"res://assets/sounds/attune_hit_3.wav",
+const HIT_STREAMS: Array[AudioStream] = [
+	preload("res://assets/sounds/attune_hit_1.wav"),
+	preload("res://assets/sounds/attune_hit_2.wav"),
+	preload("res://assets/sounds/attune_hit_3.wav"),
 ]
-const MISS_SOUND := "res://assets/sounds/attune_miss.wav"
-const HUM_SOUND := "res://assets/sounds/attune_hum.wav"
-const QUILL_SOUND := "res://assets/sounds/quill_scratch.wav"
+const MISS_STREAM := preload("res://assets/sounds/attune_miss.wav")
+const HUM_STREAM := preload("res://assets/sounds/attune_hum.wav")
+const QUILL_STREAM := preload("res://assets/sounds/quill_scratch.wav")
 ## A metronome tick on every comet pass through the gate - the pulse you time to.
-const PULSE_SOUND := "res://assets/sounds/attune_pulse.wav"
+const PULSE_STREAM := preload("res://assets/sounds/attune_pulse.wav")
 
 enum StrikeResult { MISS, HIT, COMPLETED }
-
-signal powered_changed(powered: bool)
-signal analyzed(link: MagicalLink)
 
 @export var anchor_a_path: NodePath
 @export var anchor_b_path: NodePath
@@ -168,6 +167,7 @@ func anchor_b() -> LinkAnchor:
 
 ## The fount anchor (the element provider), or null for a symmetric link.
 func source_anchor() -> LinkAnchor:
+	_validate_endpoints()
 	if _anchor_a != null and _anchor_a.provides_element():
 		return _anchor_a
 	if _anchor_b != null and _anchor_b.provides_element():
@@ -183,7 +183,19 @@ func sink_anchor() -> LinkAnchor:
 	return _anchor_b if fount == _anchor_a else _anchor_a
 
 
+## Player-built links can outlive the props they bind; a freed anchor or source
+## must read as absent, never as a dangling reference (error spam in _process).
+func _validate_endpoints() -> void:
+	if _anchor_a != null and not is_instance_valid(_anchor_a):
+		_anchor_a = null
+	if _anchor_b != null and not is_instance_valid(_anchor_b):
+		_anchor_b = null
+	if _source != null and not is_instance_valid(_source):
+		_source = null
+
+
 func is_powered() -> bool:
+	_validate_endpoints()
 	return _source == null or _source.available()
 
 
@@ -201,10 +213,12 @@ func sight_relevant() -> bool:
 
 
 func endpoint_a() -> Vector3:
+	_validate_endpoints()
 	return _anchor_a.anchor_point() if _anchor_a != null else global_position
 
 
 func endpoint_b() -> Vector3:
+	_validate_endpoints()
 	return _anchor_b.anchor_point() if _anchor_b != null else global_position
 
 
@@ -272,10 +286,6 @@ func end_attunement() -> void:
 
 func is_attuning() -> bool:
 	return _attuning
-
-
-func attunement_phase() -> float:
-	return _attune_phase
 
 
 func attunement_progress() -> float:
@@ -423,18 +433,15 @@ func analyze() -> void:
 	_locally_analyzed = true
 	JournalFacts.learn(fact_id)
 	_reveal_inscription()
-	analyzed.emit(self)
 
 
 func _on_starved() -> void:
-	powered_changed.emit(false)
 	# Ash spreads from the dead fount toward the sink; the effect only flips when
 	# the last of the element gutters out at the far end.
 	_tween_ash(1.0, 0.5, _apply_effect)
 
 
 func _on_rekindled() -> void:
-	powered_changed.emit(true)
 	# Feeding is the payoff beat: the element races down the strand, then the
 	# effect answers - ignite first, flip when the light arrives.
 	_tween_ash(0.0, 0.4, _apply_effect)
@@ -464,9 +471,9 @@ func _play_beat(hit: bool) -> void:
 	_beat_audio.global_position = gate_point()
 	if hit:
 		# The streak builds a chord: root, then the fifth, then the resolve.
-		_beat_audio.stream = load(HIT_SOUNDS[clampi(_attune_hits - 1, 0, HIT_SOUNDS.size() - 1)])
+		_beat_audio.stream = HIT_STREAMS[clampi(_attune_hits - 1, 0, HIT_STREAMS.size() - 1)]
 	else:
-		_beat_audio.stream = load(MISS_SOUND)
+		_beat_audio.stream = MISS_STREAM
 	_beat_audio.pitch_scale = 1.0
 	_beat_audio.play()
 
@@ -475,8 +482,7 @@ func _play_beat(hit: bool) -> void:
 ## code - otherwise the sustained hum plays a single pass and falls silent. The
 ## imported loop_end is 0, so a bare LOOP_FORWARD makes a ZERO-LENGTH loop (dead
 ## silence); set the end to the full sample length in frames.
-static func _looping_stream(path: String) -> AudioStream:
-	var stream: AudioStream = load(path)
+static func _looping_stream(stream: AudioStream) -> AudioStream:
 	var wav := stream as AudioStreamWAV
 	if wav != null:
 		wav.loop_begin = 0
@@ -491,7 +497,7 @@ func _start_hum() -> void:
 	if _hum_audio == null:
 		_hum_audio = AudioStreamPlayer3D.new()
 		_hum_audio.bus = &"SpellCast"
-		_hum_audio.stream = _looping_stream(HUM_SOUND)
+		_hum_audio.stream = _looping_stream(HUM_STREAM)
 		# Carry the drone well past the strand so it reads across the room.
 		_hum_audio.unit_size = 18.0
 		_hum_audio.max_db = 6.0
@@ -518,7 +524,7 @@ func _play_gate_pulse() -> void:
 	if _pulse_audio == null:
 		_pulse_audio = AudioStreamPlayer3D.new()
 		_pulse_audio.bus = &"SpellCast"
-		_pulse_audio.stream = load(PULSE_SOUND)
+		_pulse_audio.stream = PULSE_STREAM
 		_pulse_audio.unit_size = 18.0
 		_pulse_audio.max_db = 6.0
 		add_child(_pulse_audio)
@@ -541,7 +547,7 @@ func _build_label() -> void:
 	_label.no_depth_test = true
 	_label.fixed_size = false
 	_label.pixel_size = 0.0011
-	_label.font = load(INSCRIPTION_FONT)
+	_label.font = INSCRIPTION_FONT
 	_label.font_size = 40
 	_label.outline_size = 14
 	_label.modulate = Color(0.93, 0.87, 0.72, 0.0)
@@ -584,7 +590,7 @@ func _start_quill() -> void:
 	if _quill_audio == null:
 		_quill_audio = AudioStreamPlayer3D.new()
 		_quill_audio.bus = &"SpellCast"
-		_quill_audio.stream = _looping_stream(QUILL_SOUND)
+		_quill_audio.stream = _looping_stream(QUILL_STREAM)
 		_quill_audio.volume_db = -10.0
 		add_child(_quill_audio)
 	_quill_audio.global_position = gate_point()
