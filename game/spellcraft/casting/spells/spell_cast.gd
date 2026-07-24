@@ -5,13 +5,16 @@ extends Node3D
 ## instantiates the rune's cast scene when a spell is committed (SPELL_HELD) and
 ## drives it generically, so a new spell type is just a new subclass + a binding:
 ##   begin()      - once, on commit (set up any targeting preview)
-##   update_aim() - every held frame (move the reticle / track the look)
 ##   cast()       - on left click (lock the aim, hide the preview)
 ##   resolve()    - when the throw (spell_cast) clip finishes (spawn the result)
 ## Spawned results (projectiles, explosions) are parented to the world so they
 ## outlive this node, which is freed right after resolve().
 
 var element: Element   ## the imbued element applied to spawned effects (null = neutral)
+## Trace stability (the locked rune score, 0..1). Quality does not gate whether
+## a verb resolves; it shapes how the expression behaves - see stability tiers
+## in RuneGlyphs. Subclasses read it to scale potency and steadiness.
+var quality := 1.0
 
 var _camera: Camera3D
 var _muzzle: Node3D    ## where projectiles originate (the palm anchor)
@@ -27,10 +30,6 @@ func begin(camera: Camera3D, muzzle: Node3D, world: Node, caster: Node3D = null)
 	_on_begin()
 
 
-func update_aim(delta: float) -> void:
-	_on_aim(delta)
-
-
 ## Left click: lock in the aim and hide any preview. Result spawns on resolve().
 func cast() -> void:
 	_on_cast()
@@ -43,7 +42,6 @@ func resolve() -> void:
 
 # --- Overridable hooks ---
 func _on_begin() -> void: pass
-func _on_aim(_delta: float) -> void: pass
 func _on_cast() -> void: pass
 func _on_resolve() -> void: pass
 

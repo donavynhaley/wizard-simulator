@@ -173,7 +173,7 @@ The game needs hands-on verbs that feel physical in 3D.
 Strong verbs:
 
 - Grab
-- Pour
+- Decant
 - Grind
 - Inscribe
 - Aim

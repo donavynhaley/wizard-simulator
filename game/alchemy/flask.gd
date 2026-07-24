@@ -7,8 +7,6 @@ class_name Flask
 
 const GLASS_BREAK_SOUND: AudioStream = preload("res://assets/sounds/glass-breaking.wav")
 
-var item_in_flask: Reagent = null
-var is_cooked := false
 var _is_held := false
 @export var _is_stationed := false
 var _is_broken := false
@@ -20,12 +18,11 @@ func _ready() -> void:
 	max_contacts_reported = maxi(max_contacts_reported, 4)
 	if not body_entered.is_connected(_on_body_entered):
 		body_entered.connect(_on_body_entered)
+	if _is_stationed:
+		# Shelf scenes author flasks with _is_stationed set; without this they
+		# load as live unfrozen bodies that can be jostled yet never break.
+		_set_physics_active(false)
 
-func get_flask_item() -> Reagent:
-	return item_in_flask
-
-func cook() -> void:
-	is_cooked = true
 
 func set_held(value: bool) -> void:
 	_is_held = value
@@ -42,10 +39,6 @@ func set_stationed(value: bool) -> void:
 		_set_physics_active(false)
 	elif not _is_held:
 		_set_physics_active(true)
-
-
-func should_drop_straight_down() -> bool:
-	return true
 
 
 func _physics_process(_delta: float) -> void:

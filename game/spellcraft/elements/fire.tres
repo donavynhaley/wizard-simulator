@@ -1,6 +1,8 @@
-[gd_resource type="Resource" script_class="Element" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="Element" format=3 uid="uid://bxrnqs1iovw7f"]
 
-[ext_resource type="Script" path="res://game/spellcraft/elements/element.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://cg6n7dudswdyf" path="res://game/spellcraft/elements/element.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://game/spellcraft/casting/spells/fireball_cast.tscn" id="2_hurl"]
+[ext_resource type="PackedScene" uid="uid://bykwrxhkq5qhr" path="res://shared/vfx/magical_flame.tscn" id="3_flame"]
 
 [resource]
 script = ExtResource("1_script")
@@ -11,3 +13,7 @@ rim_color = Color(1, 0.78, 0.32, 1)
 emission_energy = 4.8
 flow_speed = 2.3
 noise_scale = 5.5
+hurl_cast_scene = ExtResource("2_hurl")
+held_scene = ExtResource("3_flame")
+held_scale = 2.7
+held_torch = true

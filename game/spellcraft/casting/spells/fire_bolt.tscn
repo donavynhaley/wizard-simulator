@@ -1,0 +1,84 @@
+[gd_scene load_steps=13 format=3]
+
+[ext_resource type="Script" path="res://game/spellcraft/casting/spells/hurl_projectile.gd" id="1_script"]
+[ext_resource type="Shader" path="res://game/spellcraft/casting/effects/spell_orb.gdshader" id="2_shader"]
+[ext_resource type="PackedScene" path="res://game/spellcraft/casting/effects/fire_explosion.tscn" id="3_explosion"]
+[ext_resource type="Shader" path="res://game/spellcraft/casting/effects/fire_particle.gdshader" id="4_particle_shader"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_bolt"]
+radius = 0.095
+height = 0.19
+radial_segments = 20
+rings = 10
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_bolt"]
+resource_local_to_scene = true
+shader = ExtResource("2_shader")
+shader_parameter/base_color = Color(1, 0.2, 0.015, 1)
+shader_parameter/rim_color = Color(1, 0.9, 0.32, 1)
+shader_parameter/emission_energy = 9.0
+shader_parameter/fresnel_power = 2.1
+shader_parameter/flow_speed = 4.5
+shader_parameter/noise_scale = 8.0
+shader_parameter/core_alpha = 1.0
+shader_parameter/pulse_speed = 8.0
+shader_parameter/pulse_amount = 0.12
+
+[sub_resource type="Gradient" id="Gradient_trail"]
+offsets = PackedFloat32Array(0, 0.45, 1)
+colors = PackedColorArray(1, 0.92, 0.3, 0.9, 1, 0.18, 0.01, 0.58, 0.4, 0.01, 0, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture_trail"]
+gradient = SubResource("Gradient_trail")
+
+[sub_resource type="Curve" id="Curve_trail"]
+_data = [Vector2(0, 0.8), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_trail"]
+curve = SubResource("Curve_trail")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_trail"]
+direction = Vector3(0, 0, 1)
+spread = 24.0
+initial_velocity_min = 1.0
+initial_velocity_max = 3.5
+gravity = Vector3(0, 0.25, 0)
+scale_min = 0.5
+scale_max = 1.25
+scale_curve = SubResource("CurveTexture_trail")
+color_ramp = SubResource("GradientTexture_trail")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_trail"]
+shader = ExtResource("4_particle_shader")
+shader_parameter/emission_energy = 3.5
+shader_parameter/core_size = 0.14
+
+[sub_resource type="QuadMesh" id="QuadMesh_trail"]
+material = SubResource("ShaderMaterial_trail")
+size = Vector2(0.12, 0.12)
+
+[node name="FireBolt" type="Node3D" groups=["fire_bolt"]]
+script = ExtResource("1_script")
+maximum_range = 28.0
+impact_scene = ExtResource("3_explosion")
+impact_tags = Array[StringName]([&"fire", &"projectile"])
+
+[node name="Orb" type="MeshInstance3D" parent="."]
+cast_shadow = 0
+mesh = SubResource("SphereMesh_bolt")
+surface_material_override/0 = SubResource("ShaderMaterial_bolt")
+
+[node name="Trail" type="GPUParticles3D" parent="."]
+cast_shadow = 0
+amount = 48
+lifetime = 0.42
+local_coords = false
+fixed_fps = 30
+process_material = SubResource("ParticleProcessMaterial_trail")
+draw_pass_1 = SubResource("QuadMesh_trail")
+
+[node name="Light" type="OmniLight3D" parent="."]
+light_color = Color(1, 0.28, 0.02, 1)
+light_energy = 4.0
+omni_range = 4.5

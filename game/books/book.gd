@@ -6,11 +6,7 @@ extends Item
 
 signal page_changed(spread_index: int)
 signal page_turn_started(from_spread: int, to_spread: int)
-signal page_turn_finished(spread_index: int)
-signal held_hint_changed(hint: String)
-signal reading_started(book: Book)
 signal reading_finished(book: Book)
-signal close_focus_changed(enabled: bool)
 
 @export var book_data: BookData:
 	set(value):
@@ -41,6 +37,7 @@ var _reference_page_turn_enabled := false
 var _is_reading := false
 var _page_turning := false
 var _pending_page := -1
+var _page_turn_generation := 0
 var _visual: BookVisual
 var _page_renderer: BookPageRenderer
 
@@ -63,12 +60,6 @@ func get_display_name() -> String:
 	return book_data.get_display_name() if book_data != null else "Untitled Book"
 
 
-func get_held_hint() -> String:
-	if _is_reading:
-		return "%s  [Arrows pages / hold RMB focus / LMB close / G drop]" % get_display_name()
-	return "%s  [LMB read / G drop]" % get_display_name()
-
-
 func get_held_pose() -> Dictionary:
 	return {
 		"position": held_position,
@@ -79,10 +70,6 @@ func get_held_pose() -> Dictionary:
 
 func is_reading() -> bool:
 	return _is_reading
-
-
-func get_reading_hand_grips() -> Array[Transform3D]:
-	return _visual.get_hand_grip_transforms() if _visual != null else []
 
 
 func set_held(value: bool) -> void:
@@ -102,7 +89,6 @@ func set_held(value: bool) -> void:
 		_cancel_page_turn()
 		_set_physics_active(true)
 	_refresh_visual_state()
-	_emit_held_hint_changed()
 	if was_reading and not _is_reading:
 		reading_finished.emit(self)
 
@@ -163,6 +149,52 @@ func is_page_turning() -> bool:
 	return _page_turning
 
 
+## Jumps straight to a spread without the page-turn animation. Intended for
+## initialization and other state changes that should not animate.
+func jump_to_spread(index: int) -> void:
+	_cancel_page_turn()
+	current_page = clampi(index, 0, _spread_count() - 1)
+	_update_page_content()
+	page_changed.emit(current_page)
+
+
+## Turns toward an arbitrary spread using the physical page animation. This
+## is used by bookmark navigation, while jump_to_spread remains available for
+## initialization and other intentionally immediate state changes.
+func turn_to_spread(index: int) -> void:
+	var target := clampi(index, 0, _spread_count() - 1)
+	if target == current_page or _page_turning:
+		return
+	_start_page_turn(target, 1 if target > current_page else -1)
+
+
+## Bookmark ribbon tabs rendered on the page edge (see BookPageRenderer).
+func set_bookmarks(names: Array[String], active_index: int) -> void:
+	if _page_renderer != null:
+		_page_renderer.set_bookmarks(names, active_index)
+
+
+## Maps a main-viewport mouse position onto the rendered two-page spread.
+## Values outside the spread return (-1, -1).
+func page_uv_from_screen(camera: Camera3D, screen_position: Vector2) -> Vector2:
+	if _visual == null:
+		return Vector2(-1.0, -1.0)
+	return _visual.page_uv_from_screen(camera, screen_position)
+
+
+## Projects a normalized point on the spread back to the main viewport.
+func page_uv_to_screen(camera: Camera3D, page_uv: Vector2) -> Vector2:
+	if _visual == null:
+		return Vector2(-1.0, -1.0)
+	return _visual.page_uv_to_screen(camera, page_uv)
+
+
+func bookmark_at_page_uv(page_uv: Vector2) -> int:
+	if _page_renderer == null:
+		return -1
+	return _page_renderer.bookmark_at_page_uv(page_uv)
+
+
 func _input(event: InputEvent) -> void:
 	if _is_reading and event.is_action_pressed(&"book_focus"):
 		_set_close_focus(true)
@@ -192,8 +224,6 @@ func _open_reading() -> void:
 	_is_reading = true
 	_update_page_content()
 	_refresh_visual_state()
-	_emit_held_hint_changed()
-	reading_started.emit(self)
 
 
 func _close_reading() -> void:
@@ -208,7 +238,6 @@ func _close_reading() -> void:
 		_visual.close_held()
 	else:
 		_refresh_visual_state()
-	_emit_held_hint_changed()
 	reading_finished.emit(self)
 
 
@@ -216,19 +245,16 @@ func _set_close_focus(enabled: bool) -> void:
 	if _visual == null or _visual.is_close_focused() == enabled:
 		return
 	_visual.set_close_focus(enabled)
-	close_focus_changed.emit(enabled)
 
 
 func _previous_page_pressed(event: InputEvent) -> bool:
-	if event.is_action_pressed("ui_left"):
-		return true
-	return not _is_reading and event.is_action_pressed("move_left")
+	return event.is_action_pressed("ui_left") \
+		or event.is_action_pressed("move_left")
 
 
 func _next_page_pressed(event: InputEvent) -> bool:
-	if event.is_action_pressed("ui_right"):
-		return true
-	return not _is_reading and event.is_action_pressed("move_right")
+	return event.is_action_pressed("ui_right") \
+		or event.is_action_pressed("move_right")
 
 
 func _update_page_content() -> void:
@@ -266,10 +292,42 @@ func _start_page_turn(target_page: int, direction: int) -> void:
 		return
 	_page_turning = true
 	_pending_page = target_page
+	_page_turn_generation += 1
+	var generation := _page_turn_generation
+	var outgoing_texture: Texture2D
 	if _page_renderer != null:
 		_page_renderer.set_rune_playback_enabled(false)
+		outgoing_texture = _page_renderer.capture_snapshot()
+		_page_renderer.show_spread(book_data, get_display_name(), target_page)
 	page_turn_started.emit(current_page, target_page)
-	if _visual == null or not _visual.play_page_turn(direction):
+	_begin_prepared_page_turn(direction, generation, outgoing_texture)
+
+
+func _begin_prepared_page_turn(
+		direction: int,
+		generation: int,
+		outgoing_texture: Texture2D) -> void:
+	# SubViewport.UPDATE_ONCE draws after the process step. Waiting one full
+	# frame gives the destination page a complete texture before the outgoing
+	# sheet lifts away, and also works with Godot's headless dummy renderer.
+	await get_tree().process_frame
+	if not is_instance_valid(self) \
+			or generation != _page_turn_generation \
+			or not _page_turning:
+		return
+	# Keep the destination on its live viewport texture for the whole turn.
+	# Using a snapshot here required a visible snapshot-to-viewport handoff when
+	# the sheet landed, especially once rune playback resumed.
+	var destination_texture: Texture2D = _page_renderer.get_texture() \
+		if is_instance_valid(_page_renderer) else null
+	var spread_count := _spread_count()
+	var destination_progress_ratio := 0.5 if spread_count <= 1 else clampf(
+		float(_pending_page) / float(spread_count - 1), 0.0, 1.0)
+	if not is_instance_valid(_visual) or not _visual.play_page_turn(
+			direction,
+			outgoing_texture,
+			destination_texture,
+			destination_progress_ratio):
 		_on_page_turn_midpoint()
 		_on_page_turn_finished()
 
@@ -278,7 +336,8 @@ func _on_page_turn_midpoint() -> void:
 	if not _page_turning or _pending_page < 0:
 		return
 	current_page = _pending_page
-	_update_page_content()
+	if _visual != null:
+		_visual.set_page_progress(current_page, _spread_count())
 	page_changed.emit(current_page)
 
 
@@ -291,16 +350,17 @@ func _on_page_turn_finished() -> void:
 	_page_turning = false
 	if _page_renderer != null:
 		_page_renderer.set_rune_playback_enabled(true)
-	page_turn_finished.emit(current_page)
 
 
 func _cancel_page_turn() -> void:
+	_page_turn_generation += 1
 	_pending_page = -1
 	_page_turning = false
 	if _visual != null:
 		_visual.cancel_page_turn()
 	if _page_renderer != null:
 		_page_renderer.set_rune_playback_enabled(true)
+		_page_renderer.show_spread(book_data, get_display_name(), current_page)
 
 
 func _spread_count() -> int:
@@ -331,7 +391,3 @@ func _set_physics_active(active: bool) -> void:
 	collision_layer = active_collision_layer if active or _is_stationed or not _is_held else 0
 	collision_mask = active_collision_mask if active or _is_stationed or not _is_held else 0
 
-
-func _emit_held_hint_changed() -> void:
-	if _is_held:
-		held_hint_changed.emit(get_held_hint())

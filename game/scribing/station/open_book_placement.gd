@@ -6,7 +6,6 @@ class_name OpenBookPlacement
 ## place_book() stays callable from code and the editor.
 
 signal book_placed(book: Book)
-signal book_taken(book: Book)
 
 @export_node_path("Node3D") var placement_anchor_path: NodePath = ^"StaticBody3D/CollisionShape3D"
 

@@ -1,6 +1,9 @@
 [gd_scene format=3 uid="uid://d4j6n73b5yerg"]
 
-[ext_resource type="PackedScene" uid="uid://dutawtky8ykta" path="res://assets/external/WRAD_ARMS/arms.glb" id="1_arms"]
+[ext_resource type="PackedScene" path="res://assets/models/player/wizard_arms.glb" id="1_arms"]
+[ext_resource type="AnimationLibrary" path="res://game/player/viewmodel/left_arm_animations.res" id="2_leftanims"]
+[ext_resource type="AnimationLibrary" path="res://game/player/viewmodel/journal_arm_animations.tres" id="3_journalanims"]
+[ext_resource type="Script" path="res://game/player/viewmodel/wizard_arms_visual.gd" id="4_visual"]
 
 [sub_resource type="Animation" id="Animation_fll8i"]
 length = 0.001
@@ -2488,6 +2491,7 @@ _data = {
 }
 
 [node name="WizardArms" unique_id=359090022 instance=ExtResource("1_arms")]
+script = ExtResource("4_visual")
 
 [node name="Skeleton3D" parent="arms" parent_id_path=PackedInt32Array(1091170384) index="0" unique_id=1701711107]
 bones/2/scale = Vector3(1.0000004, 1.0000013, 1.0000012)
@@ -2541,10 +2545,21 @@ bone_idx = 4
 [node name="SpellAnchor" type="Marker3D" parent="arms/Skeleton3D/RightHandAttachment" index="0" unique_id=1518641773]
 transform = Transform3D(1, 7.4505806e-08, -4.4703484e-08, 1.4901161e-08, 0.9999999, 2.9802322e-08, -2.9802322e-08, 4.4703484e-08, 0.9999998, -0.54736865, 0.6599293, 0.04736221)
 
+[node name="LeftHandAttachment" type="BoneAttachment3D" parent="arms/Skeleton3D" index="2"]
+bone_name = "wrist.l"
+bone_idx = 29
+
+[node name="SpellAnchor" type="Marker3D" parent="arms/Skeleton3D/LeftHandAttachment" index="0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.54736865, 0.6599293, 0.04736221)
+
 [node name="AnimationPlayer" type="AnimationPlayer" parent="." index="1" unique_id=372333211]
 libraries/ = SubResource("AnimationLibrary_27a50")
 
-[node name="PovPreviewCamera" type="Camera3D" parent="." index="2" unique_id=1773297211]
+[node name="LeftAnimationPlayer" type="AnimationPlayer" parent="." index="2"]
+libraries/ = ExtResource("2_leftanims")
+libraries/journal = ExtResource("3_journalanims")
+
+[node name="PovPreviewCamera" type="Camera3D" parent="." index="3" unique_id=1773297211]
 transform = Transform3D(11.11111, 0, 0, 0, 10.73568, 2.878498, 0, -2.878498, 10.73568, 0, 1.382458, 0.005814)
 fov = 78.0
 near = 0.03

@@ -122,11 +122,12 @@ Scarcity lives in reagents, inks, and time, and it relaxes at home one restored 
 
 ## Rune Vocabulary
 
-The rune core is the six-verb grammar defined in the bible: **Draw, Pour, Bind, Sever, Seal, Open**.
-Runes are verbs on the world-graph that Sight reads; compound workings are sequences of verbs, and raw hurled elements need no rune at all.
+The rune core is the five-verb grammar defined in the bible: **Hurl, Bind, Sever, Seal, Open**.
+Runes are verbs on the world-graph that Sight reads; compound workings are sequences of verbs, and offensive elemental casting requires Hurl.
+Wizard Sight directly moves known essence between a source and the wizard's left hand.
 
 The form/effect/modifier vocabulary below is legacy, kept as a design quarry.
-Most of it re-derives inside the verb grammar rather than surviving as runes: Ward is Seal, Tether is Bind, Mend is Pour with matching nature, Rend is forced Draw or opposed Pour, Font is a sustained Pour.
+Most of it re-derives inside the verb grammar rather than surviving as runes: Ward is Seal, Tether is Bind, and Bolt is Hurl carrying fire or earth.
 Delivery and shaping ideas (Nova, Fork, Chain, Seek, Echo, Quicken) likely return as scroll-tier inscription modifiers, not standalone runes.
 
 ### Legacy Form Runes

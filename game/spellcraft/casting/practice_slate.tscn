@@ -1,0 +1,26 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://game/spellcraft/casting/practice_slate.gd" id="1_script"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_slate"]
+size = Vector3(0.55, 0.75, 0.05)
+
+[sub_resource type="StandardMaterial3D" id="Material_slate"]
+albedo_color = Color(0.09, 0.08, 0.12, 1)
+roughness = 0.35
+emission_enabled = true
+emission = Color(0.35, 0.22, 0.6, 1)
+emission_energy_multiplier = 0.25
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_slate"]
+size = Vector3(0.55, 0.75, 0.07)
+
+[node name="PracticeSlate" type="StaticBody3D"]
+script = ExtResource("1_script")
+
+[node name="Model" type="MeshInstance3D" parent="."]
+material_override = SubResource("Material_slate")
+mesh = SubResource("BoxMesh_slate")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_slate")

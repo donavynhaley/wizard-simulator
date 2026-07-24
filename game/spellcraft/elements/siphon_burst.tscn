@@ -1,0 +1,50 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://game/spellcraft/elements/siphon_burst.gd" id="1_script"]
+
+[sub_resource type="Curve" id="Curve_burst"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(0.4, 0.7), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="CurveTexture" id="CurveTexture_burst"]
+curve = SubResource("Curve_burst")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_burst"]
+resource_local_to_scene = true
+emission_shape = 1
+emission_sphere_radius = 0.06
+direction = Vector3(0, 1, 0)
+spread = 180.0
+initial_velocity_min = 1.2
+initial_velocity_max = 2.6
+gravity = Vector3(0, 0.4, 0)
+damping_min = 2.0
+damping_max = 4.0
+scale_min = 0.4
+scale_max = 0.9
+scale_curve = SubResource("CurveTexture_burst")
+color = Color(1, 1, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_burst"]
+transparency = 1
+blend_mode = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+no_depth_test = true
+billboard_mode = 3
+billboard_keep_scale = true
+
+[sub_resource type="QuadMesh" id="QuadMesh_burst"]
+material = SubResource("StandardMaterial3D_burst")
+size = Vector2(0.08, 0.08)
+
+[node name="SiphonBurst" type="GPUParticles3D"]
+cast_shadow = 0
+one_shot = true
+explosiveness = 1.0
+amount = 26
+lifetime = 0.45
+local_coords = false
+process_material = SubResource("ParticleProcessMaterial_burst")
+draw_pass_1 = SubResource("QuadMesh_burst")
+script = ExtResource("1_script")

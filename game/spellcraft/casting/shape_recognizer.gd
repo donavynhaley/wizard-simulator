@@ -3,17 +3,24 @@ extends RefCounted
 
 ## Order-, direction-, and stroke-count-invariant rune recognition. All strokes
 ## are flattened, normalized per-axis to their bounding box, and rasterized into
-## a grid; the grid is scored against each template with a symmetric distance
-## field (chamfer) match. Distance scoring gives partial credit by HOW FAR ink
-## strays instead of IoU's binary hit-or-miss, so honest-but-wobbly drawings
-## score high, while missing template ink (a partially drawn rune) reads as
-## large template-to-input distances and keeps partial shapes from firing.
+## a grid. Root-mean-square chamfer distance makes localized missing ink matter,
+## while a secondary-axis spread signature distinguishes a complete branching
+## shape from its straight backbone.
 
 const GRID_SIZE := 32
 const DILATION := 1                 ## cells of ink thickness stamped per line
 const FILL_MARGIN := 0.9            ## shrink shapes so they never touch the grid edge
 const ASPECT_PENALTY_WEIGHT := 1.0  ## score multiplier strength for aspect mismatch
-const DISTANCE_TOLERANCE := 5.0     ## avg cells of drift that drops the score to 0
+## Missing secondary-axis spread is judged as a FRACTION of the template's own
+## spread: losing most of Hurl's small barb-spread is a missing feature (a bare
+## shaft must not fire), while a slightly under-drawn ring loses only a sliver
+## of Seal's large spread and stays competitive (wobble is not a missing
+## branch). Up to the tolerance fraction is hand noise; beyond it the penalty
+## ramps linearly to full rejection at the reject fraction.
+const SHAPE_SPREAD_TOLERANCE_FRACTION := 0.2
+const SHAPE_SPREAD_REJECT_FRACTION := 0.6
+const STRAY_DISTANCE_TOLERANCE := 8.0    ## generous room for broad hand-drawn ink
+const MISSING_DISTANCE_TOLERANCE := 5.0  ## strict requirement for template features
 const EPSILON := 0.00001
 
 var _templates: Array[Dictionary] = []
@@ -30,6 +37,7 @@ func add_template(id: StringName, strokes: Array) -> void:
 		"grid": grid,
 		"distance_field": _distance_transform(grid),
 		"aspect": _aspect_balance(_all_points(strokes)),
+		"shape_spread": _secondary_axis_spread(grid),
 	})
 
 
@@ -54,11 +62,44 @@ func evaluate(strokes: Array) -> Dictionary:
 	return best
 
 
+## Relative-margin resolution: the best verb wins when it clears a low quality
+## floor AND decisively beats the best OTHER verb. With a small closed
+## vocabulary, ambiguity between verbs is the failure that matters; absolute
+## polish is not, so a sloppy-but-unmistakable trace still lands.
+## Returns {id, score, second_id, second_score, decisive}.
+func resolve(strokes: Array, score_floor: float, margin: float) -> Dictionary:
+	var out := {
+		"id": &"", "score": 0.0,
+		"second_id": &"", "second_score": 0.0,
+		"decisive": false,
+	}
+	var candidates := evaluate_detailed(strokes)
+	if candidates.is_empty():
+		return out
+	candidates.sort_custom(
+		func(a: Dictionary, b: Dictionary) -> bool:
+			return float(a["score"]) > float(b["score"]))
+	out["id"] = candidates[0]["id"]
+	out["score"] = candidates[0]["score"]
+	# The runner-up must be a DIFFERENT verb: multiple exemplars of the same
+	# rune (canon glyph + recorded + personal) reinforce each other rather
+	# than compete for the margin.
+	for candidate in candidates.slice(1):
+		if candidate["id"] != out["id"]:
+			out["second_id"] = candidate["id"]
+			out["second_score"] = candidate["score"]
+			break
+	out["decisive"] = float(out["score"]) >= score_floor \
+		and float(out["score"]) - float(out["second_score"]) >= margin
+	return out
+
+
 ## Full per-template breakdown for tuning and debug logs. `forward` is how far
 ## the drawn ink strays from the template (sloppiness), `backward` is how far
-## template ink is from the drawing (incompleteness), both in average grid
-## cells. The final score is driven by the worse of the two, so a clean
-## fragment and a complete scribble both land where they should.
+## template ink is from the drawing (incompleteness), both in root-mean-square
+## grid cells. The final score is driven by the worse distance, aspect mismatch,
+## and missing secondary-axis spread. Extra spread is tolerated because a broad
+## hand-drawn branch is evidence of completeness, not a missing feature.
 func evaluate_detailed(strokes: Array) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if strokes.is_empty():
@@ -66,34 +107,93 @@ func evaluate_detailed(strokes: Array) -> Array[Dictionary]:
 	var grid := _rasterize(strokes)
 	var input_distance_field := _distance_transform(grid)
 	var input_aspect := _aspect_balance(_all_points(strokes))
+	var input_shape_spread := _secondary_axis_spread(grid)
 	for template in _templates:
-		var forward := _mean_ink_distance(grid, template["distance_field"] as PackedFloat32Array)
-		var backward := _mean_ink_distance(template["grid"] as PackedByteArray, input_distance_field)
-		var distance := maxf(forward, backward)
+		var forward := _root_mean_square_ink_distance(
+			grid, template["distance_field"] as PackedFloat32Array)
+		var backward := _root_mean_square_ink_distance(
+			template["grid"] as PackedByteArray, input_distance_field)
+		var distance_score := minf(
+			clampf(1.0 - forward / STRAY_DISTANCE_TOLERANCE, 0.0, 1.0),
+			clampf(1.0 - backward / MISSING_DISTANCE_TOLERANCE, 0.0, 1.0))
 		var aspect_delta: float = absf(input_aspect - float(template["aspect"]))
-		var score := clampf(1.0 - distance / DISTANCE_TOLERANCE, 0.0, 1.0) \
-			* clampf(1.0 - aspect_delta * ASPECT_PENALTY_WEIGHT, 0.0, 1.0)
+		var template_spread := float(template["shape_spread"])
+		var spread_deficit: float = maxf(template_spread - input_shape_spread, 0.0)
+		var spread_fraction_missing := 0.0
+		if template_spread > EPSILON:
+			spread_fraction_missing = spread_deficit / template_spread
+		var spread_penalty := clampf(
+			1.0 - maxf(spread_fraction_missing - SHAPE_SPREAD_TOLERANCE_FRACTION, 0.0)
+				/ (SHAPE_SPREAD_REJECT_FRACTION - SHAPE_SPREAD_TOLERANCE_FRACTION),
+			0.0, 1.0)
+		var score := distance_score \
+			* clampf(1.0 - aspect_delta * ASPECT_PENALTY_WEIGHT, 0.0, 1.0) \
+			* spread_penalty
 		out.append({
 			"id": template["id"],
 			"score": score,
 			"forward": forward,
 			"backward": backward,
+			"spread_deficit": spread_deficit,
 		})
 	return out
 
 
-## Average distance (in cells) from each inked cell of `ink` to the nearest ink
-## of the other drawing, read from that drawing's precomputed distance field.
-func _mean_ink_distance(ink: PackedByteArray, distance_field: PackedFloat32Array) -> float:
-	var total := 0.0
+## Root-mean-square distance from each inked cell to the nearest ink of the other
+## drawing. Squaring makes a missing branch matter more than many nearby cells.
+func _root_mean_square_ink_distance(
+	ink: PackedByteArray,
+	distance_field: PackedFloat32Array,
+) -> float:
+	var total_squared := 0.0
 	var count := 0
 	for i in ink.size():
 		if ink[i] == 1:
-			total += distance_field[i]
+			total_squared += distance_field[i] * distance_field[i]
 			count += 1
 	if count == 0:
-		return DISTANCE_TOLERANCE
-	return total / float(count)
+		return maxf(STRAY_DISTANCE_TOLERANCE, MISSING_DISTANCE_TOLERANCE)
+	return sqrt(total_squared / float(count))
+
+
+## Minor-to-major covariance ratio of rasterized ink. A straight line is near
+## zero; branches, turns, and loops spread ink across the secondary axis. The
+## signature ignores traversal direction and how geometry is split into strokes.
+func _secondary_axis_spread(grid: PackedByteArray) -> float:
+	var mean := Vector2.ZERO
+	var count := 0.0
+	for i in grid.size():
+		if grid[i] == 1:
+			mean += Vector2(i % GRID_SIZE, i / GRID_SIZE)
+			count += 1.0
+	if count <= 0.0:
+		return 0.0
+	mean /= count
+
+	var covariance_xx := 0.0
+	var covariance_xy := 0.0
+	var covariance_yy := 0.0
+	for i in grid.size():
+		if grid[i] != 1:
+			continue
+		var delta := Vector2(i % GRID_SIZE, i / GRID_SIZE) - mean
+		covariance_xx += delta.x * delta.x
+		covariance_xy += delta.x * delta.y
+		covariance_yy += delta.y * delta.y
+	covariance_xx /= count
+	covariance_xy /= count
+	covariance_yy /= count
+
+	var half_trace := (covariance_xx + covariance_yy) * 0.5
+	var eigen_split := sqrt(maxf(
+		(covariance_xx - covariance_yy) * (covariance_xx - covariance_yy) * 0.25
+			+ covariance_xy * covariance_xy,
+		0.0))
+	var major_axis := half_trace + eigen_split
+	var minor_axis := half_trace - eigen_split
+	if major_axis <= EPSILON:
+		return 0.0
+	return clampf(minor_axis / major_axis, 0.0, 1.0)
 
 
 ## Two-pass chamfer distance transform: every cell gets its approximate distance

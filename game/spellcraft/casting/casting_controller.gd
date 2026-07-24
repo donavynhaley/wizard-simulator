@@ -1,23 +1,30 @@
 class_name CastingController
 extends Node
 
-## Drives the Arx-style casting flow across three states:
+## Drives air-traced rune casting: the RIGHT hand speaks the verb while the
+## ElementHandController independently owns the elemental noun in the LEFT hand.
+## Three states:
 ##   IDLE       - holding cast_focus (RMB) for enable_sketching_state_time charges
 ##                the arm and enters SKETCHING.
 ##   SKETCHING  - the player is frozen from looking; mouse motion draws air-sigil
-##                strokes. Recognition on each stroke lift locks a rune and
-##                presents it (spell_held + palm effect); redrawing overrides and
-##                swaps the presented spell. Releasing RMB commits the locked rune
-##                (or cancels if none), so a wrong draw is never force-cast.
-##   SPELL_HELD - the committed spell is held in the palm, settling to a casual
-##                hold, until fired with a left click (cast).
-## Audio lives in the CastingAudio child; the ribbon and arm clips are authored
-## in their own scenes and only driven from here.
+##                strokes at sketch_time_scale (deliberate, never a pause).
+##                Recognition on each stroke lift locks a rune and presents it
+##                (spell_held + palm effect); redrawing overrides and swaps the
+##                presented spell. Releasing RMB commits the locked rune (or
+##                cancels if none), so a wrong trace is never force-cast.
+##   SPELL_HELD - the traced verb waits in the right palm until used.
+##                HURL requests the left hand's carried element and launches
+##                that element's distinct attack expression.
+## The held verb persists until used or dismissed (drop_item shakes it off; the
+## left hand keeps its essence). Sight itself lives in the sibling
+## SightController. Audio lives in the CastingAudio child; the ribbon and arm
+## clips are authored in their own scenes and only driven from here.
 
-signal rune_recognized(id: StringName, score: float)
-## Emitted when a held spell is fired (left click). The projectile/effect system
-## acts on this; locked_rune_id/score identify which spell launched.
-signal spell_cast(id: StringName, score: float)
+## The player composition root answers this synchronously by atomically taking
+## carried essence from ElementHandController and calling fire_hurl().
+signal hurl_requested
+## A decisive practice trace was saved as a personal exemplar (practice slate).
+signal practice_recorded(id: StringName)
 
 const FOCUS_ANIM := &"cast_focus"
 const SPELL_HELD_ANIM := &"spell_held"
@@ -25,6 +32,12 @@ const SPELL_END_ANIM := &"spell_held_end"
 const SPELL_FIRE_ANIM := &"spell_cast"
 const RESET_ANIM := &"Reset"
 const AIR_TEMPLATE_DIR := "res://content/runes/air"
+const FEEDBACK_INTERVAL := 0.12         ## seconds between mid-trace resolves
+const PERSONAL_TEMPLATE_LIMIT := 3      ## newest exemplars kept per verb on disk
+## Every refused lift is kept here so a real hand's failures can be replayed
+## through the recognizer offline (tools/verification/replay_failed_traces.gd).
+const TRACE_DEBUG_DIR := "user://trace_debug"
+const TRACE_DEBUG_LIMIT := 24
 
 enum CASTING_STATE {
 	IDLE,
@@ -36,15 +49,15 @@ enum CASTING_STATE {
 @export var sketching_cursor_sensitivity := 1.0
 @export var sketching_min_distance_dedup := 4.0
 @export var stroke_max_lifetime := 6.0
-@export_range(0.0, 1.0, 0.01) var match_threshold := 0.75
-
-@export_group("Element Siphon")
-## Radius (px) from the sketch cursor to a source's screen position to target it.
-@export var siphon_cursor_radius := 60.0
-## Seconds of dwelling the cursor over a source to pull its element in.
-@export var siphon_dwell_time := 0.6
-## Wisp stream drawn from a source toward the caster while siphoning.
-@export var siphon_stream_scene: PackedScene
+## A lift commits to the best-matching verb when its score clears this floor
+## and beats the best OTHER verb by match_margin. Relative, not absolute: with
+## five known verbs, ambiguity is the failure that matters, not polish - the
+## score itself lives on as the spell's stability tier (RuneGlyphs).
+@export_range(0.0, 1.0, 0.01) var match_floor := 0.45
+@export_range(0.0, 1.0, 0.01) var match_margin := 0.15
+## Engine time scale while sketching: deliberate and slightly protected,
+## never a pause menu (locked feel decision, game-bible.md).
+@export_range(0.1, 1.0, 0.05) var sketch_time_scale := 0.7
 
 @export_group("Spell Held")
 ## Per-rune palm effects. A recognized rune spawns the matching scene at the
@@ -64,9 +77,14 @@ enum CASTING_STATE {
 @export var idle_speed := 1.5               ## breaths per ~4 seconds
 
 ## Dev tool: while non-empty, releasing cast_focus saves the sketched strokes as
-## a rune template named this instead of recognizing. Draw the rune, release,
+## a rune template named this instead of recognizing. Trace the rune, release,
 ## repeat for a couple of exemplars, then clear this field.
 @export var template_recording_id := ""
+
+## Where personal exemplars from the practice slate live. Player data, so
+## user:// (res:// is read-only in exports) and JSON, never a Resource format a
+## player can write - loading .tres executes embedded script. Tests override it.
+@export var personal_template_dir := "user://runes/air"
 
 var current_state: CASTING_STATE = CASTING_STATE.IDLE
 
@@ -85,15 +103,11 @@ var _audio: CastingAudio
 # Sketching / spell runtime state.
 var _spell_effect: Node3D
 var _spell_cast: SpellCast       ## the active cast behaviour (bolt / ground AoE)
-var _current_element: Element    ## element imbued this cast (null = neutral arcane)
-var _siphon_target: ElementSource
-var _siphon_dwell := 0.0
-var _siphon_stream: Node3D
-var _siphon_stream_source: ElementSource
-var _ribbon_default_base: Color
 var _spell_settled := false      ## true once spell_held_end has played (focus released)
+var _dismissing := false         ## true while a shake-off exit is in flight (no cast clip)
 var _spell_presented := false    ## true once spell_held has played this session (no replay on override)
 var _focus_used := false         ## blocks auto-resketch while focus stays held after a cast
+var _focus_blocked_until_release := false
 var _sketch_draw_speed := 0.0    ## smoothed cursor speed (px/sec) driving hum pitch
 var _sketch_motion_accum := 0.0  ## cursor distance moved since the last frame
 var _idle_time := 0.0
@@ -106,6 +120,13 @@ var _active_stroke: SketchStroke = null
 ## overrides it; a failed lift leaves it untouched.
 var locked_rune_id: StringName = &""
 var locked_rune_score := 0.0
+
+## The verb a practice slate is listening for. While set, a decisive trace of
+## exactly this verb is also kept as a personal exemplar - the tower learning
+## this wizard's hand (see PracticeSlate).
+var practice_verb: StringName = &""
+
+var _feedback_accum := 0.0
 
 
 #region Lifecycle
@@ -124,7 +145,6 @@ func _ready() -> void:
 		_ribbon = _camera.get_node_or_null("SketchRibbon") as SketchRibbon
 		if _ribbon != null:
 			_ribbon.visible = false
-			_ribbon_default_base = _ribbon.base_color
 		_arm_anim = _camera.get_node_or_null(
 			"Viewmodel/WizardArms/AnimationPlayer") as AnimationPlayer
 		if _arm_anim != null:
@@ -138,8 +158,6 @@ func _ready() -> void:
 		# Palm anchor rides the wrist bone; held-spell effects parent under it.
 		_spell_anchor = _camera.get_node_or_null(
 			"Viewmodel/WizardArms/arms/Skeleton3D/RightHandAttachment/SpellAnchor") as Node3D
-
-
 func _process(delta: float) -> void:
 	match current_state:
 		CASTING_STATE.IDLE:
@@ -150,7 +168,28 @@ func _process(delta: float) -> void:
 			_update_spell_held(delta)
 
 
+func _exit_tree() -> void:
+	# Sketching slows global time and locks look; if the tree drops this node
+	# mid-sketch (scene change, player freed) those must not leak.
+	if current_state == CASTING_STATE.SKETCHING:
+		Engine.time_scale = 1.0
+		if _player != null:
+			_player.look_enabled = true
+
+
 func _input(event: InputEvent) -> void:
+	if _player == null or not _player.control_enabled():
+		return
+	if event.is_action_released(&"cast_focus") and _focus_blocked_until_release:
+		_focus_blocked_until_release = false
+		sketching_state_time_accumulator = 0.0
+		return
+	if event.is_action_pressed(&"cast_focus") \
+			and _player.sight != null and _player.sight.active:
+		_focus_blocked_until_release = true
+		sketching_state_time_accumulator = 0.0
+		WizardHud.toast(self, "Lower Wizard Sight before tracing a rune")
+		return
 	# The arm-extend charge plays forward while cast_focus is held and rewinds
 	# the moment it is released, so an early release smoothly retracts and a
 	# hold-to-sketch finishes extended. Handled on the button edges so it works
@@ -158,6 +197,7 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("cast_focus"):
 		# A fresh focus press re-arms sketching; ignored while a spell is held.
 		if current_state != CASTING_STATE.SPELL_HELD:
+			_flush_pending_cast()
 			_focus_used = false
 			_play_focus_animation(true)
 	elif event.is_action_released("cast_focus"):
@@ -171,14 +211,23 @@ func _input(event: InputEvent) -> void:
 		else:
 			_play_focus_animation(false)
 
-	# A held spell fires on the next cast (left click), regardless of focus; the
-	# spell stays in hand until then.
+	# Sight owns left click while active. With Sight down, Hurl asks the player
+	# composition root for carried essence. Other verbs keep their primed state.
 	if current_state == CASTING_STATE.SPELL_HELD:
 		if event.is_action_pressed("cast"):
-			_fire_spell()
+			if _player.sight != null and _player.sight.active:
+				return
+			if locked_rune_id == &"hurl":
+				hurl_requested.emit()
+			else:
+				WizardHud.toast(self, "The rune stirs, but nothing answers")
+		elif event.is_action_pressed("drop_item"):
+			_dismiss_spell()
 		return
 
 	if current_state != CASTING_STATE.SKETCHING:
+		return
+	if _player.sight != null and _player.sight.active:
 		return
 	if event is InputEventMouseMotion:
 		_on_sketch_motion((event as InputEventMouseMotion).relative)
@@ -203,6 +252,11 @@ func _set_state(next: CASTING_STATE) -> void:
 
 
 func _update_idle(delta: float) -> void:
+	if _focus_blocked_until_release:
+		if not Input.is_action_pressed(&"cast_focus"):
+			_focus_blocked_until_release = false
+		sketching_state_time_accumulator = 0.0
+		return
 	# _focus_used stays set until a fresh focus press, so firing a spell while
 	# focus is still held does not immediately roll into a new sketch.
 	if Input.is_action_pressed("cast_focus") and not _focus_used:
@@ -213,6 +267,16 @@ func _update_idle(delta: float) -> void:
 		sketching_state_time_accumulator = 0.0
 
 
+## Sight may coexist with a completed rune, but it cannot interrupt the
+## right-click charge or active sketch that creates one.
+func blocks_wizard_sight() -> bool:
+	if current_state == CASTING_STATE.SKETCHING:
+		return true
+	if current_state == CASTING_STATE.SPELL_HELD:
+		return false
+	return Input.is_action_pressed(&"cast_focus") and not _focus_blocked_until_release
+
+
 func _enter_sketching() -> void:
 	_strokes.clear()
 	_active_stroke = null
@@ -220,10 +284,8 @@ func _enter_sketching() -> void:
 	locked_rune_score = 0.0
 	_spell_presented = false
 	_clear_spell_cast()
-	_current_element = null
-	_siphon_target = null
-	_siphon_dwell = 0.0
 	_idle_time = 0.0
+	Engine.time_scale = sketch_time_scale
 	_player.look_enabled = false
 	sketching_cursor_pos = get_viewport().get_visible_rect().size * 0.5
 	if _ribbon != null:
@@ -249,6 +311,12 @@ func _update_sketching(delta: float) -> void:
 	_sketch_draw_speed = lerpf(_sketch_draw_speed, inst_speed, clampf(delta * 12.0, 0.0, 1.0))
 	for i in range(_strokes.size() - 1, -1, -1):
 		var stroke := _strokes[i]
+		# Ink you are still laying does not rot behind you: the active stroke
+		# neither ages nor expires until the lift. Bind's figure-eight is the
+		# longest glyph, and a slow first lobe used to expire from the front
+		# while the second lobe was still being drawn.
+		if stroke == _active_stroke:
+			continue
 		for j in stroke.point_ages.size():
 			stroke.point_ages[j] += delta
 		# Expire points from the front (oldest first) so ink drops off the tail.
@@ -258,25 +326,21 @@ func _update_sketching(delta: float) -> void:
 		if drop > 0:
 			stroke.points = stroke.points.slice(drop)
 			stroke.point_ages = stroke.point_ages.slice(drop)
-		# Keep the active stroke alive even if it fully expired (holding still),
-		# so its reference stays valid; it re-seeds on the next point.
-		if stroke.points.is_empty() and stroke != _active_stroke:
+		if stroke.points.is_empty():
 			_strokes.remove_at(i)
+	_update_trace_feedback(delta)
 	if _audio != null:
 		_audio.update_sketch(_sketch_draw_speed, _active_stroke != null, delta)
-	_update_siphon(delta)
 	if _ribbon != null:
 		var viewport_size := get_viewport().get_visible_rect().size
 		_ribbon.rebuild(_strokes, _camera, viewport_size, stroke_max_lifetime)
-		# After siphoning, the cursor keeps emitting element embers even between
-		# strokes, so the pulled element visibly follows the cursor.
 		_ribbon.update_tip(
-			sketching_cursor_pos, _camera, viewport_size,
-			_active_stroke != null or _current_element != null)
+			sketching_cursor_pos, _camera, viewport_size, _active_stroke != null)
 	_apply_arm_idle(delta)
 
 
 func _exit_sketching() -> void:
+	Engine.time_scale = 1.0
 	if not template_recording_id.is_empty():
 		_save_template()
 	if _ribbon != null:
@@ -284,10 +348,6 @@ func _exit_sketching() -> void:
 		_ribbon.visible = false
 	if _get_hud() != null:
 		_hud.show_sketch_cursor(false)
-		_hud.set_siphon_markers([])
-	_siphon_target = null
-	_siphon_dwell = 0.0
-	_clear_siphon_stream()
 	if _arms != null:
 		# Restore the mount so the retract animation plays from a clean pose.
 		_arms.transform = _arm_base_transform
@@ -295,8 +355,32 @@ func _exit_sketching() -> void:
 		_audio.stop_sketch()
 	_sketch_draw_speed = 0.0
 	_sketch_motion_accum = 0.0
+	_feedback_accum = 0.0
 	_player.look_enabled = true
 	sketching_state_time_accumulator = 0.0
+
+
+## Mid-trace "getting warmer" signal: every FEEDBACK_INTERVAL the live ink is
+## resolved and the leading score drives the ribbon glow and hum voice, so a
+## failing shape is corrected mid-stroke instead of discovered at the lift.
+func _update_trace_feedback(delta: float) -> void:
+	_feedback_accum += delta
+	if _feedback_accum < FEEDBACK_INTERVAL:
+		return
+	_feedback_accum = 0.0
+	if _recognizer == null:
+		return
+	var confidence := 0.0
+	var point_arrays := _stroke_point_arrays(true)
+	if not point_arrays.is_empty():
+		var live := _recognizer.resolve(point_arrays, match_floor, match_margin)
+		confidence = clampf(float(live["score"]), 0.0, 1.0)
+		if live["decisive"]:
+			confidence = 1.0
+	if _ribbon != null:
+		_ribbon.set_confidence(confidence)
+	if _audio != null:
+		_audio.set_confidence(confidence)
 
 
 ## Presents the forming spell for the locked rune: plays spell_held (once) and
@@ -320,14 +404,11 @@ func _enter_spell_held() -> void:
 	if _spell_effect == null:
 		_present_held_spell()
 	_settle_spell_held()
-	_spawn_spell_cast(locked_rune_id)
 
 
-## Held indefinitely with the same procedural sway; only a left click fires it.
+## Held indefinitely with the same procedural sway.
 func _update_spell_held(delta: float) -> void:
 	_apply_arm_idle(delta)
-	if _spell_cast != null:
-		_spell_cast.update_aim(delta)
 
 
 ## Focus released while holding: relax from the presenting pose into a casual
@@ -340,21 +421,59 @@ func _settle_spell_held() -> void:
 		_arm_anim.play(SPELL_END_ANIM)
 
 
-## Left click while a spell is held: launch it. Leaves SPELL_HELD, which plays
-## spell_fire and clears the orb.
-func _fire_spell() -> void:
+## Completes the synchronous Hurl request after the player root transfers
+## ownership of carried essence out of ElementHandController.
+func fire_hurl(element: Element) -> bool:
+	if current_state != CASTING_STATE.SPELL_HELD \
+			or locked_rune_id != &"hurl" or element == null:
+		return false
+	if not _spawn_spell_cast(locked_rune_id, element):
+		WizardHud.toast(self, "%s has no Hurl expression" % _element_label(element))
+		return false
 	if _audio != null:
 		_audio.play_fire()
 	if _spell_cast != null:
 		_spell_cast.cast()  # lock the aim; the result launches on resolve()
-	spell_cast.emit(locked_rune_id, locked_rune_score)
 	_focus_used = true
 	_set_state(CASTING_STATE.IDLE)
+	return true
+
+
+func refuse_empty_hurl() -> void:
+	WizardHud.toast(self, "Your left hand holds nothing to Hurl")
+
+
+## A held verb was spent by another system - Sight forging or severing a link
+## with a Bind or Sever rune. Clear it quietly, like a dismissal but without the
+## "fades from your hand" toast (the link interaction speaks for itself).
+func consume_held_rune() -> void:
+	if current_state != CASTING_STATE.SPELL_HELD:
+		return
+	_dismissing = true
+	_set_state(CASTING_STATE.IDLE)
+	_dismissing = false
+
+
+## Shake off the primed rune (drop_item): the verb dissipates uncast while the
+## left hand keeps its essence.
+func _dismiss_spell() -> void:
+	_dismissing = true
+	_set_state(CASTING_STATE.IDLE)
+	_dismissing = false
+	WizardHud.toast(self, "The rune fades from your hand")
 
 
 func _exit_spell_held() -> void:
 	if _arms != null:
 		_arms.transform = _arm_base_transform
+	if _dismissing:
+		# Dismissal is not a launch: no cast clip, no projectile; just retract.
+		_clear_spell_effect()
+		_clear_spell_cast()
+		locked_rune_id = &""
+		locked_rune_score = 0.0
+		_play_focus_animation(false)
+		return
 	# The orb rides the hand through the cast clip and is cleared when it finishes
 	# (the launch moment). Without the clip there is no finish event, so clear now.
 	if _arm_anim != null and _arm_anim.has_animation(SPELL_FIRE_ANIM):
@@ -405,106 +524,12 @@ func _on_sketch_motion(relative: Vector2) -> void:
 #endregion
 
 
-#region Element siphon
-## While sketching, projects every on-screen element source to the cursor; dwelling
-## over one pulls its element in - recolouring the rune and imbuing the spell.
-func _update_siphon(delta: float) -> void:
-	if _camera == null:
-		return
-	var cursor := sketching_cursor_pos
-	var bounds := get_viewport().get_visible_rect().size
-	var hovered: ElementSource = null
-	var hovered_marker: Dictionary = {}
-	var markers: Array = []
-	for node in get_tree().get_nodes_in_group(ElementSource.GROUP):
-		var src := node as ElementSource
-		if src == null or src.element == null:
-			continue
-		var world_point := src.siphon_point()
-		if _camera.is_position_behind(world_point):
-			continue
-		var screen := _camera.unproject_position(world_point)
-		if screen.x < 0.0 or screen.y < 0.0 or screen.x > bounds.x or screen.y > bounds.y:
-			continue
-		var marker := {"pos": screen, "color": src.element.color, "progress": 0.0}
-		markers.append(marker)
-		if cursor.distance_to(screen) <= siphon_cursor_radius and hovered == null:
-			hovered = src
-			hovered_marker = marker
-	if hovered != null:
-		if hovered == _siphon_target:
-			_siphon_dwell = minf(_siphon_dwell + delta, siphon_dwell_time)
-		else:
-			_siphon_target = hovered
-			_siphon_dwell = 0.0
-		var progress := _siphon_dwell / maxf(siphon_dwell_time, 0.01)
-		hovered_marker["progress"] = progress
-		_preview_ink(hovered.element, progress)
-		if _siphon_dwell >= siphon_dwell_time:
-			_lock_element(hovered.element)
-	else:
-		_siphon_target = null
-		_siphon_dwell = 0.0
-		_preview_ink(null, 0.0)
-	_update_siphon_stream(hovered)
-	if _get_hud() != null:
-		_hud.set_siphon_markers(markers)
-
-
-## Streams element wisps from the hovered source toward the caster while dwelling.
-func _update_siphon_stream(target: ElementSource) -> void:
-	if target != _siphon_stream_source:
-		_clear_siphon_stream()
-		_siphon_stream_source = target
-		if target != null and siphon_stream_scene != null:
-			var world: Node = get_tree().current_scene
-			if world == null:
-				world = get_tree().root
-			_siphon_stream = siphon_stream_scene.instantiate() as Node3D
-			if _siphon_stream != null:
-				world.add_child(_siphon_stream)
-				if _siphon_stream.has_method("set_color"):
-					_siphon_stream.call("set_color", target.element.color)
-	if _siphon_stream != null and _siphon_stream_source != null and _camera != null:
-		var origin := _siphon_stream_source.siphon_point()
-		_siphon_stream.global_position = origin
-		if origin.distance_to(_camera.global_position) > 0.05:
-			_siphon_stream.look_at(_camera.global_position, Vector3.UP)
-
-
-func _clear_siphon_stream() -> void:
-	if _siphon_stream != null:
-		_siphon_stream.queue_free()
-		_siphon_stream = null
-	_siphon_stream_source = null
-
-
-## Ramps the ribbon ink from the committed colour toward the previewed element by
-## the dwell progress (or resets to arcane when nothing is being pulled).
-func _preview_ink(preview: Element, progress: float) -> void:
-	if _ribbon == null:
-		return
-	if _current_element == null and preview == null:
-		_ribbon.reset_ink_color()
-		return
-	var committed: Color = _current_element.color if _current_element != null else _ribbon_default_base
-	var ink := committed if preview == null else committed.lerp(preview.color, progress)
-	_ribbon.set_ink_color(ink)
-
-
-## Locks the pulled element in for this cast: recolours the ink fully and re-tints
-## an already-presented orb, so pulling after drawing still works.
-func _lock_element(imbued: Element) -> void:
-	if imbued == _current_element:
-		return
-	_current_element = imbued
-	if _ribbon != null:
-		_ribbon.set_ink_color(imbued.color)
-		_ribbon.set_tip_color(imbued.color)  # embers now trail the cursor in element colour
-	if _spell_effect != null:
-		imbued.apply_to(_spell_effect)
-	var label := imbued.display_name if not imbued.display_name.is_empty() else String(imbued.id)
-	WizardHud.toast(self, "%s siphoned" % label.capitalize())
+#region Element helpers
+func _element_label(element: Element) -> String:
+	if element == null:
+		return "Essence"
+	var label := element.display_name if not element.display_name.is_empty() else String(element.id)
+	return label.capitalize()
 #endregion
 
 
@@ -527,18 +552,25 @@ func _try_recognize() -> void:
 			point_total += stroke.points.size()
 	var details := _recognizer.evaluate_detailed(point_arrays)
 	var report := "Sketch lift: %d strokes, %d pts" % [point_arrays.size(), point_total]
-	var result := {"id": &"", "score": 0.0}
 	for candidate in details:
-		report += " | %s=%.2f (stray %.1f, missing %.1f)" % [
+		report += " | %s=%.2f (stray %.1f, missing %.1f, shape %.2f)" % [
 			candidate["id"], candidate["score"],
-			candidate["forward"], candidate["backward"]]
-		if float(candidate["score"]) > float(result["score"]):
-			result = candidate
+			candidate["forward"], candidate["backward"], candidate["spread_deficit"]]
 	print(report)
-	var score := float(result["score"])
-	if score >= match_threshold:
+	var resolution := _recognizer.resolve(point_arrays, match_floor, match_margin)
+	var score := float(resolution["score"])
+	var decisive := bool(resolution["decisive"])
+	# At the slate the intent is declared, so the margin is waived for the
+	# awaited verb (the floor still holds). Labeled practice both resolves and
+	# teaches - without this, a verb the hand cannot yet draw decisively could
+	# never be taught to the tower at all.
+	if not decisive and practice_verb != &"" \
+			and resolution["id"] == practice_verb and score >= match_floor:
+		decisive = true
+	if decisive:
+		var id := resolution["id"] as StringName
 		var overriding := locked_rune_id != &""
-		locked_rune_id = result["id"]
+		locked_rune_id = id
 		locked_rune_score = score
 		for stroke in _strokes:
 			stroke.consumed = true
@@ -546,33 +578,49 @@ func _try_recognize() -> void:
 			_ribbon.mark_recognized()
 		if _audio != null:
 			_audio.play_ignite()
-		WizardHud.toast(self, "%s rune %s (%d%%)" % [
-			String(result["id"]).capitalize(),
+		WizardHud.toast(self, "%s rune %s, %s (%d%%)" % [
+			String(id).capitalize(),
 			"overrides" if overriding else "ignites",
+			RuneGlyphs.stability_label(score),
 			int(roundf(score * 100.0))])
-		rune_recognized.emit(result["id"], score)
+		if practice_verb != &"" and id == practice_verb:
+			_save_personal_template(id, point_arrays)
 		_present_held_spell()
+	else:
+		_dump_failed_trace(point_arrays, resolution)
+		if score >= match_floor and resolution["second_id"] != &"":
+			# A close call between two verbs is the one honest refusal left;
+			# name them so the refusal teaches instead of reading as dead input.
+			WizardHud.toast(self, "The trace wavers between %s and %s" % [
+				RuneGlyphs.display_name(resolution["id"] as StringName),
+				RuneGlyphs.display_name(resolution["second_id"] as StringName)])
 
 
 func _configure_recognizer() -> void:
 	_recognizer = ShapeRecognizer.new()
-	_load_recorded_templates()
-	# Hardcoded fallback for any rune without a recorded exemplar, so recording
-	# one rune (e.g. circle) does not knock out the others. Recorded templates
-	# (drawn through the real input path) always win when present.
-	if not _recognizer.has_template(&"triangle"):
-		_recognizer.add_template(&"triangle", [PackedVector2Array([
-			Vector2(0.5, 0.0), Vector2(1.0, 1.0), Vector2(0.0, 1.0), Vector2(0.5, 0.0)])])
+	_load_template_dir(AIR_TEMPLATE_DIR)
+	_load_template_dir(personal_template_dir)
+	_register_fallback_glyphs()
 
 
-func _load_recorded_templates() -> void:
-	var dir := DirAccess.open(AIR_TEMPLATE_DIR)
+## The five-verb glyph language (RuneGlyphs, game-bible.md rune table). Canon
+## glyphs are ALWAYS registered - upright and tilted copies per verb: exemplars
+## coexist and the best match wins, so recorded and personal exemplars add
+## leniency for a particular hand without ever suppressing the canonical form.
+func _register_fallback_glyphs() -> void:
+	for id in RuneGlyphs.VERBS:
+		for strokes: Array in RuneGlyphs.exemplar_strokes(id):
+			_recognizer.add_template(id, strokes)
+
+
+func _load_template_dir(path: String) -> void:
+	var dir := DirAccess.open(path)
 	if dir == null:
 		return
 	for file_name in dir.get_files():
 		if file_name.get_extension() != "json":
 			continue
-		var file := FileAccess.open(AIR_TEMPLATE_DIR + "/" + file_name, FileAccess.READ)
+		var file := FileAccess.open(path + "/" + file_name, FileAccess.READ)
 		if file == null:
 			continue
 		var data: Variant = JSON.parse_string(file.get_as_text())
@@ -616,6 +664,86 @@ func _save_template() -> void:
 		template_recording_id, _strokes.size()])
 
 
+## The tower learns this wizard's hand: keeps the strokes that just resolved
+## decisively as a personal exemplar for the verb. Exemplars only ADD leniency:
+## the recognizer keeps every template per verb and the best match wins, so the
+## canon glyph keeps working alongside the player's own handwriting.
+func _save_personal_template(id: StringName, point_arrays: Array) -> void:
+	var err := DirAccess.make_dir_recursive_absolute(personal_template_dir)
+	if err != OK:
+		push_warning("Could not create %s: %s" % [
+			personal_template_dir, error_string(err)])
+		return
+	var stroke_data := _serialize_point_arrays(point_arrays)
+	var path := "%s/%s_%d_%d.json" % [personal_template_dir, id,
+		int(Time.get_unix_time_from_system()), Time.get_ticks_msec()]
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	if file == null:
+		push_warning("Could not write personal rune template to %s" % path)
+		return
+	file.store_string(JSON.stringify({
+		"version": 1,
+		"id": String(id),
+		"strokes": stroke_data,
+	}))
+	file.close()
+	_recognizer.add_template(id, point_arrays)
+	_prune_personal_templates(id)
+	practice_recorded.emit(id)
+
+
+## Keeps only the newest PERSONAL_TEMPLATE_LIMIT exemplars per verb on disk;
+## filenames sort by their unix-time suffix.
+func _prune_personal_templates(id: StringName) -> void:
+	_prune_json_dir(personal_template_dir, "%s_" % id, PERSONAL_TEMPLATE_LIMIT)
+
+
+func _serialize_point_arrays(point_arrays: Array) -> Array:
+	var stroke_data: Array = []
+	for stroke in point_arrays:
+		var points_out: Array = []
+		for point in (stroke as PackedVector2Array):
+			points_out.append([point.x, point.y])
+		stroke_data.append(points_out)
+	return stroke_data
+
+
+## A refused lift, exactly as the recognizer saw it, with its verdict. This is
+## the evidence loop: real failing hands get replayed offline instead of tuned
+## against synthetic noise models.
+func _dump_failed_trace(point_arrays: Array, resolution: Dictionary) -> void:
+	if DirAccess.make_dir_recursive_absolute(TRACE_DEBUG_DIR) != OK:
+		return
+	var path := "%s/trace_%d_%d.json" % [TRACE_DEBUG_DIR,
+		int(Time.get_unix_time_from_system()), Time.get_ticks_msec()]
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	if file == null:
+		return
+	file.store_string(JSON.stringify({
+		"version": 1,
+		"best": String(resolution["id"]),
+		"score": resolution["score"],
+		"second": String(resolution["second_id"]),
+		"second_score": resolution["second_score"],
+		"strokes": _serialize_point_arrays(point_arrays),
+	}))
+	file.close()
+	_prune_json_dir(TRACE_DEBUG_DIR, "trace_", TRACE_DEBUG_LIMIT)
+
+
+func _prune_json_dir(path: String, prefix: String, limit: int) -> void:
+	var dir := DirAccess.open(path)
+	if dir == null:
+		return
+	var mine: Array[String] = []
+	for file_name in dir.get_files():
+		if file_name.begins_with(prefix) and file_name.get_extension() == "json":
+			mine.append(file_name)
+	mine.sort()
+	while mine.size() > limit:
+		dir.remove(mine.pop_front())
+
+
 ## Point arrays of the live strokes; recognition passes true so ink already
 ## consumed by a locked rune stays out of the next evaluation.
 func _stroke_point_arrays(unconsumed_only := false) -> Array:
@@ -652,7 +780,11 @@ func _on_arm_anim_finished(anim_name: StringName) -> void:
 	_clear_spell_effect()  # the orb launches as the cast clip ends
 	_resolve_spell_cast()  # spawn the projectile / explosion at the launch moment
 	if cast_reset_delay > 0.0:
-		await get_tree().create_timer(cast_reset_delay).timeout
+		# A node-owned tween dies with the node, so this coroutine can never
+		# resume against a freed controller (a SceneTree timer could).
+		var pause := create_tween()
+		pause.tween_interval(cast_reset_delay)
+		await pause.finished
 	if not is_instance_valid(_arm_anim) or not _arm_anim.has_animation(RESET_ANIM):
 		return
 	var current := _arm_anim.current_animation
@@ -697,10 +829,11 @@ func _spawn_spell_effect(rune_id: StringName) -> void:
 	if _spell_effect == null:
 		return
 	_spell_anchor.add_child(_spell_effect)
+	# The rune orb stays colourless: essence lives in the LEFT hand, not the verb.
 	if _spell_effect.has_method("set_color"):
 		_spell_effect.call("set_color", default_spell_color)
-	if _current_element != null:
-		_current_element.apply_to(_spell_effect)
+	if _spell_effect.has_method("set_stability"):
+		_spell_effect.call("set_stability", clampf(locked_rune_score, 0.0, 1.0))
 
 
 func _clear_spell_effect() -> void:
@@ -709,23 +842,25 @@ func _clear_spell_effect() -> void:
 		_spell_effect = null
 
 
-## Instantiates the rune's cast behaviour (bolt, ground AoE, ...) and begins it.
-func _spawn_spell_cast(rune_id: StringName) -> void:
+## Instantiates the carried element's expression for Hurl and begins it.
+func _spawn_spell_cast(rune_id: StringName, element: Element) -> bool:
 	_clear_spell_cast()
-	var scene := _cast_scene_for(rune_id)
+	var scene := _cast_scene_for(rune_id, element)
 	if scene == null:
-		return
+		return false
 	_spell_cast = scene.instantiate() as SpellCast
 	if _spell_cast == null:
-		return
+		return false
 	add_child(_spell_cast)
 	# Spawned projectiles/explosions live in the active scene so they outlive the
 	# behaviour; fall back to the tree root if there is no current scene.
 	var world: Node = get_tree().current_scene
 	if world == null:
 		world = get_tree().root
-	_spell_cast.element = _current_element
+	_spell_cast.element = element
+	_spell_cast.quality = clampf(locked_rune_score, 0.0, 1.0)
 	_spell_cast.begin(_camera, _spell_anchor, world, _player)
+	return true
 
 
 ## Spawns the behaviour's result (projectile / explosion) at the launch moment,
@@ -743,7 +878,20 @@ func _clear_spell_cast() -> void:
 		_spell_cast = null
 
 
-func _cast_scene_for(rune_id: StringName) -> PackedScene:
+## A fresh arm action can interrupt the spell_cast clip before its
+## animation_finished callback runs; launch the pending result first so consumed
+## essence always produces its projectile instead of dying unresolved.
+func _flush_pending_cast() -> void:
+	if _spell_cast == null:
+		return
+	if _arm_anim != null and _arm_anim.current_animation == SPELL_FIRE_ANIM:
+		_clear_spell_effect()
+		_resolve_spell_cast()
+
+
+func _cast_scene_for(rune_id: StringName, element: Element) -> PackedScene:
+	if rune_id == &"hurl" and element != null and element.hurl_cast_scene != null:
+		return element.hurl_cast_scene
 	for binding in spell_effect_bindings:
 		if binding != null and binding.rune_id == rune_id:
 			return binding.cast_scene

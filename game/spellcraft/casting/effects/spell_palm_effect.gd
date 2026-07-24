@@ -18,13 +18,34 @@ extends Node3D
 @onready var _orb: MeshInstance3D = $Orb
 @onready var _light: OmniLight3D = get_node_or_null("PalmLight")
 
+var _stability := 1.0
+var _unrest_time := 0.0
+var _base_light_energy := -1.0
+
 
 func _ready() -> void:
 	_apply_color()
+	if _light != null:
+		_base_light_energy = _light.light_energy
 
 
 func _process(delta: float) -> void:
 	rotate_y(spin_speed * delta)
+	# Below the steady tier the palm light gutters: a sloppy verb reads as
+	# barely holding its shape while it waits in the hand.
+	if _light != null and _base_light_energy > 0.0 and _stability < 0.999:
+		_unrest_time += delta * lerpf(11.0, 5.0, _stability)
+		var unrest := 1.0 - _stability
+		var gutter := 1.0 + (sin(_unrest_time * TAU)
+			+ 0.5 * sin(_unrest_time * TAU * 1.9 + 0.7)) * 0.3 * unrest
+		_light.light_energy = _base_light_energy * maxf(gutter, 0.15)
+
+
+## Trace stability (0..1) from the controller; drives the gutter above.
+func set_stability(value: float) -> void:
+	_stability = clampf(value, 0.0, 1.0)
+	if _light != null and _base_light_energy > 0.0 and _stability >= 0.999:
+		_light.light_energy = _base_light_energy
 
 
 ## Called by the controller (and, later, the element system) to recolor the orb.

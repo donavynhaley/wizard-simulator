@@ -119,9 +119,16 @@ func _draw_playback_strokes() -> void:
 	if bounds.size.x <= 0.0001 or bounds.size.y <= 0.0001:
 		return
 
+	# Preserve the complete ink while the blue drawing guide travels over it.
+	# Replacing finished ink with ghosts made the rune appear to load after the
+	# physical page had already landed.
 	for stroke in strokes:
 		if stroke.size() >= 2:
-			draw_polyline(_layout_stroke(stroke, bounds), stroke_ghost_color, stroke_width, true)
+			var points := _layout_stroke(stroke, bounds)
+			draw_polyline(points, stroke_glow_color, glow_width, true)
+			draw_polyline(points, stroke_color, stroke_width, true)
+		elif stroke.size() == 1:
+			draw_circle(_layout_point(stroke[0], bounds), stroke_width, stroke_color)
 
 	var stroke_duration := maxf(playback_seconds_per_stroke, 0.01)
 	var step_duration := stroke_duration + playback_pause_between_strokes

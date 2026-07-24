@@ -18,6 +18,7 @@ var _rune_playback_enabled := true
 var _book_data: BookData
 var _fallback_title := "Untitled Book"
 var _spread_index := 0
+var _bookmark_column: VBoxContainer
 
 
 func _ready() -> void:
@@ -44,6 +45,75 @@ func set_rune_playback_enabled(enabled: bool) -> void:
 	_rune_playback_enabled = enabled
 	_update_rune_playback()
 	_update_render_mode()
+
+
+## Freezes the currently rendered spread into an independent texture. Page
+## turns use this for the outgoing sheet while this viewport pre-renders the
+## destination spread underneath it.
+func capture_snapshot() -> ImageTexture:
+	if DisplayServer.get_name() == "headless":
+		var placeholder := Image.create(1, 1, false, Image.FORMAT_RGBA8)
+		placeholder.fill(Color.WHITE)
+		return ImageTexture.create_from_image(placeholder)
+	var image := get_texture().get_image()
+	if image == null or image.is_empty():
+		return null
+	return ImageTexture.create_from_image(image)
+
+
+## Bookmark ribbon tabs down the outer edge of the right page. Pass an empty
+## array to clear. The active tab is brighter and reaches further into the
+## page, like the ribbon currently held between the pages.
+func set_bookmarks(names: Array[String], active_index: int) -> void:
+	if _bookmark_column == null:
+		_bookmark_column = VBoxContainer.new()
+		_bookmark_column.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		_bookmark_column.offset_left = -150.0
+		_bookmark_column.offset_top = 60.0
+		_bookmark_column.add_theme_constant_override("separation", 10)
+		_bookmark_column.alignment = BoxContainer.ALIGNMENT_BEGIN
+		spread_root.add_child(_bookmark_column)
+	for child in _bookmark_column.get_children():
+		_bookmark_column.remove_child(child)
+		child.queue_free()
+	for i in names.size():
+		var active := i == active_index
+		var tab := PanelContainer.new()
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color(0.55, 0.16, 0.13, 0.95) if active else Color(0.35, 0.22, 0.14, 0.8)
+		style.corner_radius_top_left = 8
+		style.corner_radius_bottom_left = 8
+		style.content_margin_left = 14.0
+		style.content_margin_right = 10.0
+		style.content_margin_top = 6.0
+		style.content_margin_bottom = 6.0
+		tab.add_theme_stylebox_override(&"panel", style)
+		tab.custom_minimum_size = Vector2(150.0 if active else 110.0, 44.0)
+		tab.size_flags_horizontal = Control.SIZE_SHRINK_END
+		var label := Label.new()
+		label.text = names[i]
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		label.add_theme_color_override(&"font_color",
+			Color(0.98, 0.92, 0.8) if active else Color(0.85, 0.78, 0.65))
+		tab.add_child(label)
+		_bookmark_column.add_child(tab)
+	_bookmark_column.visible = not names.is_empty()
+	_update_render_mode()
+
+
+## Resolves a normalized spread coordinate against the visible bookmark tabs.
+func bookmark_at_page_uv(page_uv: Vector2) -> int:
+	if _bookmark_column == null \
+			or page_uv.x < 0.0 or page_uv.x > 1.0 \
+			or page_uv.y < 0.0 or page_uv.y > 1.0:
+		return -1
+	var viewport_point := page_uv * Vector2(size)
+	for i in _bookmark_column.get_child_count():
+		var tab := _bookmark_column.get_child(i) as Control
+		if tab != null and tab.visible and tab.get_global_rect().has_point(viewport_point):
+			return i
+	return -1
 
 
 func _refresh() -> void:

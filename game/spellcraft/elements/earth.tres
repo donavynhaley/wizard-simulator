@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="Element" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://game/spellcraft/elements/element.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://game/spellcraft/casting/spells/stone_shard_cast.tscn" id="2_hurl"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"earth"
+display_name = "Earth"
+color = Color(0.46, 0.29, 0.13, 1)
+rim_color = Color(0.92, 0.63, 0.25, 1)
+emission_energy = 2.2
+flow_speed = 0.35
+noise_scale = 7.0
+hurl_cast_scene = ExtResource("2_hurl")

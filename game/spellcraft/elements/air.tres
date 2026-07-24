@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="Element" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://game/spellcraft/elements/element.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://game/spellcraft/casting/spells/air_gust_cast.tscn" id="2_hurl"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"air"
+display_name = "Air"
+color = Color(0.55, 0.84, 1, 1)
+rim_color = Color(0.88, 0.97, 1, 1)
+emission_energy = 2.8
+flow_speed = 3.2
+noise_scale = 1.8
+hurl_cast_scene = ExtResource("2_hurl")

@@ -21,24 +21,45 @@ extends Node
 var _sketch: AudioStreamPlayer
 var _ignite: AudioStreamPlayer
 var _fire: AudioStreamPlayer
+var _playback_enabled := true
+var _confidence := 0.0
 
 
 func _ready() -> void:
+	_playback_enabled = DisplayServer.get_name() != "headless"
 	_sketch = get_node_or_null(sketch_loop_path) as AudioStreamPlayer
 	_ignite = get_node_or_null(rune_ignite_path) as AudioStreamPlayer
 	_fire = get_node_or_null(spell_fire_path) as AudioStreamPlayer
 
 
+func _exit_tree() -> void:
+	# Headless scenarios can free the player while one-shot WAV playback is
+	# still active. Stop players explicitly so their playback resources release
+	# before SceneTree teardown.
+	for player in [_sketch, _ignite, _fire]:
+		if player != null:
+			player.stop()
+			player.stream = null
+
+
 ## Starts the continuous sketch hum for a sketching session (ducked to idle).
 func start_sketch() -> void:
-	if _sketch != null:
+	_confidence = 0.0
+	if _playback_enabled and _sketch != null:
 		_sketch.volume_db = sketch_idle_db
 		_sketch.play()
 
 
 func stop_sketch() -> void:
+	_confidence = 0.0
 	if _sketch != null and _sketch.playing:
 		_sketch.stop()
+
+
+## Mid-trace recognition confidence (0..1): the hum brightens and fills out as
+## the leading verb closes in, so ears track progress the way the ribbon does.
+func set_confidence(amount: float) -> void:
+	_confidence = clampf(amount, 0.0, 1.0)
 
 
 ## Rides the hum's pitch/volume each frame from the smoothed draw speed. Frame-
@@ -47,21 +68,23 @@ func update_sketch(draw_speed: float, drawing: bool, delta: float) -> void:
 	if _sketch == null or not _sketch.playing:
 		return
 	var pitch_t := clampf(draw_speed / sketch_speed_for_max_pitch, 0.0, 1.0)
-	_sketch.pitch_scale = lerpf(sketch_pitch_min, sketch_pitch_max, pitch_t)
+	_sketch.pitch_scale = lerpf(sketch_pitch_min, sketch_pitch_max, pitch_t) \
+		* lerpf(1.0, 1.12, _confidence)
 	var target_db := sketch_idle_db
 	if drawing:
 		var vol_t := clampf(draw_speed / (sketch_speed_for_max_pitch * 0.4), 0.0, 1.0)
 		target_db = lerpf(sketch_quiet_db, sketch_volume_db, vol_t)
+		target_db = minf(target_db + _confidence * 4.0, sketch_volume_db + 2.0)
 	_sketch.volume_db = move_toward(_sketch.volume_db, target_db, delta * 90.0)
 
 
 ## One-shot stinger when a rune locks in.
 func play_ignite() -> void:
-	if _ignite != null:
+	if _playback_enabled and _ignite != null:
 		_ignite.play()
 
 
 ## One-shot launch when a held spell fires.
 func play_fire() -> void:
-	if _fire != null:
+	if _playback_enabled and _fire != null:
 		_fire.play()

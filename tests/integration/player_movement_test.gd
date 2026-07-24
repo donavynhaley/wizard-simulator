@@ -15,6 +15,7 @@ func _run() -> void:
 	await _test_analog_input_strength()
 	await _test_air_control()
 	await _test_jump_height_control()
+	await _test_jump_landing_continuity()
 	await _test_direct_jump_without_grace_windows()
 	await _test_coyote_jump()
 	await _test_buffered_jump()
@@ -95,6 +96,16 @@ func _test_jump_height_control() -> void:
 	await _dispose_world(world)
 
 
+func _test_jump_landing_continuity() -> void:
+	var world := _make_world()
+	var stationary_drop := await _measure_landing_drop(world, false)
+	var moving_drop := await _measure_landing_drop(world, true)
+	_check(stationary_drop < 0.16 and moving_drop < 0.16,
+		"jump landings advance continuously (still=%.3f m, moving=%.3f m)" \
+		% [stationary_drop, moving_drop])
+	await _dispose_world(world)
+
+
 func _test_direct_jump_without_grace_windows() -> void:
 	var world := _make_world()
 	var player := await _spawn_player(world, Vector3.ZERO + Vector3.UP * 0.9)
@@ -148,12 +159,11 @@ func _test_tall_obstacle_rejection() -> void:
 	var world := _make_world()
 	_add_box(world, Vector3(0.0, 0.3, -0.5), Vector3(2.0, 0.6, 0.6))
 	var player := await _spawn_player(world, Vector3(0.0, 0.9, 0.8))
-	player.locomotion.enable_stair_stepping = true
 	Input.action_press("move_forward")
 	await _physics_frames(90)
 	Input.action_release("move_forward")
 	_check(player.global_position.y < 1.05 and player.global_position.z > 0.0,
-		"automatic stair stepping rejects a 0.6 m obstacle")
+		"normal movement rejects a 0.6 m obstacle")
 	await _dispose_world(world)
 
 
@@ -188,6 +198,30 @@ func _measure_jump_height(world: Node3D, release_after_frames: int) -> float:
 	return peak_height - start_height
 
 
+func _measure_landing_drop(world: Node3D, move_forward: bool) -> float:
+	var player := await _spawn_player(world, Vector3.ZERO + Vector3.UP * 0.9)
+	var previous_height := player.global_position.y
+	var largest_drop := 0.0
+	var became_airborne := false
+	if move_forward:
+		Input.action_press("move_forward")
+	Input.action_press("jump")
+	for frame in 180:
+		await physics_frame
+		largest_drop = maxf(largest_drop, previous_height - player.global_position.y)
+		previous_height = player.global_position.y
+		if not player.is_on_floor():
+			became_airborne = true
+		elif became_airborne:
+			break
+	Input.action_release("jump")
+	Input.action_release("move_forward")
+	player.queue_free()
+	await process_frame
+	await physics_frame
+	return largest_drop
+
+
 func _make_world(with_floor: bool = true) -> Node3D:
 	var world := Node3D.new()
 	root.add_child(world)
@@ -201,7 +235,6 @@ func _spawn_player(
 	var player := PLAYER_SCENE.instantiate() as WizardPlayer
 	world.add_child(player)
 	player.global_position = position
-	player.locomotion.enable_stair_stepping = false
 	await _physics_frames(5 if settle_on_floor else 1)
 	return player
 

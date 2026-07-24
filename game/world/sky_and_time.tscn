@@ -1,0 +1,87 @@
+[gd_scene format=3 uid="uid://cskyandtime01"]
+
+[ext_resource type="Script" uid="uid://ivvjr42yf0nn" path="res://game/world/day_night_cycle.gd" id="1_cycle"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_o6hnd"]
+sky_top_color = Color(0.137476, 0.16737998, 0.20737997, 1)
+sky_horizon_color = Color(0.358834, 0.36485597, 0.35475993, 1)
+sky_curve = 0.7
+sky_energy_multiplier = 1.1
+ground_bottom_color = Color(0.012, 0.016, 0.019, 1)
+ground_horizon_color = Color(0.075, 0.082, 0.085, 1)
+ground_curve = 0.7
+sun_angle_max = 32.0
+sun_curve = 0.12
+
+[sub_resource type="Sky" id="Sky_rddas"]
+sky_material = SubResource("ProceduralSkyMaterial_o6hnd")
+
+[sub_resource type="Environment" id="Environment_0jym3"]
+background_mode = 2
+sky = SubResource("Sky_rddas")
+ambient_light_source = 2
+ambient_light_color = Color(0.47999996, 0.53, 0.57, 1)
+ambient_light_energy = 0.7
+reflected_light_source = 2
+tonemap_mode = 4
+tonemap_exposure = 1.2
+tonemap_white = 1.35
+fog_enabled = true
+fog_light_color = Color(0.22, 0.25, 0.27, 1)
+fog_light_energy = 0.65
+fog_sun_scatter = 0.12
+fog_density = 0.0028
+fog_sky_affect = 0.72
+fog_height = -8.0
+fog_height_density = 0.045
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.0055
+volumetric_fog_albedo = Color(0.34, 0.38, 0.4, 1)
+volumetric_fog_length = 256.0
+volumetric_fog_detail_spread = 2.5
+volumetric_fog_ambient_inject = 0.85
+volumetric_fog_sky_affect = 0.72
+adjustment_enabled = true
+adjustment_brightness = 1.04
+adjustment_contrast = 1.12
+adjustment_saturation = 0.78
+
+[node name="SkyAndTime" type="Node"]
+script = ExtResource("1_cycle")
+start_hour = 17.4
+sun_path = NodePath("Sun")
+moon_path = NodePath("Moon")
+world_environment_path = NodePath("WorldEnvironment")
+sun_energy_day = 1.15
+sun_energy_night = 0.01
+sun_color_day = Color(0.68, 0.73, 0.78, 1)
+sun_color_sunset = Color(0.62, 0.35, 0.24, 1)
+sun_color_night = Color(0.16, 0.21, 0.31, 1)
+moon_energy_night = 0.3
+moon_color = Color(0.27, 0.36, 0.55, 1)
+day_sky_top = Color(0.14, 0.18, 0.22, 1)
+day_sky_horizon = Color(0.35, 0.38, 0.38, 1)
+sunset_sky_top = Color(0.12, 0.08, 0.12, 1)
+sunset_sky_horizon = Color(0.42, 0.26, 0.18, 1)
+night_sky_top = Color(0.008, 0.012, 0.028, 1)
+night_sky_horizon = Color(0.035, 0.045, 0.065, 1)
+ambient_energy_day = 0.7
+ambient_energy_night = 0.07
+ambient_color_day = Color(0.48, 0.53, 0.57, 1)
+ambient_color_night = Color(0.08, 0.11, 0.18, 1)
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_0jym3")
+
+[node name="Moon" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.3340112, 0.13917214, 0.9322374, 0, 0.98903924, -0.14765188, -0.94256854, -0.049317427, -0.33035022, 0, 0, 0)
+light_color = Color(0.27, 0.36, 0.55, 1)
+light_energy = 0.0
+shadow_enabled = true
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.3340114, 0.13917214, -0.9322376, 0, 0.98903924, 0.14765193, 0.94256896, -0.049317434, 0.33035037, 0, 0, 0)
+light_color = Color(0.67242795, 0.6820439, 0.71185184, 1)
+light_energy = 1.15
+shadow_enabled = true
+directional_shadow_max_distance = 180.0

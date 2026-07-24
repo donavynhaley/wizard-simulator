@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://dpmk1jysfkho1"]
 
 [ext_resource type="Script" uid="uid://b58drra8m8iw1" path="res://game/books/book.gd" id="1_book"]
-[ext_resource type="Resource" uid="uid://dwi4kltjsnjfk" path="res://content/books/bolt_rune_book.tres" id="2_book_data"]
+[ext_resource type="Resource" path="res://content/books/hurl_rune_book.tres" id="2_book_data"]
 [ext_resource type="PackedScene" path="res://game/books/presentation/default_book_visual.tscn" id="3_visual"]
 [ext_resource type="PackedScene" path="res://game/books/presentation/book_page_renderer.tscn" id="4_renderer"]
 

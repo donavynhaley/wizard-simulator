@@ -23,8 +23,6 @@ const ScribingSessionState := preload("res://game/scribing/session/scribing_sess
 @export var seal_action: StringName = &"jump"
 ## Seconds the seal action must be held before the runes are sealed.
 @export var seal_hold_time: float = 0.8
-## Width of the physical ink mesh drawn back onto the table scroll.
-@export var ink_width: float = 0.007
 ## Small vertical offset that keeps physical ink from z-fighting with the scroll.
 @export var ink_lift: float = 0.001
 ## Pixel size of the render texture that is projected onto the scroll surface.
@@ -105,7 +103,6 @@ func _ready() -> void:
 	_book_camera_pose = get_node_or_null(book_camera_pose_path) as Marker3D
 	if _reference_book_placement != null:
 		_reference_book_placement.book_placed.connect(_on_reference_book_placed)
-		_reference_book_placement.book_taken.connect(_on_reference_book_taken)
 	_configure_rune_recognizer()
 	if quill:
 		_quill_rest_transform = quill.transform
@@ -144,11 +141,6 @@ func focus_prompt(player: WizardPlayer, _collider: Object) -> String:
 
 func _on_reference_book_placed(book: Book) -> void:
 	_reference_book = book
-
-
-func _on_reference_book_taken(book: Book) -> void:
-	if _reference_book == book:
-		_reference_book = null
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -258,7 +250,10 @@ func get_rune_qualities() -> Array[float]:
 func _begin_scribing(player: WizardPlayer) -> void:
 	_active = true
 	_player = player
-	_session.reset_recognition()
+	# Recognition deliberately survives cancel/re-entry along with the strokes
+	# (the session owns both "until the scroll is sealed"); resetting only the
+	# session here silently lost runes the canvas still showed as recognized.
+	_set_scribe_rendering(true)
 	_seal_hold_elapsed = 0.0
 	_previous_mouse_mode = Input.mouse_mode
 	_original_camera = get_viewport().get_camera_3d()
@@ -282,6 +277,7 @@ func _end_scribing(completed: bool, stroke_count: int = 0) -> void:
 		return
 
 	_active = false
+	_set_scribe_rendering(false)
 	if _reference_book != null:
 		_reference_book.set_reference_page_turn_enabled(false)
 	if _original_camera and is_instance_valid(_original_camera):
@@ -350,7 +346,9 @@ func _create_scribe_surface() -> void:
 	_scribe_viewport.name = "ScribeInkViewport"
 	_scribe_viewport.transparent_bg = true
 	_scribe_viewport.disable_3d = true
-	_scribe_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	# UPDATE_ONCE paints the persisted ink into the texture, then the viewport
+	# idles; _set_scribe_rendering flips it to UPDATE_ALWAYS only while scribing.
+	_scribe_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 	_scribe_viewport.size = scribe_texture_size
 	add_child(_scribe_viewport)
 
@@ -376,6 +374,19 @@ func _create_scribe_surface() -> void:
 	_scribe_surface.rotation_degrees.y = scribe_surface_rotation_degrees
 	_scribe_surface.material_override = _scribe_surface_material()
 	scroll.add_child(_scribe_surface)
+	_set_scribe_rendering(false)
+
+
+## The scribe SubViewport re-renders (and the canvas animates) only while
+## someone is scribing; idle, the texture holds its last frame instead of
+## repainting a 1024x768 surface every frame the crafting table is loaded.
+func _set_scribe_rendering(active: bool) -> void:
+	if _scribe_canvas != null:
+		_scribe_canvas.set_process(active)
+		_scribe_canvas.queue_redraw()
+	if _scribe_viewport != null:
+		_scribe_viewport.render_target_update_mode = \
+			SubViewport.UPDATE_ALWAYS if active else SubViewport.UPDATE_ONCE
 
 
 func _on_canvas_strokes_changed(strokes: Array[PackedVector2Array]) -> void:

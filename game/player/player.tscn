@@ -15,10 +15,14 @@
 [ext_resource type="PackedScene" uid="uid://b7nt1rl222ctc" path="res://game/spellcraft/casting/effects/spell_palm_effect.tscn" id="16_palmfx"]
 [ext_resource type="Script" uid="uid://bcgeqrt5cux1s" path="res://game/spellcraft/casting/casting_audio.gd" id="17_castaudio"]
 [ext_resource type="AudioStream" uid="uid://c2u2uev4k5xx5" path="res://assets/sounds/spell_fire.wav" id="18_firesfx"]
-[ext_resource type="Resource" uid="uid://dufs4nm1diqs" path="res://game/spellcraft/casting/spells/triangle_spell.tres" id="19_triangle"]
-[ext_resource type="Resource" uid="uid://ceyt7dht7q482" path="res://game/spellcraft/casting/spells/circle_spell.tres" id="20_circle"]
-[ext_resource type="PackedScene" path="res://game/spellcraft/elements/siphon_stream.tscn" id="21_stream"]
+[ext_resource type="Resource" path="res://game/spellcraft/casting/spells/hurl_spell.tres" id="19_hurl"]
 [ext_resource type="Script" uid="uid://dhlkpospgbicb" path="res://game/player/components/viewmodel_motion.gd" id="22_vmmotion"]
+[ext_resource type="Script" path="res://game/player/sight/sight_controller.gd" id="23_sight"]
+[ext_resource type="Script" path="res://game/player/journal/journal_menu.gd" id="24_journal"]
+[ext_resource type="PackedScene" path="res://game/books/book.tscn" id="25_book"]
+[ext_resource type="PackedScene" path="res://game/player/components/element_hand_controller.tscn" id="26_element_hand"]
+[ext_resource type="PackedScene" path="res://game/player/components/health_component.tscn" id="27_health"]
+[ext_resource type="Script" path="res://game/player/components/wizard_camera_effects.gd" id="28_camera"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
 radius = 0.35
@@ -26,9 +30,61 @@ height = 1.7
 
 [sub_resource type="ImmediateMesh" id="ImmediateMesh_0e4oy"]
 
+[sub_resource type="TorusMesh" id="Torus_journal_belt_hook"]
+inner_radius = 0.015
+outer_radius = 0.022
+rings = 24
+ring_segments = 8
+
+[sub_resource type="StandardMaterial3D" id="Material_journal_belt_hook"]
+albedo_color = Color(0.24, 0.12, 0.035, 1)
+metallic = 0.7
+roughness = 0.66
+shading_mode = 0
+no_depth_test = true
+
+[sub_resource type="Animation" id="Animation_journal_reset"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:summon_progress")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [0.0]
+}
+
+[sub_resource type="Animation" id="Animation_journal_summon"]
+resource_name = "summon"
+length = 1.05
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:summon_progress")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.15, 0.315, 0.588, 1.05),
+"transitions": PackedFloat32Array(0.7, 0.85, 1.0, 0.75, 1.0),
+"update": 0,
+"values": [0.0, 0.14, 0.3, 0.56, 1.0]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_journal"]
+_data = {
+&"RESET": SubResource("Animation_journal_reset"),
+&"summon": SubResource("Animation_journal_summon")
+}
+
 [node name="Player" type="CharacterBody3D" unique_id=1184757697 groups=["player"]]
 floor_constant_speed = true
 floor_block_on_wall = false
+floor_snap_length = 0.2
 script = ExtResource("1")
 
 [node name="Components" type="Node" parent="." unique_id=2035879410]
@@ -41,11 +97,24 @@ script = ExtResource("1")
 script = ExtResource("22_vmmotion")
 bob_frequency = 1.0
 
+[node name="SightController" type="Node" parent="Components" unique_id=818843548]
+script = ExtResource("23_sight")
+
+[node name="ElementHandController" parent="Components" instance=ExtResource("26_element_hand")]
+
+[node name="HealthComponent" parent="Components" instance=ExtResource("27_health")]
+
+[node name="JournalMenu" type="Node" parent="Components"]
+script = ExtResource("24_journal")
+book_scene = ExtResource("25_book")
+
+[node name="SummonAnimation" type="AnimationPlayer" parent="Components/JournalMenu"]
+libraries/ = SubResource("AnimationLibrary_journal")
+
 [node name="CastingController" type="Node" parent="Components" unique_id=818843547]
 script = ExtResource("4_5ghna")
 stroke_max_lifetime = 2.0
-siphon_stream_scene = ExtResource("21_stream")
-spell_effect_bindings = Array[ExtResource("5_2mv0n")]([ExtResource("19_triangle"), ExtResource("20_circle")])
+spell_effect_bindings = Array[ExtResource("5_2mv0n")]([ExtResource("19_hurl")])
 default_spell_effect = ExtResource("16_palmfx")
 
 [node name="CastingAudio" type="Node" parent="Components/CastingController" unique_id=2044185999]
@@ -67,6 +136,16 @@ max_polyphony = 3
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=541500586]
 shape = SubResource("CapsuleShape3D_player")
 
+[node name="JournalBeltAnchor" type="Marker3D" parent="."]
+transform = Transform3D(0.99026805, 0.1391731, 0, -0.1391731, 0.99026805, 0, 0, 0, 1, -0.28, 0.18, -0.18)
+
+[node name="JournalBeltHook" type="MeshInstance3D" parent="JournalBeltAnchor"]
+position = Vector3(-0.04, 0.035, -0.055)
+rotation = Vector3(1.5707964, 0, 0)
+cast_shadow = 0
+mesh = SubResource("Torus_journal_belt_hook")
+material_override = SubResource("Material_journal_belt_hook")
+
 [node name="Head" type="Node3D" parent="." unique_id=1427366907]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.72, 0)
 
@@ -75,6 +154,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.024497509)
 current = true
 fov = 78.0
 near = 0.03
+script = ExtResource("28_camera")
 
 [node name="Interactor" type="RayCast3D" parent="Head/Camera3D" unique_id=614184027]
 unique_name_in_owner = true
@@ -86,6 +166,9 @@ corner_rounding = 0.165
 corner_smoothing_passes = 4
 
 [node name="Viewmodel" type="Node3D" parent="Head/Camera3D" unique_id=378493421]
+
+[node name="LeftHandAnchor" type="Node3D" parent="Head/Camera3D/Viewmodel"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.28, -0.22, -0.5)
 
 [node name="WizardArms" parent="Head/Camera3D/Viewmodel" unique_id=1588980357 instance=ExtResource("5_anr75")]
 transform = Transform3D(0.09, 0, 0, 0, 0.0869, -0.0233, 0, 0.0233, 0.0869, 0, -0.120000005, -0.032716922)

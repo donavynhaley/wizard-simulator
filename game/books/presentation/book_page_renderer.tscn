@@ -1,26 +1,28 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://game/books/presentation/book_page_renderer.gd" id="1_renderer"]
 [ext_resource type="Script" path="res://game/scribing/runes/rune_template_view.gd" id="2_rune_view"]
 [ext_resource type="Theme" path="res://assets/themes/book_page_theme.tres" id="3_theme"]
+[ext_resource type="Script" path="res://game/books/presentation/book_page_patina.gd" id="4_patina"]
+[ext_resource type="FontFile" path="res://assets/fonts/almendra/Almendra-Bold.ttf" id="5_title_font"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBox_page_left"]
-bg_color = Color(0.988235, 0.878431, 0.54902, 1)
+bg_color = Color(0.77, 0.7, 0.56, 1)
 border_width_left = 4
 border_width_top = 4
 border_width_right = 2
 border_width_bottom = 4
-border_color = Color(0.24, 0.13, 0.045, 0.55)
+border_color = Color(0.22, 0.105, 0.04, 0.72)
 corner_radius_top_left = 10
 corner_radius_bottom_left = 10
 
 [sub_resource type="StyleBoxFlat" id="StyleBox_page_right"]
-bg_color = Color(0.988235, 0.878431, 0.54902, 1)
+bg_color = Color(0.77, 0.7, 0.56, 1)
 border_width_left = 2
 border_width_top = 4
 border_width_right = 4
 border_width_bottom = 4
-border_color = Color(0.24, 0.13, 0.045, 0.55)
+border_color = Color(0.22, 0.105, 0.04, 0.72)
 corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 
@@ -64,6 +66,12 @@ size_flags_vertical = 3
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBox_page_left")
 
+[node name="Patina" type="Control" parent="SpreadRoot/Pages/LeftPage"]
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("4_patina")
+texture_seed = 7241
+
 [node name="Margin" type="MarginContainer" parent="SpreadRoot/Pages/LeftPage"]
 layout_mode = 2
 mouse_filter = 2
@@ -80,7 +88,8 @@ theme_override_constants/separation = 12
 [node name="LeftTitle" type="Label" parent="SpreadRoot/Pages/LeftPage/Margin/Column"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_font_sizes/font_size = 40
+theme_override_fonts/font = ExtResource("5_title_font")
+theme_override_font_sizes/font_size = 42
 text = "Rune Book"
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -93,7 +102,7 @@ mouse_filter = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_font_sizes/font_size = 30
+theme_override_font_sizes/font_size = 31
 text = "The pages are blank."
 vertical_alignment = 1
 autowrap_mode = 3
@@ -124,6 +133,12 @@ size_flags_vertical = 3
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBox_page_right")
 
+[node name="Patina" type="Control" parent="SpreadRoot/Pages/RightPage"]
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("4_patina")
+texture_seed = 9137
+
 [node name="Margin" type="MarginContainer" parent="SpreadRoot/Pages/RightPage"]
 layout_mode = 2
 mouse_filter = 2
@@ -140,7 +155,8 @@ theme_override_constants/separation = 11
 [node name="RightTitle" type="Label" parent="SpreadRoot/Pages/RightPage/Margin/Column"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_font_sizes/font_size = 40
+theme_override_fonts/font = ExtResource("5_title_font")
+theme_override_font_sizes/font_size = 42
 text = "Rune"
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -164,7 +180,7 @@ glow_width = 13.0
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_font_sizes/font_size = 27
+theme_override_font_sizes/font_size = 29
 text = "Category"
 vertical_alignment = 1
 autowrap_mode = 3

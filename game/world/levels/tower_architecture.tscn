@@ -1,0 +1,226 @@
+[gd_scene format=3 uid="uid://crj5lr4dxm8y7"]
+
+[ext_resource type="Script" uid="uid://b74s84ugq2fng" path="res://game/world/levels/tower_architecture.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://dce5p50neh3lx" path="res://assets/models/environments/wizard_tower.glb" id="2_model"]
+[ext_resource type="Script" uid="uid://cau33cvj2flp7" path="res://game/world/levels/tower_door.gd" id="3_door_script"]
+[ext_resource type="Script" uid="uid://c403iad6kcw8k" path="res://game/spellcraft/links/magical_link.gd" id="4_link"]
+[ext_resource type="Script" uid="uid://8xdkuk56pic8" path="res://game/spellcraft/links/link_anchor.gd" id="5_anchor"]
+[ext_resource type="PackedScene" uid="uid://jtttvlmcy1jg" path="res://game/world/props/breath_of_the_last_dragon.tscn" id="6_torch"]
+[ext_resource type="PackedScene" uid="uid://5fyhxou04dxg" path="res://game/scribing/station/crafting_table.tscn" id="7_table"]
+[ext_resource type="PackedScene" uid="uid://ckttbfrao7whi" path="res://game/alchemy/alchemy_lab.tscn" id="8_lab"]
+[ext_resource type="PackedScene" uid="uid://bchhcoi8ov80b" path="res://game/alchemy/storage/flask_filled_storage_shelf.tscn" id="9_shelf"]
+[ext_resource type="PackedScene" uid="uid://dpmk1jysfkho1" path="res://game/books/book.tscn" id="10_book"]
+[ext_resource type="PackedScene" uid="uid://cdoorlantern1" path="res://game/world/props/door_lantern.tscn" id="11_lantern"]
+[ext_resource type="PackedScene" uid="uid://b04q02fhf6uk8" path="res://assets/third_party/kenney/fantasy_town/fountain-square-detail.glb" id="12_spring"]
+[ext_resource type="Script" uid="uid://duwe13r5kkl2m" path="res://game/world/props/mood_light.gd" id="13_mood"]
+[ext_resource type="PackedScene" uid="uid://cstandtorch01" path="res://game/world/props/standing_torch.tscn" id="14_approach_torch"]
+[ext_resource type="Resource" path="res://content/links/door_arcane_lock.tres" id="15_lock"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_door"]
+size = Vector3(1.52, 2.58, 0.2)
+
+[sub_resource type="Animation" id="Animation_door_reset"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:open_progress")
+tracks/0/interp = 1
+tracks/0/loop_wrap = false
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [0.0]
+}
+
+[sub_resource type="Animation" id="Animation_door_open"]
+resource_name = "open"
+length = 1.2
+step = 0.01
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:open_progress")
+tracks/0/interp = 1
+tracks/0/loop_wrap = false
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 1.2),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.0, 1.0]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_door"]
+_data = {
+&"RESET": SubResource("Animation_door_reset"),
+&"open": SubResource("Animation_door_open")
+}
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_hatch"]
+size = Vector3(3, 0.22, 3)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_spring_interact"]
+size = Vector3(1.35, 1.45, 1.35)
+
+[sub_resource type="Gradient" id="Gradient_2r11s"]
+offsets = PackedFloat32Array(0, 0.55, 1)
+colors = PackedColorArray(0, 0.8901219, 0.88322216, 1, 0, 0.6447173, 0.66755885, 0.72, 0.45, 0.05, 0.02, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_46ud6"]
+gradient = SubResource("Gradient_2r11s")
+
+[sub_resource type="Curve" id="Curve_e4xuk"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(0.72, 0.75), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="CurveTexture" id="CurveTexture_pfup0"]
+curve = SubResource("Curve_e4xuk")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_nuofk"]
+emission_shape = 1
+emission_sphere_radius = 0.077
+direction = Vector3(0, 1, 0)
+spread = 42.0
+initial_velocity_min = 0.19
+initial_velocity_max = 0.57
+gravity = Vector3(0, 0.12, 0)
+radial_accel_min = -0.08
+radial_accel_max = 0.12
+tangential_accel_min = -0.2
+tangential_accel_max = 0.2
+damping_min = 0.12
+damping_max = 0.36
+scale_min = 0.75
+scale_max = 1.7
+scale_curve = SubResource("CurveTexture_pfup0")
+color_ramp = SubResource("GradientTexture1D_46ud6")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1ca5e"]
+transparency = 1
+blend_mode = 1
+shading_mode = 0
+albedo_color = Color(0, 0.70108336, 0.79398686, 0.9019608)
+billboard_mode = 1
+
+[sub_resource type="SphereMesh" id="SphereMesh_6wrrw"]
+material = SubResource("StandardMaterial3D_1ca5e")
+radius = 0.006
+height = 0.012
+radial_segments = 6
+rings = 3
+
+[node name="TowerArchitecture" type="Node3D" unique_id=1788995363]
+script = ExtResource("1_script")
+
+[node name="Model" parent="." unique_id=192220924 instance=ExtResource("2_model")]
+
+[node name="EntryDoor" type="AnimatableBody3D" parent="." unique_id=280429298]
+script = ExtResource("3_door_script")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="EntryDoor" unique_id=1001833745]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.73, 0, 0)
+shape = SubResource("BoxShape3D_door")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="EntryDoor" unique_id=1181833002]
+libraries/ = SubResource("AnimationLibrary_door")
+
+[node name="DoorLinkPoint" type="Node3D" parent="EntryDoor" unique_id=636673762]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.3, -0.1, 0)
+script = ExtResource("5_anchor")
+kind = &"door"
+display_name = "the tower door"
+
+[node name="DoorWard" type="Node3D" parent="." unique_id=1708443263]
+script = ExtResource("4_link")
+anchor_a_path = NodePath("../GroundFloorProps/DoorLantern/LanternLinkPoint")
+anchor_b_path = NodePath("../EntryDoor/DoorLinkPoint")
+effect = ExtResource("15_lock")
+drain_source_on_ready = true
+fact_id = &"door_ward_source"
+description = "A thread runs from the lock to the cold lantern above; the arcane lock is starved, and it holds the door until the vessel is fed."
+
+[node name="SecretHatchBlocker" type="StaticBody3D" parent="." unique_id=1090867715]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.45, 0.09, 1.45)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SecretHatchBlocker" unique_id=1705674694]
+shape = SubResource("BoxShape3D_hatch")
+
+[node name="BasementRespawn" type="Marker3D" parent="." unique_id=1982146198]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 0.35, -2.66, -2)
+
+[node name="BasementMoodLight" type="OmniLight3D" parent="." unique_id=1297209395]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.65, -2.55, -0.1)
+light_color = Color(0.16, 0.72, 0.32, 1)
+light_energy = 2.2
+shadow_enabled = true
+omni_range = 5.2
+
+[node name="ObservatoryCrystalLight" type="OmniLight3D" parent="." unique_id=219666600]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 13.02, 0)
+light_color = Color(0.12, 0.38, 0.92, 1)
+light_energy = 2.8
+shadow_enabled = true
+omni_range = 6.5
+
+[node name="ApproachTorch" parent="." unique_id=1632529039 instance=ExtResource("14_approach_torch")]
+transform = Transform3D(0.94551855, 0, -0.32556817, 0, 1, 0, 0.32556817, 0, 0.94551855, 1.95, 0.365, 8.3)
+
+[node name="GroundFloorProps" type="Node3D" parent="." unique_id=561058443]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.26498866, 0)
+
+[node name="TorchOfEternalFlame" parent="GroundFloorProps" unique_id=38845476 instance=ExtResource("6_torch")]
+transform = Transform3D(0.4685589, 0, -0.8834324, 0, 1, 0, 0.8834324, 0, 0.4685589, -1.2765927, -0.06286472, -4.710579)
+
+[node name="Table" parent="GroundFloorProps" unique_id=1981475450 instance=ExtResource("7_table")]
+transform = Transform3D(0.9256861, 0, -0.37829244, 0, 1, 0, 0.37829244, 0, 0.9256861, -4.4311295, 0.16906828, -1.4691505)
+
+[node name="AlchemyLab" parent="GroundFloorProps" unique_id=392590852 instance=ExtResource("8_lab")]
+transform = Transform3D(0.9140432, 0, 0.4056172, 0, 1, 0, -0.4056172, 0, 0.9140432, -4.324766, 0.16771984, 1.705534)
+
+[node name="StorageShelf" parent="GroundFloorProps" unique_id=1144787116 instance=ExtResource("9_shelf")]
+transform = Transform3D(-0.9247093, 0, 0.38067394, 0, 1, 0, -0.38067394, 0, -0.9247093, -3.4334383, 1.4580476, 4.443354)
+
+[node name="Book" parent="GroundFloorProps" unique_id=847017079 instance=ExtResource("10_book")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.2777853, 1.186738, 1.1335363)
+
+[node name="DoorLantern" parent="GroundFloorProps" unique_id=805035118 instance=ExtResource("11_lantern")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -0.07908678, 3.2557468, 5.9788275)
+
+[node name="LanternLinkPoint" type="Node3D" parent="GroundFloorProps/DoorLantern" unique_id=916281801]
+script = ExtResource("5_anchor")
+kind = &"vessel"
+source_path = NodePath("../MagicalFlame/FireSource")
+display_name = "the lantern"
+
+[node name="BasementProps" type="Node3D" parent="." unique_id=2060013179]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.26498866, 0)
+
+[node name="EndlessSpring" parent="BasementProps" unique_id=562595687 instance=ExtResource("12_spring")]
+transform = Transform3D(0.8, 0, 0, 0, 0.8, 0, 0, 0, 0.8, -3.55, -3.58, 2.1)
+
+[node name="InteractionBody" type="StaticBody3D" parent="BasementProps/EndlessSpring" unique_id=1227041048]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+collision_layer = 2
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="BasementProps/EndlessSpring/InteractionBody" unique_id=1010428640]
+shape = SubResource("BoxShape3D_spring_interact")
+
+[node name="MoodLight" type="OmniLight3D" parent="BasementProps/EndlessSpring" unique_id=1276402473]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.27585196, 0)
+light_color = Color(4.3317677e-06, 0.76190245, 0.7627682, 1)
+shadow_enabled = true
+shadow_bias = 0.79
+script = ExtResource("13_mood")
+metadata/_custom_type_script = "uid://duwe13r5kkl2m"
+
+[node name="WaterSarkles" type="GPUParticles3D" parent="BasementProps/EndlessSpring" unique_id=755617009]
+transform = Transform3D(0.75, 0, 0, 0, 0.75, 0, 0, 0, 0.75, 0, 0.16280508, 0)
+amount = 48
+lifetime = 1.35
+preprocess = 1.35
+fixed_fps = 24
+local_coords = true
+process_material = SubResource("ParticleProcessMaterial_nuofk")
+draw_pass_1 = SubResource("SphereMesh_6wrrw")

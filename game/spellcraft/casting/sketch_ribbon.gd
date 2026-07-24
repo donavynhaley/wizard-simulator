@@ -12,7 +12,11 @@ extends MeshInstance3D
 ## warping; look is frozen during sketching so it never tilts.
 
 @export var plane_depth := 1.8         ## metres in front of the camera
-@export var ribbon_half_width := 0.03  ## metres, at plane_depth
+## Core stroke width as a fraction of screen height. Authored in screen terms,
+## not metres: the ribbon converts it against the live camera fov every
+## rebuild, so the stroke's on-screen weight is identical at every window
+## size and aspect, and stays proportional through fov kicks.
+@export_range(0.005, 0.1, 0.001) var stroke_screen_width := 0.028
 @export var halo_width_multiplier := 4.0  ## soft glow strip width vs the core
 @export var halo_alpha := 0.55         ## glow strength at the core edge
 @export var base_color := Color(0.75, 0.55, 1.0)
@@ -40,6 +44,16 @@ var _default_base_color: Color
 var _default_recognized_color: Color
 var _spark_material: StandardMaterial3D
 var _default_tip_albedo: Color
+var _confidence := 0.0
+var _half_width := 0.03
+
+
+## Resolves the screen-fraction width into plane metres for this camera.
+## Full visible height at plane_depth is 2 * depth * tan(fov / 2), so the
+## half-width is depth * tan(fov / 2) * fraction.
+func _update_half_width(camera: Camera3D) -> void:
+	var fov := camera.fov if camera != null else 75.0
+	_half_width = plane_depth * tan(deg_to_rad(fov) * 0.5) * stroke_screen_width
 
 
 func _ready() -> void:
@@ -68,12 +82,20 @@ func _process(_delta: float) -> void:
 ## sketch session.
 func clear() -> void:
 	_immediate_mesh.clear_surfaces()
+	_confidence = 0.0
 	if _flare_tween != null and _flare_tween.is_valid():
 		_flare_tween.kill()
 	if _material != null:
 		_material.set_shader_parameter("emission_energy", _rest_energy)
 	if _tip_particles != null:
 		_tip_particles.emitting = false
+
+
+## Mid-trace recognition confidence (0..1): live ink warms from the base tint
+## toward the recognized tint as the leading verb's score rises, so a trace
+## reads "getting warmer" while it is still correctable.
+func set_confidence(amount: float) -> void:
+	_confidence = clampf(amount, 0.0, 1.0)
 
 
 ## Recolours the drawn ink to an element tint, or resets to the default arcane
@@ -121,6 +143,7 @@ func update_tip(
 		drawing: bool) -> void:
 	if _tip_particles == null or camera == null:
 		return
+	_update_half_width(camera)
 	_tip_particles.position = _screen_to_local(cursor, camera, viewport_size)
 	_tip_particles.emitting = drawing
 
@@ -136,10 +159,12 @@ func rebuild(
 	_immediate_mesh.clear_surfaces()
 	if camera == null:
 		return
+	_update_half_width(camera)
 	for stroke in strokes:
 		if stroke.points.is_empty():
 			continue
-		var tint := recognized_color if stroke.consumed else base_color
+		var tint := recognized_color if stroke.consumed \
+			else base_color.lerp(recognized_color, _confidence * 0.65)
 		var local_points := PackedVector3Array()
 		var colors := PackedColorArray()
 		for i in stroke.points.size():
@@ -166,6 +191,7 @@ func _fade_alpha(age: float, lifetime: float) -> float:
 func _rebuild_editor_preview() -> void:
 	if _immediate_mesh == null:
 		return
+	_update_half_width(null)
 	_immediate_mesh.clear_surfaces()
 	var alphas: Array[float] = [1.0, 0.6, 0.25]
 	for row in 3:
@@ -234,7 +260,7 @@ func _add_local_stroke(source_points: PackedVector3Array, source_colors: PackedC
 	# edge to fully transparent at the halo edge. Because the glow is mesh
 	# alpha, it fades uniformly with the stroke instead of collapsing when HDR
 	# bloom drops under its threshold.
-	var halo_offset := ribbon_half_width * halo_width_multiplier
+	var halo_offset := _half_width * halo_width_multiplier
 	for side: float in [1.0, -1.0]:
 		_immediate_mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLE_STRIP)
 		for i in local_points.size():
@@ -242,7 +268,7 @@ func _add_local_stroke(source_points: PackedVector3Array, source_colors: PackedC
 			halo_color.a = colors[i].a * halo_alpha
 			var halo_edge_color := colors[i]
 			halo_edge_color.a = 0.0
-			var inner := local_points[i] + offsets[i] * (ribbon_half_width * side)
+			var inner := local_points[i] + offsets[i] * (_half_width * side)
 			var outer := local_points[i] + offsets[i] * (halo_offset * side)
 			_immediate_mesh.surface_set_color(halo_color)
 			_immediate_mesh.surface_add_vertex(inner)
@@ -253,7 +279,7 @@ func _add_local_stroke(source_points: PackedVector3Array, source_colors: PackedC
 	# Bright core strip.
 	_immediate_mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLE_STRIP)
 	for i in local_points.size():
-		var offset := offsets[i] * ribbon_half_width
+		var offset := offsets[i] * _half_width
 		_immediate_mesh.surface_set_color(colors[i])
 		_immediate_mesh.surface_add_vertex(local_points[i] + offset)
 		_immediate_mesh.surface_set_color(colors[i])
@@ -286,8 +312,8 @@ func _add_round_cap(
 	halo_color.a = color.a * halo_alpha
 	var halo_edge_color := color
 	halo_edge_color.a = 0.0
-	var core_radius := ribbon_half_width
-	var halo_radius := ribbon_half_width * halo_width_multiplier
+	var core_radius := _half_width
+	var halo_radius := _half_width * halo_width_multiplier
 	var segment_count := CAP_SEGMENTS if arc <= PI else CAP_SEGMENTS * 2
 
 	_immediate_mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
