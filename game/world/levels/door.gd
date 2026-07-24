@@ -38,7 +38,7 @@ func _ensure_link_anchor() -> void:
 			return
 	var anchor := LinkAnchor.new()
 	anchor.name = &"LinkAnchor"
-	anchor.kind = &"door"
+	anchor.display_name = display_name
 	anchor.attach_offset = link_attach_offset
 	add_child(anchor)  # target() defaults to parent = this Door
 

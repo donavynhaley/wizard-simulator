@@ -425,7 +425,7 @@ func _comet_point() -> Vector3:
 
 
 func _spawn_burst_at(point: Vector3, burst_scale: float) -> void:
-	var burst := BURST_SCENE.instantiate() as Node3D
+	var burst := BURST_SCENE.instantiate() as SiphonBurst
 	if burst == null:
 		return
 	var world: Node = get_tree().current_scene
@@ -434,8 +434,8 @@ func _spawn_burst_at(point: Vector3, burst_scale: float) -> void:
 	world.add_child(burst)
 	burst.global_position = point
 	burst.scale = Vector3.ONE * burst_scale
-	if burst.has_method(&"set_color") and element != null:
-		burst.call(&"set_color", element.color)
+	if element != null:
+		burst.set_color(element.color)
 
 
 ## The final strike detonates: twin ember fronts race outward along the strand

@@ -453,9 +453,7 @@ func _on_left_arm_anim_finished(animation_name: StringName) -> void:
 
 
 func _elements_match(a: Element, b: Element) -> bool:
-	if a == null or b == null:
-		return false
-	return a == b or (a.id != &"" and a.id == b.id)
+	return a != null and a.matches(b)
 
 
 func _element_label(element: Element) -> String:

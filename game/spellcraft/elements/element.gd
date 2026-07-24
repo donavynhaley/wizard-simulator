@@ -26,6 +26,17 @@ extends Resource
 @export var held_torch := false
 
 
+## Is this the same element as another? Compare with this, never with `id ==
+## &"fire"` string literals: pass the canonical resource
+## (preload("res://game/spellcraft/elements/fire.tres")) and a typo becomes a
+## load error instead of a condition that silently never fires. The id fallback
+## covers duplicated resources, which compare unequal by instance.
+func matches(other: Element) -> bool:
+	if other == null:
+		return false
+	return self == other or (id != &"" and id == other.id)
+
+
 ## Pushes this element's look onto a spell effect. set_color updates the base/rim
 ## and any tinted light; set_shader_param then layers the fuller element look
 ## (explicit rim, energy, flow, turbulence) on top. Both run when available so the

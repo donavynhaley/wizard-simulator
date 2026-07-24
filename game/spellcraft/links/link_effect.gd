@@ -15,8 +15,10 @@ extends Resource
 ## player can carry a thread from either end.
 
 
-## Can this effect bind these two anchors? Inspect kind and provided element on
-## each. Return false to let another effect claim the pair.
+## Can this effect bind these two anchors? Match on the TYPE of each anchor's
+## target (`sink.target() is HeatSink`) and, for founts, on the element identity
+## (`FIRE.matches(source.provided_element())`) - never on string tags. Return
+## false to let another effect claim the pair.
 func can_apply(_a: LinkAnchor, _b: LinkAnchor) -> bool:
 	return false
 

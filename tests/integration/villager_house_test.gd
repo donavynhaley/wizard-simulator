@@ -60,8 +60,8 @@ func _run() -> void:
 	var tower_anchor := _anchor_owned_by(tower_arch.entry_door)
 	_check(house_anchor != null, "the cottage door auto-provides a LinkAnchor")
 	_check(tower_anchor != null, "the tower door still auto-provides a LinkAnchor")
-	_check(house_anchor != null and house_anchor.kind == &"door",
-		"the cottage anchor is a door anchor")
+	_check(house_anchor != null and house_anchor.target() is Door,
+		"the cottage anchor targets a Door - effects match on type, not a tag")
 
 	# The threshold is walkable: flat-ish ground just outside the door.
 	var space := level.get_viewport().world_3d.direct_space_state

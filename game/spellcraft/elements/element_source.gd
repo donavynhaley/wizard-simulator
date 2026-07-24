@@ -85,7 +85,7 @@ func _ensure_link_anchor() -> void:
 			return
 	var anchor := LinkAnchor.new()
 	anchor.name = &"LinkAnchor"
-	anchor.kind = &"vessel"
+	anchor.display_name = "vessel"
 	anchor.source_path = NodePath("..")  # the anchor's parent is this source
 	add_child(anchor)
 

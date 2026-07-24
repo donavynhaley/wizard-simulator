@@ -2,18 +2,22 @@ class_name LinkAnchor
 extends Node3D
 
 ## Marks a world object as something a magical link can attach to. A link binds
-## two anchors; the LinkForge inspects each anchor's kind and provided element to
-## decide what effect the connection produces, and effects act on target().
+## two anchors; the LinkForge inspects each anchor's TARGET TYPE and provided
+## element to decide what effect the connection produces, and effects act on
+## target().
 ##
 ## An anchor that carries an ElementSource is a fount: its element flows through
 ## any link and its availability is that link's power. An anchor with no source
-## is a pure sink (a door, a patch of ground, a plant) that receives an effect.
+## is a pure sink (a Door, a HeatSink, a PlantSink) that receives an effect.
+##
+## Deliberately NO `kind` tag: what a thing IS is its class, and effects match
+## with `target() is Door`. A parallel string tag can contradict the object it
+## labels and a typo fails silently; a misspelled class name fails to compile.
+## Make something linkable by giving it the component that implements the
+## behaviour - the component is both the mark and the implementation.
 
 const GROUP := &"link_anchor"
 
-## What this object is, for effect matching: &"door", &"ground", &"plant",
-## &"vessel", &"fount"... Extensible - effects match on these tags.
-@export var kind: StringName = &""
 ## Optional ElementSource that powers links from this anchor (a lit vessel, a
 ## spring). Its element is what flows; its availability is the link's power.
 @export var source_path: NodePath
@@ -65,5 +69,15 @@ func target() -> Node:
 	return get_parent()
 
 
+## Human label for inscriptions. Falls back to the target's class name ("Door" ->
+## "door", "HeatSink" -> "heat sink") so an unlabelled anchor still reads.
 func label() -> String:
-	return display_name if not display_name.is_empty() else String(kind)
+	if not display_name.is_empty():
+		return display_name
+	var node := target()
+	if node == null:
+		return "something"
+	var script := node.get_script() as Script
+	if script != null and script.get_global_name() != &"":
+		return String(script.get_global_name()).capitalize().to_lower()
+	return node.name

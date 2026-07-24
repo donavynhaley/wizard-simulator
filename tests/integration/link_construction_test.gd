@@ -37,7 +37,6 @@ func _run() -> void:
 	fire_source.one_shot = true
 	fount.add_child(fire_source)
 	var fount_anchor := LinkAnchor.new()
-	fount_anchor.kind = &"fount"
 	fount_anchor.source_path = NodePath("../" + str(fire_source.name))
 	fount.add_child(fount_anchor)
 
@@ -46,8 +45,8 @@ func _run() -> void:
 	root.add_child(ground)
 	ground.global_position = camera.global_position + camera.global_transform.basis \
 		* Vector3(1.4, -0.4, -3.0)
+	# No tag: the HeatSink component itself is what makes this warmable.
 	var ground_anchor := LinkAnchor.new()
-	ground_anchor.kind = &"ground"
 	ground.add_child(ground_anchor)
 	await process_frame
 	await process_frame
