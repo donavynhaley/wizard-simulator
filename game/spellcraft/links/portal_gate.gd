@@ -18,7 +18,7 @@ extends Node3D
 
 const PORTAL_SHADER := preload("res://game/spellcraft/links/portal_surface.gdshader")
 const BURST_SCENE := preload("res://game/spellcraft/elements/siphon_burst.tscn")
-const ARRIVAL_STREAM := preload("res://assets/sounds/siphon_place.wav")
+const WHOOSH_STREAM := preload("res://assets/sounds/portal_whoosh.wav")
 const PORTAL_TINT := Color(0.25, 0.55, 0.95)
 
 ## Doorway centre in frame-local space: the slab hangs off the hinge along +X,
@@ -58,6 +58,7 @@ var _audio: AudioStreamPlayer3D
 ## True when this door's lock was inherited from its partner rather than its own
 ## ward, so it can be handed back when the binding ends.
 var _inherited_lock := false
+var _announced := false
 
 
 func _ready() -> void:
@@ -375,11 +376,30 @@ func _play_arrival(point: Vector3) -> void:
 		add_child(burst)
 		burst.global_position = point
 		burst.set_color(PORTAL_TINT)
+	_play_whoosh(point, 0.0)
+
+
+## The rush of a doorway opening onto elsewhere. Sounded once at each mouth when
+## the binding takes, and again wherever someone comes through.
+func announce_binding() -> void:
+	if _announced:
+		return
+	_announced = true
+	var anchor := frame()
+	if anchor != null:
+		_play_whoosh(anchor.to_global(DOORWAY_OFFSET), -5.0)
+
+
+func _play_whoosh(point: Vector3, volume_db: float) -> void:
+	if DisplayServer.get_name() == "headless":
+		return
 	if _audio == null:
 		_audio = AudioStreamPlayer3D.new()
-		_audio.stream = ARRIVAL_STREAM
-		_audio.pitch_scale = 0.7
+		_audio.stream = WHOOSH_STREAM
 		_audio.bus = &"SpellCast"
 		add_child(_audio)
+	_audio.volume_db = volume_db
+	# A touch of pitch scatter so repeated crossings never sound mechanical.
+	_audio.pitch_scale = randf_range(0.93, 1.08)
 	_audio.global_position = point
 	_audio.play()

@@ -58,6 +58,9 @@ func _open_gates(link: MagicalLink) -> void:
 	# Binding makes one doorway of two, so the two leaves start in agreement and
 	# move together from here on.
 	gate_a.agree_with_far()
+	# Both mouths rush as the way opens - the far one too, for anyone stood by it.
+	gate_a.announce_binding()
+	gate_b.announce_binding()
 
 
 func _close_gates(link: MagicalLink) -> void:
