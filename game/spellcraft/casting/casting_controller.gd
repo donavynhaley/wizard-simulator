@@ -20,10 +20,6 @@ extends Node
 ## SightController. Audio lives in the CastingAudio child; the ribbon and arm
 ## clips are authored in their own scenes and only driven from here.
 
-signal rune_recognized(id: StringName, score: float)
-## Emitted when a held spell is fired (left click). The projectile/effect system
-## acts on this; locked_rune_id/score identify which spell launched.
-signal spell_cast(id: StringName, score: float)
 ## The player composition root answers this synchronously by atomically taking
 ## carried essence from ElementHandController and calling fire_hurl().
 signal hurl_requested
@@ -147,6 +143,15 @@ func _process(delta: float) -> void:
 			_update_spell_held(delta)
 
 
+func _exit_tree() -> void:
+	# Sketching slows global time and locks look; if the tree drops this node
+	# mid-sketch (scene change, player freed) those must not leak.
+	if current_state == CASTING_STATE.SKETCHING:
+		Engine.time_scale = 1.0
+		if _player != null:
+			_player.look_enabled = true
+
+
 func _input(event: InputEvent) -> void:
 	if _player == null or not _player.control_enabled():
 		return
@@ -167,6 +172,7 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("cast_focus"):
 		# A fresh focus press re-arms sketching; ignored while a spell is held.
 		if current_state != CASTING_STATE.SPELL_HELD:
+			_flush_pending_cast()
 			_focus_used = false
 			_play_focus_animation(true)
 	elif event.is_action_released("cast_focus"):
@@ -349,8 +355,6 @@ func _enter_spell_held() -> void:
 ## Held indefinitely with the same procedural sway.
 func _update_spell_held(delta: float) -> void:
 	_apply_arm_idle(delta)
-	if _spell_cast != null:
-		_spell_cast.update_aim(delta)
 
 
 ## Focus released while holding: relax from the presenting pose into a casual
@@ -376,7 +380,6 @@ func fire_hurl(element: Element) -> bool:
 		_audio.play_fire()
 	if _spell_cast != null:
 		_spell_cast.cast()  # lock the aim; the result launches on resolve()
-	spell_cast.emit(locked_rune_id, locked_rune_score)
 	_focus_used = true
 	_set_state(CASTING_STATE.IDLE)
 	return true
@@ -518,7 +521,6 @@ func _try_recognize() -> void:
 			String(result["id"]).capitalize(),
 			"overrides" if overriding else "ignites",
 			int(roundf(score * 100.0))])
-		rune_recognized.emit(result["id"], score)
 		_present_held_spell()
 
 
@@ -624,7 +626,11 @@ func _on_arm_anim_finished(anim_name: StringName) -> void:
 	_clear_spell_effect()  # the orb launches as the cast clip ends
 	_resolve_spell_cast()  # spawn the projectile / explosion at the launch moment
 	if cast_reset_delay > 0.0:
-		await get_tree().create_timer(cast_reset_delay).timeout
+		# A node-owned tween dies with the node, so this coroutine can never
+		# resume against a freed controller (a SceneTree timer could).
+		var pause := create_tween()
+		pause.tween_interval(cast_reset_delay)
+		await pause.finished
 	if not is_instance_valid(_arm_anim) or not _arm_anim.has_animation(RESET_ANIM):
 		return
 	var current := _arm_anim.current_animation
@@ -713,6 +719,17 @@ func _clear_spell_cast() -> void:
 	if _spell_cast != null:
 		_spell_cast.queue_free()
 		_spell_cast = null
+
+
+## A fresh arm action can interrupt the spell_cast clip before its
+## animation_finished callback runs; launch the pending result first so consumed
+## essence always produces its projectile instead of dying unresolved.
+func _flush_pending_cast() -> void:
+	if _spell_cast == null:
+		return
+	if _arm_anim != null and _arm_anim.current_animation == SPELL_FIRE_ANIM:
+		_clear_spell_effect()
+		_resolve_spell_cast()
 
 
 func _cast_scene_for(rune_id: StringName, element: Element) -> PackedScene:
