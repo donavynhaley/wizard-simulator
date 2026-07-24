@@ -5,6 +5,7 @@ const COTTAGE_OUT := "/tmp/portal_cottage_mouth.png"
 const COTTAGE_WIDE_OUT := "/tmp/portal_cottage_wide.png"
 const TOWER_OUT := "/tmp/portal_tower_mouth.png"
 const STRAND_OUT := "/tmp/portal_strand.png"
+const CONTROL_OUT := "/tmp/portal_control_tower_interior.png"
 
 
 func _init() -> void:
@@ -66,6 +67,22 @@ func _capture() -> void:
 	_frame_gate(camera, tower_gate, 3.6, 0.35, 2.2)
 	await _settle()
 	_save(viewport, TOWER_OUT)
+
+	# Control: stand the main camera exactly where the cottage mouth's virtual eye
+	# stands, so the portal's contents can be checked against the honest render.
+	_frame_gate(camera, cottage_gate, 3.1, 0.25)
+	var relative := cottage_gate.frame().global_transform.affine_inverse() \
+		* camera.global_transform
+	var tower_frame := tower_gate.frame()
+	camera.global_transform = tower_frame.global_transform * relative
+	# Same near-plane clip the mouth uses, or the beams outside the tower door
+	# fill the view and there is nothing to compare.
+	var normal := tower_frame.global_transform.basis.z.normalized()
+	var to_plane := tower_frame.to_global(PortalGate.DOORWAY_OFFSET) - camera.global_position
+	camera.near = clampf(absf(to_plane.dot(normal)), 0.05, 200.0)
+	await _settle()
+	_save(viewport, CONTROL_OUT)
+	camera.near = 0.05
 
 	# Both doors and the strand between them, seen in Sight.
 	camera.position = Vector3(4.6, 3.0, 21.0)

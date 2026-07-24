@@ -96,32 +96,38 @@ func _run() -> void:
 		and cottage_gate.global_position.distance_to(cottage_frame.global_position) < 0.05,
 		"the gate rides the door frame")
 
+	var tower_frame := tower_door.get_parent() as Node3D
+
 	# A closed door is a closed portal.
-	_stand_in_doorway(player, cottage_gate)
+	_walk_into_doorway(player, cottage_gate, 1.0)
 	for _frame in 6:
 		await physics_frame
 	_check(player.global_position.distance_to(_doorway_point(cottage_gate)) < 3.0,
 		"a closed door carries nobody through")
 
-	# Open the cottage door and step in: the tower doorstep receives us.
+	# Open the cottage door and walk in: the far ROOM receives us, not the far
+	# doorstep. Two bound doorways are one doorway.
 	cottage_door.interact(player, cottage_door)
 	await create_timer(1.4).timeout
 	_check(cottage_door.is_open(), "the cottage door opens")
-	_stand_in_doorway(player, cottage_gate)
+	_walk_into_doorway(player, cottage_gate, 1.0)
 	for _frame in 8:
 		await physics_frame
-	var tower_exit := tower_gate.exit_transform(player)
-	_check(player.global_position.distance_to(tower_exit.origin) < 1.2,
-		"stepping into the cottage door arrives at the tower door")
+	_check(_side_of(tower_frame, player.global_position) > 0.0,
+		"walking into the cottage door puts you inside the tower, not on its step")
+	_check(_doorway_distance(tower_frame, player.global_position) < 2.5,
+		"the arrival is just through the tower doorway")
 	_check(player.global_position.distance_to(_doorway_point(cottage_gate)) > 3.0,
 		"the arrival is genuinely across the world, not a nudge")
+	_check(_has_roof_overhead(level, player.global_position),
+		"the traveller ends up under the tower's roof - properly indoors")
 
-	# Facing away from the door we arrived at, so the way forward is ahead.
+	# Heading survives the threshold: you walked in, so you are still walking in.
 	var arrival_forward := -player.global_transform.basis.z
-	var tower_outward := -tower_gate.frame().global_transform.basis.z
+	var tower_inward := tower_frame.global_transform.basis * PortalGate.INWARD
 	_check(arrival_forward.normalized().dot(
-		Vector3(tower_outward.x, 0.0, tower_outward.z).normalized()) > 0.9,
-		"the traveller faces out of the door they arrive at")
+		Vector3(tower_inward.x, 0.0, tower_inward.z).normalized()) > 0.85,
+		"the traveller keeps their heading through the threshold")
 
 	# Standing, not falling or buried: land, then confirm we kept our footing.
 	for _frame in 30:
@@ -135,12 +141,15 @@ func _run() -> void:
 	lantern.restore(lantern.global_position + Vector3.UP * 0.5)
 	await create_timer(1.4).timeout
 	_check(tower_door.is_open(), "feeding the ward opens the tower door")
-	_stand_in_doorway(player, tower_gate)
+	# Leaving the tower through its own door puts us OUTSIDE the cottage - the
+	# crossing is reversible, and direction is what decides which side you land.
+	_walk_into_doorway(player, tower_gate, -1.0)
 	for _frame in 8:
 		await physics_frame
-	var cottage_exit := cottage_gate.exit_transform(player)
-	_check(player.global_position.distance_to(cottage_exit.origin) < 1.2,
-		"the portal carries back to the cottage")
+	_check(_side_of(cottage_frame, player.global_position) < 0.0,
+		"walking out of the tower door puts you outside the cottage")
+	_check(_doorway_distance(cottage_frame, player.global_position) < 2.5,
+		"the return arrives just outside the cottage doorway")
 
 	# Severing takes the portal with it - the doors are only doors again.
 	link.sever()
@@ -220,11 +229,34 @@ func _doorway_point_from_door(door: Door) -> Vector3:
 	return frame.to_global(PortalGate.DOORWAY_OFFSET)
 
 
-## Drop the player into the middle of a gate's doorway, as if mid-stride.
-func _stand_in_doorway(player: WizardPlayer, gate: PortalGate) -> void:
+## Put the player in a gate's doorway mid-stride, walking indoors (+1) or out
+## (-1), so the gate reads a real crossing direction from their momentum.
+func _walk_into_doorway(player: WizardPlayer, gate: PortalGate, direction: float) -> void:
+	var frame := gate.frame()
+	var heading := frame.global_transform.basis * (PortalGate.INWARD * direction)
+	heading.y = 0.0
+	heading = heading.normalized()
 	var point := _doorway_point(gate)
 	player.global_position = Vector3(point.x, point.y - 0.2, point.z)
-	player.velocity = Vector3.ZERO
+	player.velocity = heading * 3.0
+	player.rotation.y = atan2(-heading.x, -heading.z)
+
+
+## Which side of a doorway a point is on: positive indoors, negative outdoors.
+func _side_of(frame: Node3D, point: Vector3) -> float:
+	return frame.to_local(point).z
+
+
+## Horizontal distance from the doorway centre, ignoring which side.
+func _doorway_distance(frame: Node3D, point: Vector3) -> float:
+	var local := frame.to_local(point) - PortalGate.DOORWAY_OFFSET
+	return Vector2(local.x, local.z).length()
+
+
+func _has_roof_overhead(level: Node3D, point: Vector3) -> bool:
+	var space := level.get_viewport().world_3d.direct_space_state
+	var query := PhysicsRayQueryParameters3D.create(point, point + Vector3.UP * 12.0)
+	return not space.intersect_ray(query).is_empty()
 
 
 func _check(condition: bool, message: String) -> void:
