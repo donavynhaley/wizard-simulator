@@ -52,6 +52,11 @@ func set_color(color: Color) -> void:
 func _process(delta: float) -> void:
 	if _from_point.is_null() or _to_point.is_null():
 		return
+	if not _from_point.is_valid() or not _to_point.is_valid():
+		# A freed bound object invalidates the callable; streams are top_level
+		# and can outlive their owner, so die with the endpoints.
+		queue_free()
+		return
 	_life += delta
 	if _life > _duration + FADE_TIME + 0.05:
 		queue_free()

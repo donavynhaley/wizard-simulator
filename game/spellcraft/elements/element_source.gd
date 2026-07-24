@@ -51,6 +51,7 @@ var _visual_light_energy := 0.0
 var _home_point := Vector3.ZERO
 var _return_tween: Tween
 var _consume_tween: Tween
+var _light_tween: Tween
 var _container_meshes: Array[MeshInstance3D] = []
 var _flare := 0.0
 var _flare_tween: Tween
@@ -144,7 +145,6 @@ func deplete_silently() -> void:
 	if visual != null:
 		_save_visual_base()
 		if "light_energy" in visual:
-			_visual_light_energy = visual.light_energy
 			visual.light_energy = 0.0
 		visual.visible = false
 	else:
@@ -200,8 +200,6 @@ func consume(hand_position: Vector3) -> void:
 		return
 	_save_visual_base()
 	_kill_return_tween()
-	if "light_energy" in visual:
-		_visual_light_energy = visual.light_energy
 	_consume_tween = create_tween()
 	_consume_tween.set_parallel(true)
 	_consume_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
@@ -210,10 +208,11 @@ func consume(hand_position: Vector3) -> void:
 	# MagicalFlame exposes light_energy; flare once at the instant of the rip,
 	# then dim as the flame leaves its wick.
 	if "light_energy" in visual:
-		var light_tween := create_tween()
-		light_tween.tween_property(
+		_kill_light_tween()
+		_light_tween = create_tween()
+		_light_tween.tween_property(
 			visual, "light_energy", _visual_light_energy * 1.6, 0.07)
-		light_tween.tween_property(
+		_light_tween.tween_property(
 			visual, "light_energy", 0.0, maxf(consume_time - 0.07, 0.05))
 	_consume_tween.chain().tween_callback(func() -> void:
 		if is_instance_valid(visual):
@@ -243,10 +242,11 @@ func restore(from_position: Vector3) -> void:
 	tween.tween_property(visual, "transform", _visual_base, restore_time)
 	# Rekindling over-blooms briefly before settling - the vessel drinks deep.
 	if "light_energy" in visual:
-		var light_tween := create_tween()
-		light_tween.tween_property(
+		_kill_light_tween()
+		_light_tween = create_tween()
+		_light_tween.tween_property(
 			visual, "light_energy", _visual_light_energy * 1.5, restore_time)
-		light_tween.tween_property(visual, "light_energy", _visual_light_energy, 0.15)
+		_light_tween.tween_property(visual, "light_energy", _visual_light_energy, 0.15)
 
 
 func _save_visual_base() -> void:
@@ -256,9 +256,20 @@ func _save_visual_base() -> void:
 		# The visual is untouched at this moment, so this is the true home -
 		# _ready runs before spawners position the node, making it too early.
 		_home_point = global_position
+		# Same for the light: capture once, before any flare/dim tween runs.
+		# Recapturing mid-restore read the 1.5x over-bloom as the new base and
+		# ratcheted the lamp brighter on every fast siphon/feed cycle.
+		if "light_energy" in visual:
+			_visual_light_energy = visual.light_energy
 
 
 func _kill_return_tween() -> void:
 	if _return_tween != null and _return_tween.is_valid():
 		_return_tween.kill()
 	_return_tween = null
+
+
+func _kill_light_tween() -> void:
+	if _light_tween != null and _light_tween.is_valid():
+		_light_tween.kill()
+	_light_tween = null
