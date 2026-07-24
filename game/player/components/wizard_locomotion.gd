@@ -25,9 +25,8 @@ func reset(body: CharacterBody3D) -> void:
 	_jump_buffer_timer = 0.0
 
 
-func physics_step(body: CharacterBody3D, input_direction: Vector2, delta: float) -> float:
+func physics_step(body: CharacterBody3D, input_direction: Vector2, delta: float) -> void:
 	var was_on_floor := body.is_on_floor()
-	var position_before_move := body.global_position
 	var world_input := body.transform.basis * Vector3(
 		input_direction.x, 0.0, input_direction.y)
 	world_input.y = 0.0
@@ -53,12 +52,6 @@ func physics_step(body: CharacterBody3D, input_direction: Vector2, delta: float)
 	body.move_and_slide()
 	if not jumped and body.is_on_floor():
 		_try_buffered_jump(body)
-
-	var actual_horizontal_motion := Vector3(
-		body.global_position.x - position_before_move.x,
-		0.0,
-		body.global_position.z - position_before_move.z).length()
-	return actual_horizontal_motion / maxf(delta, 0.001) if body.is_on_floor() else 0.0
 
 
 func _update_jump_windows(delta: float, was_on_floor: bool) -> void:

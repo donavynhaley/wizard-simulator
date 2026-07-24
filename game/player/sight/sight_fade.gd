@@ -35,6 +35,18 @@ var _applied := false
 var _prior_overlays: Dictionary = {}
 
 
+func _exit_tree() -> void:
+	# The player (and this node with it) can be freed while Sight is up; the
+	# world must not keep the shadow overlays or a nonzero global, and the
+	# static must not point at a freed instance (ElementSource calls refresh()).
+	if _applied:
+		_restore()
+	SightFade.sight_amount = 0.0
+	RenderingServer.global_shader_parameter_set(&"wizard_sight", 0.0)
+	if _instance == self:
+		_instance = null
+
+
 func _ready() -> void:
 	_instance = self
 	_fade_mat = ShaderMaterial.new()
@@ -81,7 +93,9 @@ func _restore() -> void:
 ## meshes newly excluded shed the shadow overlay mid-squint, newly mundane ones
 ## take it on. A no-op while Sight is down - the next _apply re-walks anyway.
 static func refresh(root: Node) -> void:
-	if _instance == null or not _instance._applied or root == null:
+	if _instance == null or not is_instance_valid(_instance):
+		return
+	if not _instance._applied or root == null:
 		return
 	var faded: Array[MeshInstance3D] = []
 	_instance._gather(root, faded)

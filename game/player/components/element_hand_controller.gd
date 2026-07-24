@@ -5,11 +5,6 @@ extends Node
 ## Wizard Sight requests source transfers and CastingController requests an
 ## atomic take when Hurl fires, but neither system owns the carried element.
 
-signal element_changed(element: Element)
-signal element_grabbed(element: Element, source: ElementSource)
-signal element_placed(element: Element, source: ElementSource)
-signal element_consumed(element: Element)
-
 @export_group("Presentation")
 @export var held_effect_scene: PackedScene
 @export var siphon_stream_scene: PackedScene
@@ -168,8 +163,6 @@ func take_for_hurl() -> Element:
 	_clear_held_effect()
 	if _carry_audio != null:
 		_carry_audio.stop()
-	element_changed.emit(null)
-	element_consumed.emit(element)
 	return element
 
 
@@ -180,7 +173,6 @@ func restore_from_failed_hurl(element: Element) -> void:
 	_held_element = element
 	_spawn_held_effect(element)
 	_start_carry_audio()
-	element_changed.emit(element)
 
 
 func hand_position() -> Vector3:
@@ -211,8 +203,6 @@ func _grab_from(source: ElementSource) -> void:
 	# The toast lands with the flame, not with the press - cause, then effect.
 	_toast_later(source.consume_time,
 		"%s gathered in your left hand" % _element_label(_held_element))
-	element_changed.emit(_held_element)
-	element_grabbed.emit(_held_element, source)
 
 
 func _place_into(source: ElementSource) -> void:
@@ -233,8 +223,6 @@ func _place_into(source: ElementSource) -> void:
 		_carry_audio.stop()
 	_play_transfer_sound(place_sound)
 	_toast_later(source.restore_time, "%s returned to its vessel" % _element_label(placed))
-	element_changed.emit(null)
-	element_placed.emit(placed, source)
 
 
 ## Pull streams source-to-hand; pushing back reverses the endpoints. Both ends
@@ -398,7 +386,8 @@ func _start_carry_audio() -> void:
 ## land instead of answering the input edge.
 func _toast_later(delay: float, message: String) -> void:
 	get_tree().create_timer(maxf(delay, 0.01)).timeout.connect(func() -> void:
-		if is_inside_tree():
+		# The SceneTree timer outlives this node; the captured self may be freed.
+		if is_instance_valid(self) and is_inside_tree():
 			WizardHud.toast(self, message))
 
 

@@ -17,17 +17,23 @@ func _ready() -> void:
 	_noise = FastNoiseLite.new()
 	_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
 	_noise.seed = randi()
+	set_process(false)
 
 
 func add_trauma(amount: float) -> void:
 	_trauma = clampf(_trauma + amount, 0.0, 1.0)
+	if _trauma > 0.0:
+		set_process(true)
 
 
 func _process(delta: float) -> void:
-	if _trauma <= 0.0:
-		transform = _base_transform
-		return
 	_trauma = maxf(_trauma - trauma_decay * delta, 0.0)
+	if _trauma <= 0.0:
+		# Settle once and stop: a per-frame base write would stomp any other
+		# writer of the camera transform (hand-flinch tweens, lean effects).
+		transform = _base_transform
+		set_process(false)
+		return
 	_noise_time += delta * noise_speed
 	var strength := _trauma * _trauma
 	var offset := Vector3(

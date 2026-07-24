@@ -12,12 +12,10 @@ extends Node
 ## Later the same component renders knowledge glyphs, smudges, and threads; the
 ## journal will decide what qualifies as a source.
 
-signal sight_changed(active: bool)
 signal element_action_requested(source: ElementSource)
 signal element_pull_started(source: ElementSource, is_push: bool)
 signal element_pull_updated(source: ElementSource, progress: float)
 signal element_pull_canceled(source: ElementSource)
-signal link_analyzed(link: MagicalLink)
 
 const SHADER := preload("res://game/player/sight/sight_overlay.gdshader")
 
@@ -179,6 +177,10 @@ func deactivate() -> void:
 	_activation_blocked_until_release = false
 	_set_active(false)
 	_fade = 0.0
+	# The menu also freezes this node's _process, so push the zeroed fade into
+	# the world now or the shadow overlays stay frozen for the whole takeover.
+	if _sight_fade != null:
+		_sight_fade.set_amount(0.0)
 	if _rect != null:
 		_rect.visible = false
 
@@ -329,7 +331,6 @@ func _press_on_link(link: MagicalLink) -> void:
 				_flash_color = link.marker_color()
 				_flash_age = 0.0
 			_lean_in()
-			link_analyzed.emit(link)
 		_:
 			pass
 
@@ -490,7 +491,6 @@ func _set_active(value: bool) -> void:
 		_end_carry()
 		_set_aimed_target(null)
 		_set_markers([])
-	sight_changed.emit(active)
 
 
 ## Projects on-screen Sight targets to HUD markers and picks the one nearest the
@@ -522,7 +522,7 @@ func _update_markers() -> void:
 			var screen := projected as Vector2
 			markers.append({"pos": screen, "color": src.element.color,
 				"progress": _pull_progress if src == _hold_target else 0.0,
-				"empty": not src.available(), "aimed": false, "src": src})
+				"aimed": false, "src": src})
 			var distance := center.distance_to(screen)
 			if distance <= best_distance:
 				best_distance = distance

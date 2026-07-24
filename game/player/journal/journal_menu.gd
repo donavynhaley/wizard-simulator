@@ -66,10 +66,13 @@ func _ready() -> void:
 	_sight = get_parent().get_node_or_null("SightController") as SightController
 	_summon_animation = get_node_or_null(summon_animation_path) as AnimationPlayer
 	_belt_anchor = get_node_or_null(belt_anchor_path) as Node3D
-	_left_hand_anchor = _camera.get_node_or_null(
-		"Viewmodel/WizardArms/arms/Skeleton3D/LeftHandAttachment/SpellAnchor") as Node3D
-	if _left_hand_anchor == null:
-		_left_hand_anchor = _camera.get_node_or_null("Viewmodel/LeftHandAnchor") as Node3D
+	if _camera == null:
+		push_warning("JournalMenu: no Head/Camera3D under the player; summon pose disabled.")
+	else:
+		_left_hand_anchor = _camera.get_node_or_null(
+			"Viewmodel/WizardArms/arms/Skeleton3D/LeftHandAttachment/SpellAnchor") as Node3D
+		if _left_hand_anchor == null:
+			_left_hand_anchor = _camera.get_node_or_null("Viewmodel/LeftHandAnchor") as Node3D
 	if _summon_animation != null:
 		_summon_animation.animation_finished.connect(_on_summon_animation_finished)
 	set_process_unhandled_input(true)
