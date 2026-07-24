@@ -40,6 +40,7 @@ var _default_base_color: Color
 var _default_recognized_color: Color
 var _spark_material: StandardMaterial3D
 var _default_tip_albedo: Color
+var _confidence := 0.0
 
 
 func _ready() -> void:
@@ -68,12 +69,20 @@ func _process(_delta: float) -> void:
 ## sketch session.
 func clear() -> void:
 	_immediate_mesh.clear_surfaces()
+	_confidence = 0.0
 	if _flare_tween != null and _flare_tween.is_valid():
 		_flare_tween.kill()
 	if _material != null:
 		_material.set_shader_parameter("emission_energy", _rest_energy)
 	if _tip_particles != null:
 		_tip_particles.emitting = false
+
+
+## Mid-trace recognition confidence (0..1): live ink warms from the base tint
+## toward the recognized tint as the leading verb's score rises, so a trace
+## reads "getting warmer" while it is still correctable.
+func set_confidence(amount: float) -> void:
+	_confidence = clampf(amount, 0.0, 1.0)
 
 
 ## Recolours the drawn ink to an element tint, or resets to the default arcane
@@ -139,7 +148,8 @@ func rebuild(
 	for stroke in strokes:
 		if stroke.points.is_empty():
 			continue
-		var tint := recognized_color if stroke.consumed else base_color
+		var tint := recognized_color if stroke.consumed \
+			else base_color.lerp(recognized_color, _confidence * 0.65)
 		var local_points := PackedVector3Array()
 		var colors := PackedColorArray()
 		for i in stroke.points.size():

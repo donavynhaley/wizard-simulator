@@ -21,10 +21,17 @@ func _on_resolve() -> void:
 	var proj := projectile_scene.instantiate()
 	proj.set(&"element", element)
 	proj.set(&"caster", _caster)
+	# A wavering hand costs punch before it costs function: the bolt still
+	# flies - slower, softer, wobbling as the verb fights its own shape.
+	var stability := clampf(quality, 0.0, 1.0)
+	proj.set(&"stability", stability)
+	var authored_damage: Variant = proj.get(&"damage")
+	if authored_damage != null:
+		proj.set(&"damage", float(authored_damage) * lerpf(0.65, 1.0, stability))
 	_world.add_child(proj)
 	if proj is Node3D:
 		(proj as Node3D).global_position = _muzzle_position()
 	if element != null:
 		element.apply_to(proj)
 	if proj.has_method("launch"):
-		proj.call("launch", _fire_dir * speed)
+		proj.call("launch", _fire_dir * speed * lerpf(0.8, 1.0, stability))

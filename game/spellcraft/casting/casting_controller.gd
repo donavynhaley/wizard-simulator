@@ -23,6 +23,8 @@ extends Node
 ## The player composition root answers this synchronously by atomically taking
 ## carried essence from ElementHandController and calling fire_hurl().
 signal hurl_requested
+## A decisive practice trace was saved as a personal exemplar (practice slate).
+signal practice_recorded(id: StringName)
 
 const FOCUS_ANIM := &"cast_focus"
 const SPELL_HELD_ANIM := &"spell_held"
@@ -30,6 +32,8 @@ const SPELL_END_ANIM := &"spell_held_end"
 const SPELL_FIRE_ANIM := &"spell_cast"
 const RESET_ANIM := &"Reset"
 const AIR_TEMPLATE_DIR := "res://content/runes/air"
+const FEEDBACK_INTERVAL := 0.12         ## seconds between mid-trace resolves
+const PERSONAL_TEMPLATE_LIMIT := 3      ## newest exemplars kept per verb on disk
 
 enum CASTING_STATE {
 	IDLE,
@@ -41,7 +45,12 @@ enum CASTING_STATE {
 @export var sketching_cursor_sensitivity := 1.0
 @export var sketching_min_distance_dedup := 4.0
 @export var stroke_max_lifetime := 6.0
-@export_range(0.0, 1.0, 0.01) var match_threshold := 0.75
+## A lift commits to the best-matching verb when its score clears this floor
+## and beats the best OTHER verb by match_margin. Relative, not absolute: with
+## five known verbs, ambiguity is the failure that matters, not polish - the
+## score itself lives on as the spell's stability tier (RuneGlyphs).
+@export_range(0.0, 1.0, 0.01) var match_floor := 0.45
+@export_range(0.0, 1.0, 0.01) var match_margin := 0.15
 ## Engine time scale while sketching: deliberate and slightly protected,
 ## never a pause menu (locked feel decision, game-bible.md).
 @export_range(0.1, 1.0, 0.05) var sketch_time_scale := 0.7
@@ -67,6 +76,11 @@ enum CASTING_STATE {
 ## a rune template named this instead of recognizing. Trace the rune, release,
 ## repeat for a couple of exemplars, then clear this field.
 @export var template_recording_id := ""
+
+## Where personal exemplars from the practice slate live. Player data, so
+## user:// (res:// is read-only in exports) and JSON, never a Resource format a
+## player can write - loading .tres executes embedded script. Tests override it.
+@export var personal_template_dir := "user://runes/air"
 
 var current_state: CASTING_STATE = CASTING_STATE.IDLE
 
@@ -102,6 +116,13 @@ var _active_stroke: SketchStroke = null
 ## overrides it; a failed lift leaves it untouched.
 var locked_rune_id: StringName = &""
 var locked_rune_score := 0.0
+
+## The verb a practice slate is listening for. While set, a decisive trace of
+## exactly this verb is also kept as a personal exemplar - the tower learning
+## this wizard's hand (see PracticeSlate).
+var practice_verb: StringName = &""
+
+var _feedback_accum := 0.0
 
 
 #region Lifecycle
@@ -299,6 +320,7 @@ func _update_sketching(delta: float) -> void:
 		# so its reference stays valid; it re-seeds on the next point.
 		if stroke.points.is_empty() and stroke != _active_stroke:
 			_strokes.remove_at(i)
+	_update_trace_feedback(delta)
 	if _audio != null:
 		_audio.update_sketch(_sketch_draw_speed, _active_stroke != null, delta)
 	if _ribbon != null:
@@ -325,8 +347,32 @@ func _exit_sketching() -> void:
 		_audio.stop_sketch()
 	_sketch_draw_speed = 0.0
 	_sketch_motion_accum = 0.0
+	_feedback_accum = 0.0
 	_player.look_enabled = true
 	sketching_state_time_accumulator = 0.0
+
+
+## Mid-trace "getting warmer" signal: every FEEDBACK_INTERVAL the live ink is
+## resolved and the leading score drives the ribbon glow and hum voice, so a
+## failing shape is corrected mid-stroke instead of discovered at the lift.
+func _update_trace_feedback(delta: float) -> void:
+	_feedback_accum += delta
+	if _feedback_accum < FEEDBACK_INTERVAL:
+		return
+	_feedback_accum = 0.0
+	if _recognizer == null:
+		return
+	var confidence := 0.0
+	var point_arrays := _stroke_point_arrays(true)
+	if not point_arrays.is_empty():
+		var live := _recognizer.resolve(point_arrays, match_floor, match_margin)
+		confidence = clampf(float(live["score"]), 0.0, 1.0)
+		if live["decisive"]:
+			confidence = 1.0
+	if _ribbon != null:
+		_ribbon.set_confidence(confidence)
+	if _audio != null:
+		_audio.set_confidence(confidence)
 
 
 ## Presents the forming spell for the locked rune: plays spell_held (once) and
@@ -498,18 +544,17 @@ func _try_recognize() -> void:
 			point_total += stroke.points.size()
 	var details := _recognizer.evaluate_detailed(point_arrays)
 	var report := "Sketch lift: %d strokes, %d pts" % [point_arrays.size(), point_total]
-	var result := {"id": &"", "score": 0.0}
 	for candidate in details:
 		report += " | %s=%.2f (stray %.1f, missing %.1f, shape %.2f)" % [
 			candidate["id"], candidate["score"],
 			candidate["forward"], candidate["backward"], candidate["spread_deficit"]]
-		if float(candidate["score"]) > float(result["score"]):
-			result = candidate
 	print(report)
-	var score := float(result["score"])
-	if score >= match_threshold:
+	var resolution := _recognizer.resolve(point_arrays, match_floor, match_margin)
+	var score := float(resolution["score"])
+	if resolution["decisive"]:
+		var id := resolution["id"] as StringName
 		var overriding := locked_rune_id != &""
-		locked_rune_id = result["id"]
+		locked_rune_id = id
 		locked_rune_score = score
 		for stroke in _strokes:
 			stroke.consumed = true
@@ -517,36 +562,46 @@ func _try_recognize() -> void:
 			_ribbon.mark_recognized()
 		if _audio != null:
 			_audio.play_ignite()
-		WizardHud.toast(self, "%s rune %s (%d%%)" % [
-			String(result["id"]).capitalize(),
+		WizardHud.toast(self, "%s rune %s, %s (%d%%)" % [
+			String(id).capitalize(),
 			"overrides" if overriding else "ignites",
+			RuneGlyphs.stability_label(score),
 			int(roundf(score * 100.0))])
+		if practice_verb != &"" and id == practice_verb:
+			_save_personal_template(id, point_arrays)
 		_present_held_spell()
+	elif score >= match_floor and resolution["second_id"] != &"":
+		# A close call between two verbs is the one honest refusal left; name
+		# them so the refusal teaches instead of reading as a dead input.
+		WizardHud.toast(self, "The trace wavers between %s and %s" % [
+			RuneGlyphs.display_name(resolution["id"] as StringName),
+			RuneGlyphs.display_name(resolution["second_id"] as StringName)])
 
 
 func _configure_recognizer() -> void:
 	_recognizer = ShapeRecognizer.new()
-	_load_recorded_templates()
+	_load_template_dir(AIR_TEMPLATE_DIR)
+	_load_template_dir(personal_template_dir)
 	_register_fallback_glyphs()
 
 
-## The five-verb glyph language (RuneGlyphs, game-bible.md rune table), as
-## synthetic fallbacks so every verb recognizes before hand-drawn exemplars
-## exist. Recorded templates (drawn through the real input path) always win.
+## The five-verb glyph language (RuneGlyphs, game-bible.md rune table). Canon
+## glyphs are ALWAYS registered: exemplars per verb coexist and the best match
+## wins, so recorded and personal exemplars add leniency for a particular hand
+## without ever suppressing the canonical form.
 func _register_fallback_glyphs() -> void:
 	for id in RuneGlyphs.VERBS:
-		if not _recognizer.has_template(id):
-			_recognizer.add_template(id, [RuneGlyphs.points(id)])
+		_recognizer.add_template(id, [RuneGlyphs.points(id)])
 
 
-func _load_recorded_templates() -> void:
-	var dir := DirAccess.open(AIR_TEMPLATE_DIR)
+func _load_template_dir(path: String) -> void:
+	var dir := DirAccess.open(path)
 	if dir == null:
 		return
 	for file_name in dir.get_files():
 		if file_name.get_extension() != "json":
 			continue
-		var file := FileAccess.open(AIR_TEMPLATE_DIR + "/" + file_name, FileAccess.READ)
+		var file := FileAccess.open(path + "/" + file_name, FileAccess.READ)
 		if file == null:
 			continue
 		var data: Variant = JSON.parse_string(file.get_as_text())
@@ -588,6 +643,54 @@ func _save_template() -> void:
 	_recognizer.add_template(StringName(template_recording_id), _stroke_point_arrays())
 	WizardHud.toast(self, "Recorded '%s' template (%d strokes)" % [
 		template_recording_id, _strokes.size()])
+
+
+## The tower learns this wizard's hand: keeps the strokes that just resolved
+## decisively as a personal exemplar for the verb. Exemplars only ADD leniency:
+## the recognizer keeps every template per verb and the best match wins, so the
+## canon glyph keeps working alongside the player's own handwriting.
+func _save_personal_template(id: StringName, point_arrays: Array) -> void:
+	var err := DirAccess.make_dir_recursive_absolute(personal_template_dir)
+	if err != OK:
+		push_warning("Could not create %s: %s" % [
+			personal_template_dir, error_string(err)])
+		return
+	var stroke_data: Array = []
+	for stroke in point_arrays:
+		var points_out: Array = []
+		for point in (stroke as PackedVector2Array):
+			points_out.append([point.x, point.y])
+		stroke_data.append(points_out)
+	var path := "%s/%s_%d_%d.json" % [personal_template_dir, id,
+		int(Time.get_unix_time_from_system()), Time.get_ticks_msec()]
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	if file == null:
+		push_warning("Could not write personal rune template to %s" % path)
+		return
+	file.store_string(JSON.stringify({
+		"version": 1,
+		"id": String(id),
+		"strokes": stroke_data,
+	}))
+	file.close()
+	_recognizer.add_template(id, point_arrays)
+	_prune_personal_templates(id)
+	practice_recorded.emit(id)
+
+
+## Keeps only the newest PERSONAL_TEMPLATE_LIMIT exemplars per verb on disk;
+## filenames sort by their unix-time suffix.
+func _prune_personal_templates(id: StringName) -> void:
+	var dir := DirAccess.open(personal_template_dir)
+	if dir == null:
+		return
+	var mine: Array[String] = []
+	for file_name in dir.get_files():
+		if file_name.begins_with("%s_" % id) and file_name.get_extension() == "json":
+			mine.append(file_name)
+	mine.sort()
+	while mine.size() > PERSONAL_TEMPLATE_LIMIT:
+		dir.remove(mine.pop_front())
 
 
 ## Point arrays of the live strokes; recognition passes true so ink already
@@ -678,6 +781,8 @@ func _spawn_spell_effect(rune_id: StringName) -> void:
 	# The rune orb stays colourless: essence lives in the LEFT hand, not the verb.
 	if _spell_effect.has_method("set_color"):
 		_spell_effect.call("set_color", default_spell_color)
+	if _spell_effect.has_method("set_stability"):
+		_spell_effect.call("set_stability", clampf(locked_rune_score, 0.0, 1.0))
 
 
 func _clear_spell_effect() -> void:
@@ -702,6 +807,7 @@ func _spawn_spell_cast(rune_id: StringName, element: Element) -> bool:
 	if world == null:
 		world = get_tree().root
 	_spell_cast.element = element
+	_spell_cast.quality = clampf(locked_rune_score, 0.0, 1.0)
 	_spell_cast.begin(_camera, _spell_anchor, world, _player)
 	return true
 

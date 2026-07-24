@@ -11,7 +11,14 @@ const GRID_SIZE := 32
 const DILATION := 1                 ## cells of ink thickness stamped per line
 const FILL_MARGIN := 0.9            ## shrink shapes so they never touch the grid edge
 const ASPECT_PENALTY_WEIGHT := 1.0  ## score multiplier strength for aspect mismatch
-const SHAPE_SPREAD_DEFICIT_WEIGHT := 5.0  ## rejects missing branches and loops
+## Missing secondary-axis spread is judged as a FRACTION of the template's own
+## spread: losing most of Hurl's small barb-spread is a missing feature (a bare
+## shaft must not fire), while a slightly under-drawn ring loses only a sliver
+## of Seal's large spread and stays competitive (wobble is not a missing
+## branch). Up to the tolerance fraction is hand noise; beyond it the penalty
+## ramps linearly to full rejection at the reject fraction.
+const SHAPE_SPREAD_TOLERANCE_FRACTION := 0.2
+const SHAPE_SPREAD_REJECT_FRACTION := 0.6
 const STRAY_DISTANCE_TOLERANCE := 8.0    ## generous room for broad hand-drawn ink
 const MISSING_DISTANCE_TOLERANCE := 5.0  ## strict requirement for template features
 const EPSILON := 0.00001
@@ -55,6 +62,38 @@ func evaluate(strokes: Array) -> Dictionary:
 	return best
 
 
+## Relative-margin resolution: the best verb wins when it clears a low quality
+## floor AND decisively beats the best OTHER verb. With a small closed
+## vocabulary, ambiguity between verbs is the failure that matters; absolute
+## polish is not, so a sloppy-but-unmistakable trace still lands.
+## Returns {id, score, second_id, second_score, decisive}.
+func resolve(strokes: Array, score_floor: float, margin: float) -> Dictionary:
+	var out := {
+		"id": &"", "score": 0.0,
+		"second_id": &"", "second_score": 0.0,
+		"decisive": false,
+	}
+	var candidates := evaluate_detailed(strokes)
+	if candidates.is_empty():
+		return out
+	candidates.sort_custom(
+		func(a: Dictionary, b: Dictionary) -> bool:
+			return float(a["score"]) > float(b["score"]))
+	out["id"] = candidates[0]["id"]
+	out["score"] = candidates[0]["score"]
+	# The runner-up must be a DIFFERENT verb: multiple exemplars of the same
+	# rune (canon glyph + recorded + personal) reinforce each other rather
+	# than compete for the margin.
+	for candidate in candidates.slice(1):
+		if candidate["id"] != out["id"]:
+			out["second_id"] = candidate["id"]
+			out["second_score"] = candidate["score"]
+			break
+	out["decisive"] = float(out["score"]) >= score_floor \
+		and float(out["score"]) - float(out["second_score"]) >= margin
+	return out
+
+
 ## Full per-template breakdown for tuning and debug logs. `forward` is how far
 ## the drawn ink strays from the template (sloppiness), `backward` is how far
 ## template ink is from the drawing (incompleteness), both in root-mean-square
@@ -78,11 +117,18 @@ func evaluate_detailed(strokes: Array) -> Array[Dictionary]:
 			clampf(1.0 - forward / STRAY_DISTANCE_TOLERANCE, 0.0, 1.0),
 			clampf(1.0 - backward / MISSING_DISTANCE_TOLERANCE, 0.0, 1.0))
 		var aspect_delta: float = absf(input_aspect - float(template["aspect"]))
-		var spread_deficit: float = maxf(
-			float(template["shape_spread"]) - input_shape_spread, 0.0)
+		var template_spread := float(template["shape_spread"])
+		var spread_deficit: float = maxf(template_spread - input_shape_spread, 0.0)
+		var spread_fraction_missing := 0.0
+		if template_spread > EPSILON:
+			spread_fraction_missing = spread_deficit / template_spread
+		var spread_penalty := clampf(
+			1.0 - maxf(spread_fraction_missing - SHAPE_SPREAD_TOLERANCE_FRACTION, 0.0)
+				/ (SHAPE_SPREAD_REJECT_FRACTION - SHAPE_SPREAD_TOLERANCE_FRACTION),
+			0.0, 1.0)
 		var score := distance_score \
 			* clampf(1.0 - aspect_delta * ASPECT_PENALTY_WEIGHT, 0.0, 1.0) \
-			* clampf(1.0 - spread_deficit * SHAPE_SPREAD_DEFICIT_WEIGHT, 0.0, 1.0)
+			* spread_penalty
 		out.append({
 			"id": template["id"],
 			"score": score,

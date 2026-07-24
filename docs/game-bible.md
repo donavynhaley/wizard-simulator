@@ -59,10 +59,11 @@ This five-verb core replaces the earlier draw/pour and bolt/font/mend/rend sets.
 | Bind | Connect | Figure-eight (the knot) | Create a link between two subjects |
 | Sever | Cut | Lightning slash (drawn violently) | Break a link |
 | Seal | Close | Closed ring (the ritual circle) | Hold a boundary: wards, locks, containment |
-| Open | Release | Broken ring (the gap is the door) | Undo a boundary |
+| Open | Release | Broken ring, loose end hooked inward (the gap is the door) | Undo a boundary |
 
 Every glyph is one stroke, and the motion matches the verb's emotion: a cut is slashed, a seal is drawn calm.
-The pairs teach each other: Open is a Seal deliberately left unclosed, and Sever slashes through the knot Bind ties.
+The pairs teach each other: Open is a Seal left unclosed, its loose end hooked inward like a handle, and Sever slashes through the knot Bind ties.
+The hook is what keeps a lazy or under-drawn circle from reading as either ring; without it the pair was a subset and only global strictness could tell them apart.
 
 Wizard Sight handles elemental essence directly; grabbing and placing are manipulation rather than casting.
 Essence rests in the left hand, leaving the right hand free to trace a verb.
@@ -98,6 +99,16 @@ Feel decisions (locked 2026-07-20):
 - **Element handling is not spellcasting**: Sight can move known essence between the world and the left hand without spending a rune.
 - The academy taught every graduate **Sight and Hurl** - find the noun, then make it dangerous.
   Everything else is learned from the world.
+
+Recognition feel (2026-07-23):
+
+- A trace commits to the closest verb when it is decisive, not when it is pretty.
+  The five-verb vocabulary is closed, so ambiguity between two verbs is the only honest refusal, and the refusal names them both.
+- The trace score no longer gates the cast; it is the spell's stability tier (steady / wavering / unstable).
+  A sloppy Hurl still hurls - slower, softer, wobbling in flight, its palm light guttering.
+- The ribbon and the sketch hum warm with recognition confidence mid-trace, so a failing shape is corrected, not discovered at the lift.
+- The practice slate records a decisive trace as a personal exemplar (player data, user://).
+  The tower learns this wizard's hand alongside the canon glyphs; personal exemplars only add leniency, never replace the canon.
 
 The three casting tiers are the same sentence at three levels of preparation:
 

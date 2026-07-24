@@ -15,8 +15,11 @@ signal hit(position: Vector3, collider: Node)
 
 var element: Element
 var caster: Node3D
+## Trace stability (0..1) from the cast; below 1.0 the bolt sways in flight.
+var stability := 1.0
 var _velocity: Vector3 = Vector3.ZERO
 var _distance_travelled: float = 0.0
+var _wobble_time := 0.0
 var _spent: bool = false
 
 
@@ -45,6 +48,16 @@ func _physics_process(delta: float) -> void:
 		return
 	_velocity.y -= gravity * delta
 	var step := _velocity * delta
+	if stability < 0.999:
+		# Unstable verbs sway laterally in flight; the sweep below still runs
+		# over the swayed step, so wobble never tunnels through collision.
+		_wobble_time += delta
+		var side := _velocity.cross(Vector3.UP)
+		if side.length_squared() > 0.001:
+			var unrest := 1.0 - stability
+			var sway := sin(_wobble_time * TAU * 2.6) \
+				+ 0.5 * sin(_wobble_time * TAU * 1.7 + 1.3)
+			step += side.normalized() * sway * unrest * 1.6 * delta
 	var remaining := maximum_range - _distance_travelled
 	if step.length() > remaining:
 		step = step.normalized() * maxf(remaining, 0.0)

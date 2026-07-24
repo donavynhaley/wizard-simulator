@@ -37,9 +37,22 @@ const _INFO := {
 		"name": "Open",
 		"glyph": "the Broken Ring",
 		"meaning": "Undo a boundary.",
-		"hint": "The seal's ring, stopped three quarters of the way around. The gap is the door.",
+		"hint": "The seal's ring, stopped three quarters of the way around, then hooked inward. The gap is the door; the hook is its handle.",
 	},
 }
+
+## Stability tier boundaries for a trace score. Quality no longer gates whether
+## a verb resolves (ambiguity does); it shapes how the spell expresses.
+const STEADY_SCORE := 0.75
+const WAVERING_SCORE := 0.6
+
+
+static func stability_label(score: float) -> String:
+	if score >= STEADY_SCORE:
+		return "steady"
+	if score >= WAVERING_SCORE:
+		return "wavering"
+	return "unstable"
 
 
 static func display_name(id: StringName) -> String:
@@ -73,8 +86,23 @@ static func points(id: StringName) -> PackedVector2Array:
 		&"seal":
 			return _ring(1.0)
 		&"open":
-			return _ring(0.75)
+			return _broken_ring_with_hook()
 	return PackedVector2Array()
+
+
+## Open's glyph: the broken ring, its loose end hooked deep inward toward the
+## center. The hook is ink Seal never has, so an under-drawn circle can no
+## longer read as Open - the two were a subset pair, and disambiguating them by
+## absolute strictness was what made every verb feel harsh. The hook reaches
+## well inside the ring on purpose: a shallow tick normalizes away.
+static func _broken_ring_with_hook() -> PackedVector2Array:
+	var out := _ring(0.75)
+	var tail := out[out.size() - 1]
+	var inward := (Vector2(0.5, 0.5) - tail).normalized()
+	out.append(tail + inward * 0.12)
+	out.append(tail + inward * 0.24)
+	out.append(tail + inward * 0.36)
+	return out
 
 
 ## A RuneTemplate of the glyph, for journal pages and anywhere else that wants

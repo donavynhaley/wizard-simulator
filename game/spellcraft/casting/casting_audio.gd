@@ -22,6 +22,7 @@ var _sketch: AudioStreamPlayer
 var _ignite: AudioStreamPlayer
 var _fire: AudioStreamPlayer
 var _playback_enabled := true
+var _confidence := 0.0
 
 
 func _ready() -> void:
@@ -43,14 +44,22 @@ func _exit_tree() -> void:
 
 ## Starts the continuous sketch hum for a sketching session (ducked to idle).
 func start_sketch() -> void:
+	_confidence = 0.0
 	if _playback_enabled and _sketch != null:
 		_sketch.volume_db = sketch_idle_db
 		_sketch.play()
 
 
 func stop_sketch() -> void:
+	_confidence = 0.0
 	if _sketch != null and _sketch.playing:
 		_sketch.stop()
+
+
+## Mid-trace recognition confidence (0..1): the hum brightens and fills out as
+## the leading verb closes in, so ears track progress the way the ribbon does.
+func set_confidence(amount: float) -> void:
+	_confidence = clampf(amount, 0.0, 1.0)
 
 
 ## Rides the hum's pitch/volume each frame from the smoothed draw speed. Frame-
@@ -59,11 +68,13 @@ func update_sketch(draw_speed: float, drawing: bool, delta: float) -> void:
 	if _sketch == null or not _sketch.playing:
 		return
 	var pitch_t := clampf(draw_speed / sketch_speed_for_max_pitch, 0.0, 1.0)
-	_sketch.pitch_scale = lerpf(sketch_pitch_min, sketch_pitch_max, pitch_t)
+	_sketch.pitch_scale = lerpf(sketch_pitch_min, sketch_pitch_max, pitch_t) \
+		* lerpf(1.0, 1.12, _confidence)
 	var target_db := sketch_idle_db
 	if drawing:
 		var vol_t := clampf(draw_speed / (sketch_speed_for_max_pitch * 0.4), 0.0, 1.0)
 		target_db = lerpf(sketch_quiet_db, sketch_volume_db, vol_t)
+		target_db = minf(target_db + _confidence * 4.0, sketch_volume_db + 2.0)
 	_sketch.volume_db = move_toward(_sketch.volume_db, target_db, delta * 90.0)
 
 

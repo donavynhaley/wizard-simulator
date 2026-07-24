@@ -177,8 +177,9 @@ func _run() -> void:
 	_check(unique_paths.size() == 4, "each element has a mechanically distinct Hurl scene")
 
 	_check(RuneGlyphs.VERBS.has(&"hurl"), "Hurl belongs to the canonical rune vocabulary")
-	var hurl_match := casting._recognizer.evaluate([RuneGlyphs.points(&"hurl")])
-	_check(hurl_match["id"] == &"hurl" and float(hurl_match["score"]) >= casting.match_threshold,
+	var hurl_match: Dictionary = casting._recognizer.resolve(
+		[RuneGlyphs.points(&"hurl")], casting.match_floor, casting.match_margin)
+	_check(hurl_match["id"] == &"hurl" and bool(hurl_match["decisive"]),
 		"the Outward Spear recognizes as Hurl through the live casting recognizer")
 	_check(not RuneGlyphs.VERBS.has(&"draw") and not RuneGlyphs.VERBS.has(&"pour"),
 		"Draw and Pour are absent from the canonical rune vocabulary")
