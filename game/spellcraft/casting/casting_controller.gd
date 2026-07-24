@@ -42,7 +42,10 @@ enum CASTING_STATE {
 }
 
 @export var enable_sketching_state_time: float = 0.8
-@export var sketching_cursor_sensitivity := 1.0
+## Cursor travel per unit of hand motion. Larger tracking draws bigger glyphs,
+## which also land more points past the dedup distance - cleaner shapes for
+## the recognizer, not just more comfortable tracing.
+@export var sketching_cursor_sensitivity := 1.35
 @export var sketching_min_distance_dedup := 4.0
 @export var stroke_max_lifetime := 6.0
 ## A lift commits to the best-matching verb when its score clears this floor
