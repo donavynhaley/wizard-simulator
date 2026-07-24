@@ -71,6 +71,23 @@ func _ready() -> void:
 			_set_essence(&"essence_tint", element.color)
 		_apply_essence_presence()
 		_apply_container_exemption()
+	_ensure_link_anchor()
+
+
+## Every source is a fount a Bind thread can tether to. Provide a LinkAnchor so
+## tethering works project-wide without per-prop wiring; a prop that authors its
+## own anchor child (for a custom attach point or label) opts out.
+func _ensure_link_anchor() -> void:
+	if element == null:
+		return
+	for child in get_children():
+		if child is LinkAnchor:
+			return
+	var anchor := LinkAnchor.new()
+	anchor.name = &"LinkAnchor"
+	anchor.kind = &"vessel"
+	anchor.source_path = NodePath("..")  # the anchor's parent is this source
+	add_child(anchor)
 
 
 ## The wizard's aim rests on this source: the vessel's coloured rim flares

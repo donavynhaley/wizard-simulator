@@ -1,6 +1,8 @@
 [gd_scene format=3 uid="uid://cskyandtime01"]
 
 [ext_resource type="Script" uid="uid://ivvjr42yf0nn" path="res://game/world/day_night_cycle.gd" id="1_cycle"]
+[ext_resource type="Script" uid="uid://cjp0d0s4gm561" path="res://game/world/palette_grade.gd" id="2_grade"]
+[ext_resource type="CompressedTexture3D" uid="uid://c2dyw6ea1nsfe" path="res://game/world/luts/lut_ember.png" id="3_ember"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_o6hnd"]
 sky_top_color = Color(0.137476, 0.16737998, 0.20737997, 1)
@@ -85,3 +87,9 @@ light_color = Color(0.67242795, 0.6820439, 0.71185184, 1)
 light_energy = 1.15
 shadow_enabled = true
 directional_shadow_max_distance = 180.0
+
+[node name="PaletteGrade" type="Node" parent="."]
+script = ExtResource("2_grade")
+luts = [ExtResource("3_ember")]
+lut_names = PackedStringArray("ember (amber/blue-slate)")
+active_index = 0

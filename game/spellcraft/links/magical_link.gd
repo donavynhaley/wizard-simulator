@@ -80,6 +80,11 @@ enum StrikeResult { MISS, HIT, COMPLETED }
 
 var _anchor_a: LinkAnchor
 var _anchor_b: LinkAnchor
+## The nodes anchor_a_path / anchor_b_path point at - a LinkAnchor directly, or a
+## prop (Door, ElementSource) that owns one. Captured in _ready while the paths
+## are valid; the anchor child is resolved later in _wire_source.
+var _anchor_a_host: Node
+var _anchor_b_host: Node
 var _source: ElementSource
 var _player_built := false
 var _fade := 0.0
@@ -128,18 +133,40 @@ func setup_runtime(a: LinkAnchor, b: LinkAnchor, link_effect: LinkEffect) -> voi
 
 func _ready() -> void:
 	add_to_group(GROUP)
+	# Capture the referenced nodes now, while their scene paths are valid: a link
+	# may point at a LinkAnchor directly, or at the prop that owns one (a Door, an
+	# ElementSource). Props create their anchor in _ready, and some reparent
+	# themselves afterward (the door binds into the imported model), so bind to
+	# the node here and resolve its anchor child once wired, in _wire_source.
 	if _anchor_a == null:
-		_anchor_a = get_node_or_null(anchor_a_path) as LinkAnchor
+		_anchor_a_host = get_node_or_null(anchor_a_path)
 	if _anchor_b == null:
-		_anchor_b = get_node_or_null(anchor_b_path) as LinkAnchor
+		_anchor_b_host = get_node_or_null(anchor_b_path)
 	_build_strand_meshes()
 	_build_label()
-	# Anchors are children of their props and ready after this sibling node, so
-	# resolve the fount and apply the effect a frame later when they are wired.
 	_wire_source.call_deferred()
 
 
+## A link references a LinkAnchor directly (player-forged) or the prop that owns
+## one (a Door, an ElementSource, which auto-provide theirs in _ready). Called
+## deferred, once every prop's anchor exists.
+func _resolve_anchor(host: Node) -> LinkAnchor:
+	if host == null:
+		return null
+	var anchor := host as LinkAnchor
+	if anchor != null:
+		return anchor
+	for child in host.get_children():
+		if child is LinkAnchor:
+			return child as LinkAnchor
+	return null
+
+
 func _wire_source() -> void:
+	if _anchor_a == null:
+		_anchor_a = _resolve_anchor(_anchor_a_host)
+	if _anchor_b == null:
+		_anchor_b = _resolve_anchor(_anchor_b_host)
 	var fount := source_anchor()
 	if fount != null:
 		_source = fount.source()

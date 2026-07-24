@@ -2,9 +2,8 @@
 
 [ext_resource type="Script" uid="uid://b74s84ugq2fng" path="res://game/world/levels/tower_architecture.gd" id="1_script"]
 [ext_resource type="PackedScene" uid="uid://dce5p50neh3lx" path="res://assets/models/environments/wizard_tower.glb" id="2_model"]
-[ext_resource type="Script" uid="uid://cau33cvj2flp7" path="res://game/world/levels/door.gd" id="3_door_script"]
+[ext_resource type="PackedScene" uid="uid://cwardeddoor01" path="res://game/world/levels/door.tscn" id="3_door_scene"]
 [ext_resource type="Script" uid="uid://c403iad6kcw8k" path="res://game/spellcraft/links/magical_link.gd" id="4_link"]
-[ext_resource type="Script" uid="uid://8xdkuk56pic8" path="res://game/spellcraft/links/link_anchor.gd" id="5_anchor"]
 [ext_resource type="PackedScene" uid="uid://jtttvlmcy1jg" path="res://game/world/props/breath_of_the_last_dragon.tscn" id="6_torch"]
 [ext_resource type="PackedScene" uid="uid://5fyhxou04dxg" path="res://game/scribing/station/crafting_table.tscn" id="7_table"]
 [ext_resource type="PackedScene" uid="uid://ckttbfrao7whi" path="res://game/alchemy/alchemy_lab.tscn" id="8_lab"]
@@ -15,47 +14,6 @@
 [ext_resource type="Script" uid="uid://duwe13r5kkl2m" path="res://game/world/props/mood_light.gd" id="13_mood"]
 [ext_resource type="PackedScene" uid="uid://cstandtorch01" path="res://game/world/props/standing_torch.tscn" id="14_approach_torch"]
 [ext_resource type="Resource" uid="uid://l6jdxe0xw46q" path="res://content/links/door_arcane_lock.tres" id="15_lock"]
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_door"]
-size = Vector3(1.52, 2.58, 0.2)
-
-[sub_resource type="Animation" id="Animation_door_reset"]
-length = 0.001
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath(".:open_progress")
-tracks/0/interp = 1
-tracks/0/loop_wrap = false
-tracks/0/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 0,
-"values": [0.0]
-}
-
-[sub_resource type="Animation" id="Animation_door_open"]
-resource_name = "open"
-length = 1.2
-step = 0.01
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath(".:open_progress")
-tracks/0/interp = 1
-tracks/0/loop_wrap = false
-tracks/0/keys = {
-"times": PackedFloat32Array(0, 1.2),
-"transitions": PackedFloat32Array(1, 1),
-"update": 0,
-"values": [0.0, 1.0]
-}
-
-[sub_resource type="AnimationLibrary" id="AnimationLibrary_door"]
-_data = {
-&"RESET": SubResource("Animation_door_reset"),
-&"open": SubResource("Animation_door_open")
-}
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_hatch"]
 size = Vector3(3, 0.22, 3)
@@ -115,26 +73,13 @@ script = ExtResource("1_script")
 
 [node name="Model" parent="." unique_id=192220924 instance=ExtResource("2_model")]
 
-[node name="EntryDoor" type="AnimatableBody3D" parent="." unique_id=280429298]
-script = ExtResource("3_door_script")
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="EntryDoor" unique_id=1001833745]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.73, 0, 0)
-shape = SubResource("BoxShape3D_door")
-
-[node name="AnimationPlayer" type="AnimationPlayer" parent="EntryDoor" unique_id=1181833002]
-libraries/ = SubResource("AnimationLibrary_door")
-
-[node name="DoorLinkPoint" type="Node3D" parent="EntryDoor" unique_id=636673762]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.3, -0.1, 0)
-script = ExtResource("5_anchor")
-kind = &"door"
-display_name = "the tower door"
+[node name="EntryDoor" parent="." unique_id=280429298 instance=ExtResource("3_door_scene")]
+link_attach_offset = Vector3(1.3, -0.1, 0)
 
 [node name="DoorWard" type="Node3D" parent="." unique_id=1708443263]
 script = ExtResource("4_link")
-anchor_a_path = NodePath("../GroundFloorProps/DoorLantern/LanternLinkPoint")
-anchor_b_path = NodePath("../EntryDoor/DoorLinkPoint")
+anchor_a_path = NodePath("../GroundFloorProps/DoorLantern/MagicalFlame/FireSource")
+anchor_b_path = NodePath("../EntryDoor")
 effect = ExtResource("15_lock")
 drain_source_on_ready = true
 fact_id = &"door_ward_source"
@@ -186,12 +131,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.2777853, 1.186738, 1.133536
 
 [node name="DoorLantern" parent="GroundFloorProps" unique_id=805035118 instance=ExtResource("11_lantern")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -0.07908678, 3.2557468, 5.9788275)
-
-[node name="LanternLinkPoint" type="Node3D" parent="GroundFloorProps/DoorLantern" unique_id=916281801]
-script = ExtResource("5_anchor")
-kind = &"vessel"
-source_path = NodePath("../MagicalFlame/FireSource")
-display_name = "the lantern"
 
 [node name="BasementProps" type="Node3D" parent="." unique_id=2060013179]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.26498866, 0)

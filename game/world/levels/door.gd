@@ -4,6 +4,11 @@ extends AnimatableBody3D
 const LOCK_BREAK_STREAM := preload("res://assets/sounds/siphon_rip.wav")
 
 @export_range(90.0, 120.0, 1.0) var open_angle_degrees := 105.0
+## How the focus prompt names this door ("Open tower door", "Open cottage door").
+@export var display_name := "tower door"
+## Where a magical link's strand attaches, in the door's local space - lets the
+## auto-provided anchor sit on the lock face instead of the hinge.
+@export var link_attach_offset := Vector3.ZERO
 
 @onready var _animation_player: AnimationPlayer = $AnimationPlayer
 
@@ -21,6 +26,21 @@ var _lock_break_audio: AudioStreamPlayer3D
 
 func _ready() -> void:
 	open_progress = 0.0
+	_ensure_link_anchor()
+
+
+## Every door is a link sink a Bind can seal. Provide a LinkAnchor so links can
+## reference the door directly, with no hand-placed anchor; a scene that authors
+## its own anchor child opts out.
+func _ensure_link_anchor() -> void:
+	for child in get_children():
+		if child is LinkAnchor:
+			return
+	var anchor := LinkAnchor.new()
+	anchor.name = &"LinkAnchor"
+	anchor.kind = &"door"
+	anchor.attach_offset = link_attach_offset
+	add_child(anchor)  # target() defaults to parent = this Door
 
 
 ## An arcane lock holds the door shut. A magical link drives this: while the
@@ -80,7 +100,7 @@ func focus_prompt(player: WizardPlayer, _collider: Object) -> String:
 		return ""
 	if _locked and not _is_open:
 		return "The door is locked by arcane magic"
-	return "Close tower door" if _is_open else "Open tower door"
+	return ("Close %s" if _is_open else "Open %s") % display_name
 
 
 func is_open() -> bool:
