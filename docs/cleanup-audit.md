@@ -1,5 +1,9 @@
 # Cleanup Audit - 2026-07-23
 
+Status: buckets A (bugs), B (tests, 20/20 green), and C (dead code) were applied on 2026-07-23 as the commits following `0814c6a`.
+Buckets D (duplication), E (contracts), F (splits), and G (style) are pending discussion.
+Note from applying B5: commit `10ca2f2` had incidentally re-exported the homestead glb with its glTF extras stripped; the pre-WIP export was restored.
+
 Baseline: branch `prototype/verb-casting-sentence` at checkpoint `49075d9` (awakened-objects WIP committed first so cleanup diffs stay separable).
 Method: mechanical scans (orphans, broken refs, typing, prints, input actions) plus seven parallel code reviews covering all 118 scripts, 53 scenes, tools, and tests, cross-checked against `docs/project-organization.md` and the Godot 4.3+ review checklist.
 Findings are grouped into approval buckets A-G, ranked by value and risk.
