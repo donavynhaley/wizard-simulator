@@ -23,6 +23,7 @@ static func _ensure_registered() -> void:
 		HeatEffect.new(),
 		IrrigateEffect.new(),
 		ArcaneLockEffect.new(),
+		PortalEffect.new(),
 	]
 
 
