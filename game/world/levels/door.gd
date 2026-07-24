@@ -1,6 +1,10 @@
 class_name Door
 extends AnimatableBody3D
 
+## Emitted whenever the door actually swings, so anything bound to it can follow
+## (a portal's far leaf moves with this one - the two are one doorway).
+signal open_state_changed(is_open: bool)
+
 const LOCK_BREAK_STREAM := preload("res://assets/sounds/siphon_rip.wav")
 
 @export_range(90.0, 120.0, 1.0) var open_angle_degrees := 105.0
@@ -51,8 +55,7 @@ func set_locked(locked: bool) -> void:
 		return
 	_locked = locked
 	if not locked and _is_bound and not _is_open:
-		_is_open = true
-		_play_toward_target()
+		set_open(true)
 		_play_lock_break()
 
 
@@ -91,8 +94,7 @@ func interact(player: WizardPlayer, _collider: Object) -> void:
 	if _locked and not _is_open:
 		WizardHud.toast(player, "An arcane lock holds the door fast")
 		return
-	_is_open = not _is_open
-	_play_toward_target()
+	set_open(not _is_open)
 
 
 func focus_prompt(player: WizardPlayer, _collider: Object) -> String:
@@ -105,6 +107,20 @@ func focus_prompt(player: WizardPlayer, _collider: Object) -> String:
 
 func is_open() -> bool:
 	return _is_open
+
+
+## Drive the door to a state, from a hand or from a binding. An arcane lock
+## refuses to open but never refuses to shut, so a warded door can still be
+## pulled closed. Announcing only real changes is what keeps two bound doors from
+## echoing each other forever.
+func set_open(open: bool) -> void:
+	if not _is_bound or _is_open == open:
+		return
+	if open and _locked:
+		return
+	_is_open = open
+	_play_toward_target()
+	open_state_changed.emit(_is_open)
 
 
 func _play_toward_target() -> void:

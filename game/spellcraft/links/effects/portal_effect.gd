@@ -55,6 +55,9 @@ func _open_gates(link: MagicalLink) -> void:
 	var gate_b := _ensure_gate(link, GATE_B, door_b)
 	gate_a.far_gate = gate_b
 	gate_b.far_gate = gate_a
+	# Binding makes one doorway of two, so the two leaves start in agreement and
+	# move together from here on.
+	gate_a.agree_with_far()
 
 
 func _close_gates(link: MagicalLink) -> void:

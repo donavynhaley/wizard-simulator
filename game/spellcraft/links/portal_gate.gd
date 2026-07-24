@@ -62,6 +62,8 @@ func _ready() -> void:
 	_build_trigger()
 	_build_view()
 	snap_to_frame()
+	if door != null and is_instance_valid(door):
+		door.open_state_changed.connect(_on_door_swung)
 
 
 ## The fixed doorway transform. A bound Door is reparented onto the imported
@@ -81,6 +83,29 @@ func snap_to_frame() -> void:
 
 func is_open() -> bool:
 	return door != null and is_instance_valid(door) and door.is_open()
+
+
+## One doorway, so one leaf: what this door does, the far one does. Door only
+## announces real changes, so the answering swing raises no further echo.
+func _on_door_swung(is_door_open: bool) -> void:
+	if far_gate == null or not is_instance_valid(far_gate):
+		return
+	if far_gate.door != null and is_instance_valid(far_gate.door):
+		far_gate.door.set_open(is_door_open)
+
+
+## Bring a freshly bound pair into agreement. Open wins: a portal you can walk
+## through is the point of building one. An arcane lock still refuses, and a
+## warded door simply stays shut until its ward is fed.
+func agree_with_far() -> void:
+	if far_gate == null or not is_instance_valid(far_gate):
+		return
+	var theirs := far_gate.door
+	if door == null or theirs == null:
+		return
+	if door.is_open() or theirs.is_open():
+		door.set_open(true)
+		theirs.set_open(true)
 
 
 func _build_surface() -> void:

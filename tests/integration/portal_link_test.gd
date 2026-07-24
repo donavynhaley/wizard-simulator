@@ -151,6 +151,34 @@ func _run() -> void:
 	_check(_doorway_distance(cottage_frame, player.global_position) < 2.5,
 		"the return arrives just outside the cottage doorway")
 
+	# One doorway, one leaf: with the ward fed, neither door moves alone.
+	_check(cottage_door.is_open(),
+		"the ward breaking open the tower door opens the bound cottage door too")
+	cottage_door.interact(player, cottage_door)
+	await create_timer(1.4).timeout
+	_check(not cottage_door.is_open() and not tower_door.is_open(),
+		"closing one bound door closes the other")
+	tower_door.interact(player, tower_door)
+	await create_timer(1.4).timeout
+	_check(tower_door.is_open() and cottage_door.is_open(),
+		"opening one bound door opens the other")
+
+	# Binding brings a mismatched pair into agreement. Sever, part them, re-forge.
+	link.sever()
+	await process_frame
+	cottage_door.interact(player, cottage_door)
+	await create_timer(1.4).timeout
+	_check(not cottage_door.is_open() and tower_door.is_open(),
+		"a severed pair moves independently again")
+	var rebound := LinkForge.forge(cottage_anchor, tower_anchor, level)
+	await process_frame
+	await process_frame
+	_check(rebound != null and cottage_door.is_open(),
+		"binding a shut door to an open one swings it open to match")
+	link = rebound
+	cottage_gate = link.get_node_or_null(^"GateA") as PortalGate
+	tower_gate = link.get_node_or_null(^"GateB") as PortalGate
+
 	# Severing takes the portal with it - the doors are only doors again.
 	link.sever()
 	await process_frame
