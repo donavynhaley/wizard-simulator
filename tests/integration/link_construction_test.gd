@@ -94,6 +94,11 @@ func _run() -> void:
 	_check(casting.current_state == CastingController.CASTING_STATE.IDLE,
 		"forging consumes the held Bind rune")
 	_check(ground.is_hot(), "the forged Warmth link heats the ground")
+	# The strand is forged while Sight is already up, so it misses the activation
+	# broadcast that reveals links; it must still be told Sight is on and fade in
+	# on its own, not stay invisible until the player toggles Sight off and on.
+	_check(link._fade_target > 0.5,
+		"the freshly forged strand reveals itself without a Sight toggle")
 
 	# Starve the fount: the link cools its ground without being severed.
 	fire_source.consume(fire_source.global_position + Vector3.UP * 0.5)

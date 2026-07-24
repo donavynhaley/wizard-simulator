@@ -238,7 +238,12 @@ func _bind_pressed() -> void:
 	var world: Node = get_tree().current_scene
 	if world == null:
 		world = get_tree().root
-	LinkForge.forge(_carry_from, anchor, world)
+	var new_link := LinkForge.forge(_carry_from, anchor, world)
+	# Born while Sight is already up, the strand missed the activation broadcast
+	# (call_group in _set_active) that reveals links, so tell it directly - else
+	# it stays faded out until the player toggles Sight off and on.
+	if new_link != null:
+		new_link.set_sight_visible(active)
 	if _camera != null:
 		_flash_screen = _camera.unproject_position(anchor.anchor_point())
 		_flash_color = _anchor_color(anchor)
