@@ -34,6 +34,10 @@ const RESET_ANIM := &"Reset"
 const AIR_TEMPLATE_DIR := "res://content/runes/air"
 const FEEDBACK_INTERVAL := 0.12         ## seconds between mid-trace resolves
 const PERSONAL_TEMPLATE_LIMIT := 3      ## newest exemplars kept per verb on disk
+## Every refused lift is kept here so a real hand's failures can be replayed
+## through the recognizer offline (tools/verification/replay_failed_traces.gd).
+const TRACE_DEBUG_DIR := "user://trace_debug"
+const TRACE_DEBUG_LIMIT := 24
 
 enum CASTING_STATE {
 	IDLE,
@@ -307,6 +311,12 @@ func _update_sketching(delta: float) -> void:
 	_sketch_draw_speed = lerpf(_sketch_draw_speed, inst_speed, clampf(delta * 12.0, 0.0, 1.0))
 	for i in range(_strokes.size() - 1, -1, -1):
 		var stroke := _strokes[i]
+		# Ink you are still laying does not rot behind you: the active stroke
+		# neither ages nor expires until the lift. Bind's figure-eight is the
+		# longest glyph, and a slow first lobe used to expire from the front
+		# while the second lobe was still being drawn.
+		if stroke == _active_stroke:
+			continue
 		for j in stroke.point_ages.size():
 			stroke.point_ages[j] += delta
 		# Expire points from the front (oldest first) so ink drops off the tail.
@@ -316,9 +326,7 @@ func _update_sketching(delta: float) -> void:
 		if drop > 0:
 			stroke.points = stroke.points.slice(drop)
 			stroke.point_ages = stroke.point_ages.slice(drop)
-		# Keep the active stroke alive even if it fully expired (holding still),
-		# so its reference stays valid; it re-seeds on the next point.
-		if stroke.points.is_empty() and stroke != _active_stroke:
+		if stroke.points.is_empty():
 			_strokes.remove_at(i)
 	_update_trace_feedback(delta)
 	if _audio != null:
@@ -578,12 +586,14 @@ func _try_recognize() -> void:
 		if practice_verb != &"" and id == practice_verb:
 			_save_personal_template(id, point_arrays)
 		_present_held_spell()
-	elif score >= match_floor and resolution["second_id"] != &"":
-		# A close call between two verbs is the one honest refusal left; name
-		# them so the refusal teaches instead of reading as a dead input.
-		WizardHud.toast(self, "The trace wavers between %s and %s" % [
-			RuneGlyphs.display_name(resolution["id"] as StringName),
-			RuneGlyphs.display_name(resolution["second_id"] as StringName)])
+	else:
+		_dump_failed_trace(point_arrays, resolution)
+		if score >= match_floor and resolution["second_id"] != &"":
+			# A close call between two verbs is the one honest refusal left;
+			# name them so the refusal teaches instead of reading as dead input.
+			WizardHud.toast(self, "The trace wavers between %s and %s" % [
+				RuneGlyphs.display_name(resolution["id"] as StringName),
+				RuneGlyphs.display_name(resolution["second_id"] as StringName)])
 
 
 func _configure_recognizer() -> void:
@@ -664,12 +674,7 @@ func _save_personal_template(id: StringName, point_arrays: Array) -> void:
 		push_warning("Could not create %s: %s" % [
 			personal_template_dir, error_string(err)])
 		return
-	var stroke_data: Array = []
-	for stroke in point_arrays:
-		var points_out: Array = []
-		for point in (stroke as PackedVector2Array):
-			points_out.append([point.x, point.y])
-		stroke_data.append(points_out)
+	var stroke_data := _serialize_point_arrays(point_arrays)
 	var path := "%s/%s_%d_%d.json" % [personal_template_dir, id,
 		int(Time.get_unix_time_from_system()), Time.get_ticks_msec()]
 	var file := FileAccess.open(path, FileAccess.WRITE)
@@ -690,15 +695,52 @@ func _save_personal_template(id: StringName, point_arrays: Array) -> void:
 ## Keeps only the newest PERSONAL_TEMPLATE_LIMIT exemplars per verb on disk;
 ## filenames sort by their unix-time suffix.
 func _prune_personal_templates(id: StringName) -> void:
-	var dir := DirAccess.open(personal_template_dir)
+	_prune_json_dir(personal_template_dir, "%s_" % id, PERSONAL_TEMPLATE_LIMIT)
+
+
+func _serialize_point_arrays(point_arrays: Array) -> Array:
+	var stroke_data: Array = []
+	for stroke in point_arrays:
+		var points_out: Array = []
+		for point in (stroke as PackedVector2Array):
+			points_out.append([point.x, point.y])
+		stroke_data.append(points_out)
+	return stroke_data
+
+
+## A refused lift, exactly as the recognizer saw it, with its verdict. This is
+## the evidence loop: real failing hands get replayed offline instead of tuned
+## against synthetic noise models.
+func _dump_failed_trace(point_arrays: Array, resolution: Dictionary) -> void:
+	if DirAccess.make_dir_recursive_absolute(TRACE_DEBUG_DIR) != OK:
+		return
+	var path := "%s/trace_%d_%d.json" % [TRACE_DEBUG_DIR,
+		int(Time.get_unix_time_from_system()), Time.get_ticks_msec()]
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	if file == null:
+		return
+	file.store_string(JSON.stringify({
+		"version": 1,
+		"best": String(resolution["id"]),
+		"score": resolution["score"],
+		"second": String(resolution["second_id"]),
+		"second_score": resolution["second_score"],
+		"strokes": _serialize_point_arrays(point_arrays),
+	}))
+	file.close()
+	_prune_json_dir(TRACE_DEBUG_DIR, "trace_", TRACE_DEBUG_LIMIT)
+
+
+func _prune_json_dir(path: String, prefix: String, limit: int) -> void:
+	var dir := DirAccess.open(path)
 	if dir == null:
 		return
 	var mine: Array[String] = []
 	for file_name in dir.get_files():
-		if file_name.begins_with("%s_" % id) and file_name.get_extension() == "json":
+		if file_name.begins_with(prefix) and file_name.get_extension() == "json":
 			mine.append(file_name)
 	mine.sort()
-	while mine.size() > PERSONAL_TEMPLATE_LIMIT:
+	while mine.size() > limit:
 		dir.remove(mine.pop_front())
 
 
