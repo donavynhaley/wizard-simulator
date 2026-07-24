@@ -71,6 +71,41 @@ static func drawing_hint(id: StringName) -> String:
 	return _INFO.get(id, {}).get("hint", "")
 
 
+## Air traces have no horizon - nothing tells the hand where vertical is - and
+## the bbox-normalized scorer is tilt-sensitive (a 12-degree tilt cost Bind
+## half its score). Registering slightly tilted canon copies absorbs natural
+## hand rotation for every verb.
+const EXEMPLAR_TILT_DEGREES: Array[float] = [0.0, -14.0, 14.0]
+
+
+## Canonical exemplar stroke-sets for a verb: the glyph plus tilted copies.
+## Each entry is one template (an Array of strokes) for ShapeRecognizer.
+static func exemplar_strokes(id: StringName) -> Array:
+	var out: Array = []
+	for tilt_degrees in _exemplar_tilts(id):
+		out.append([_rotated(points(id), deg_to_rad(tilt_degrees))])
+	return out
+
+
+## Rings keep only the upright canon: Seal is rotation-symmetric (tilted copies
+## are duplicates) and a tilted Open would swing its gap and hook into shapes
+## that shadow sloppy Seals, shrinking Seal's margin for no leniency gain.
+static func _exemplar_tilts(id: StringName) -> Array[float]:
+	if id == &"seal" or id == &"open":
+		return [0.0]
+	return EXEMPLAR_TILT_DEGREES
+
+
+static func _rotated(stroke: PackedVector2Array, angle: float) -> PackedVector2Array:
+	if is_zero_approx(angle):
+		return stroke
+	var out := PackedVector2Array()
+	var center := Vector2(0.5, 0.5)
+	for point in stroke:
+		out.append(center + (point - center).rotated(angle))
+	return out
+
+
 ## Unit-square stroke for a verb's glyph.
 static func points(id: StringName) -> PackedVector2Array:
 	match id:

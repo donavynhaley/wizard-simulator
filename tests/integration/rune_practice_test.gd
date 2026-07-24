@@ -20,13 +20,26 @@ func _run() -> void:
 
 
 func _run_recognizer_checks() -> void:
+	# Mirror the controller's canon registration: upright plus tilted copies.
 	var recognizer := ShapeRecognizer.new()
 	for id in RuneGlyphs.VERBS:
-		recognizer.add_template(id, [RuneGlyphs.points(id)])
+		for strokes: Array in RuneGlyphs.exemplar_strokes(id):
+			recognizer.add_template(id, strokes)
 
 	var hurl := recognizer.resolve([RuneGlyphs.points(&"hurl")], 0.45, 0.15)
 	_check(hurl["id"] == &"hurl" and bool(hurl["decisive"]),
 		"canonical Hurl resolves decisively under the margin rule")
+
+	# The Donavyn report of 2026-07-23: a naturally tilted figure-eight (air
+	# traces have no horizon) must still read as Bind.
+	var tilted_eight := PackedVector2Array()
+	for i in 65:
+		var a := TAU * float(i) / 64.0
+		var p := Vector2(0.3 * sin(2.0 * a), 0.45 * cos(a)).rotated(deg_to_rad(12.0))
+		tilted_eight.append(Vector2(0.5, 0.5) + p)
+	var tilted_bind := recognizer.resolve([tilted_eight], 0.45, 0.15)
+	_check(tilted_bind["id"] == &"bind" and bool(tilted_bind["decisive"]),
+		"a 12-degree tilted figure-eight resolves decisively as Bind")
 
 	var seal := recognizer.resolve([RuneGlyphs._ring(1.0)], 0.45, 0.15)
 	_check(seal["id"] == &"seal" and bool(seal["decisive"]),

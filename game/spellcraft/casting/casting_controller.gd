@@ -551,7 +551,15 @@ func _try_recognize() -> void:
 	print(report)
 	var resolution := _recognizer.resolve(point_arrays, match_floor, match_margin)
 	var score := float(resolution["score"])
-	if resolution["decisive"]:
+	var decisive := bool(resolution["decisive"])
+	# At the slate the intent is declared, so the margin is waived for the
+	# awaited verb (the floor still holds). Labeled practice both resolves and
+	# teaches - without this, a verb the hand cannot yet draw decisively could
+	# never be taught to the tower at all.
+	if not decisive and practice_verb != &"" \
+			and resolution["id"] == practice_verb and score >= match_floor:
+		decisive = true
+	if decisive:
 		var id := resolution["id"] as StringName
 		var overriding := locked_rune_id != &""
 		locked_rune_id = id
@@ -586,12 +594,13 @@ func _configure_recognizer() -> void:
 
 
 ## The five-verb glyph language (RuneGlyphs, game-bible.md rune table). Canon
-## glyphs are ALWAYS registered: exemplars per verb coexist and the best match
-## wins, so recorded and personal exemplars add leniency for a particular hand
-## without ever suppressing the canonical form.
+## glyphs are ALWAYS registered - upright and tilted copies per verb: exemplars
+## coexist and the best match wins, so recorded and personal exemplars add
+## leniency for a particular hand without ever suppressing the canonical form.
 func _register_fallback_glyphs() -> void:
 	for id in RuneGlyphs.VERBS:
-		_recognizer.add_template(id, [RuneGlyphs.points(id)])
+		for strokes: Array in RuneGlyphs.exemplar_strokes(id):
+			_recognizer.add_template(id, strokes)
 
 
 func _load_template_dir(path: String) -> void:

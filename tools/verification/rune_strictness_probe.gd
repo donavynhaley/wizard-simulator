@@ -20,7 +20,8 @@ func _init() -> void:
 func _run() -> void:
 	var recognizer := ShapeRecognizer.new()
 	for id in RuneGlyphs.VERBS:
-		recognizer.add_template(id, [RuneGlyphs.points(id)])
+		for strokes: Array in RuneGlyphs.exemplar_strokes(id):
+			recognizer.add_template(id, strokes)
 
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 20260723
@@ -39,7 +40,6 @@ func _run() -> void:
 				var detailed := recognizer.evaluate_detailed(strokes)
 				detailed.sort_custom(func(a, b): return float(a["score"]) > float(b["score"]))
 				var best := detailed[0]
-				var second := detailed[1]
 				var best_score := float(best["score"])
 				var correct: bool = best["id"] == id
 				scores.append(best_score if correct else 0.0)
@@ -47,10 +47,12 @@ func _run() -> void:
 					accept_threshold += 1
 					if not correct:
 						wrong_threshold += 1
-				if best_score >= MARGIN_FLOOR \
-						and best_score - float(second["score"]) >= MARGIN:
+				# Margin acceptance goes through the REAL rule (resolve skips
+				# same-verb exemplars for the runner-up) - never reimplement it.
+				var resolution := recognizer.resolve(strokes, MARGIN_FLOOR, MARGIN)
+				if bool(resolution["decisive"]):
 					accept_margin += 1
-					if not correct:
+					if resolution["id"] != id:
 						wrong_margin += 1
 			scores.sort()
 			var mean := 0.0

@@ -109,6 +109,7 @@ Recognition feel (2026-07-23):
 - The ribbon and the sketch hum warm with recognition confidence mid-trace, so a failing shape is corrected, not discovered at the lift.
 - The practice slate records a decisive trace as a personal exemplar (player data, user://).
   The tower learns this wizard's hand alongside the canon glyphs; personal exemplars only add leniency, never replace the canon.
+  At the slate the intent is declared, so the margin is waived for the awaited verb (the quality floor still holds): a verb the hand cannot yet draw decisively can still be taught.
 
 The three casting tiers are the same sentence at three levels of preparation:
 
