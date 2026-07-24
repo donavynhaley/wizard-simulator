@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://bfsb71ceawsfi" path="res://game/books/resources/book_data.gd" id="1_book_data"]
 [ext_resource type="Script" uid="uid://dqbhuio5lxao0" path="res://game/books/resources/book_page_data.gd" id="2_page_data"]
 [ext_resource type="Script" uid="uid://dr7ronxaidf54" path="res://game/books/resources/book_spread_data.gd" id="3_spread_data"]
-[ext_resource type="Resource" path="res://content/runes/templates/hurl/hurl_template_01.tres" id="4_hurl"]
+[ext_resource type="Resource" uid="uid://cyvc007j3k1vk" path="res://content/runes/templates/hurl/hurl_template_01.tres" id="4_hurl"]
 [ext_resource type="Resource" path="res://content/books/default_book_visual_profile.tres" id="5_visual_profile"]
 
 [sub_resource type="Resource" id="BookPageData_hurl_intro"]

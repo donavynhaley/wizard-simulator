@@ -1,14 +1,6 @@
 class_name ArcaneLockEffect
 extends LinkEffect
 
-## Binds a light-bearing fount to a door: the classic Arcane Lock. While the
-## fount holds its element the door yields; starve it and the lock takes hold.
-## Set invert to flip that - a door that a lit vessel LOCKS instead of frees.
-##
-## This is what the tower's entrance is: an empty lantern bound to the door,
-## so the door stays arcane-locked until fire is placed in the vessel.
-
-## When true, a powered fount LOCKS the door and starving it opens the way.
 @export var invert := false
 
 
@@ -17,16 +9,20 @@ func can_apply(a: LinkAnchor, b: LinkAnchor) -> bool:
 	if source == null:
 		return false
 	var sink := sink_of(a, b)
-	return sink != null and sink.kind == &"door"
+	return sink != null and sink.target() is Door
 
 
 func set_active(link: MagicalLink, active: bool) -> void:
-	var door := _door(link)
-	if door == null or not door.has_method(&"set_locked"):
+	var door := _get_door(link)
+	if door == null:
 		return
 	var powered_opens := not invert
-	door.call(&"set_locked", active != powered_opens)
+	door.set_locked(active != powered_opens)
 
+func on_removed(link: MagicalLink) -> void:
+	var door := _get_door(link)
+	if door != null:
+		door.set_locked(false)
 
 func effect_name() -> String:
 	return "Arcane Lock"
@@ -40,6 +36,8 @@ func describe(link: MagicalLink) -> String:
 		% source.label()
 
 
-func _door(link: MagicalLink) -> Node:
+func _get_door(link: MagicalLink) -> Door:
 	var sink := link.sink_anchor()
-	return sink.target() if sink != null else null
+	if sink == null:
+		return null
+	return sink.target() as Door

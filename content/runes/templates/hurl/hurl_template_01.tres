@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="RuneTemplate" format=3]
+[gd_resource type="Resource" script_class="RuneTemplate" format=3 uid="uid://cyvc007j3k1vk"]
 
-[ext_resource type="Script" path="res://game/scribing/runes/rune_template.gd" id="1_template"]
+[ext_resource type="Script" uid="uid://cxw25ucjaqlv0" path="res://game/scribing/runes/rune_template.gd" id="1_template"]
 
 [resource]
 script = ExtResource("1_template")

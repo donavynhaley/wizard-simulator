@@ -1,4 +1,4 @@
-class_name TowerDoor
+class_name Door
 extends AnimatableBody3D
 
 const LOCK_BREAK_STREAM := preload("res://assets/sounds/siphon_rip.wav")
@@ -54,7 +54,7 @@ func _play_lock_break() -> void:
 
 func bind_imported_door(hinge: Node3D, visual: Node3D) -> void:
 	if hinge == null or visual == null:
-		push_error("TowerDoor: bind_imported_door needs the Blender-authored hinge and visual.")
+		push_error("Door: bind_imported_door needs the Blender-authored hinge and visual.")
 		return
 	reparent(hinge, false)
 	transform = Transform3D.IDENTITY

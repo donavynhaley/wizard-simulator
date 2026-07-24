@@ -3,7 +3,7 @@ extends Node3D
 
 @onready var basement_respawn: Marker3D = $BasementRespawn
 @onready var _hatch_blocker: CollisionShape3D = $SecretHatchBlocker/CollisionShape3D
-@onready var entry_door: TowerDoor = $EntryDoor
+@onready var entry_door: Door = $EntryDoor
 
 var _basement_is_revealed := false
 var _closed_hatch: MeshInstance3D

@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://b74s84ugq2fng" path="res://game/world/levels/tower_architecture.gd" id="1_script"]
 [ext_resource type="PackedScene" uid="uid://dce5p50neh3lx" path="res://assets/models/environments/wizard_tower.glb" id="2_model"]
-[ext_resource type="Script" uid="uid://cau33cvj2flp7" path="res://game/world/levels/tower_door.gd" id="3_door_script"]
+[ext_resource type="Script" uid="uid://cau33cvj2flp7" path="res://game/world/levels/door.gd" id="3_door_script"]
 [ext_resource type="Script" uid="uid://c403iad6kcw8k" path="res://game/spellcraft/links/magical_link.gd" id="4_link"]
 [ext_resource type="Script" uid="uid://8xdkuk56pic8" path="res://game/spellcraft/links/link_anchor.gd" id="5_anchor"]
 [ext_resource type="PackedScene" uid="uid://jtttvlmcy1jg" path="res://game/world/props/breath_of_the_last_dragon.tscn" id="6_torch"]
@@ -14,7 +14,7 @@
 [ext_resource type="PackedScene" uid="uid://b04q02fhf6uk8" path="res://assets/third_party/kenney/fantasy_town/fountain-square-detail.glb" id="12_spring"]
 [ext_resource type="Script" uid="uid://duwe13r5kkl2m" path="res://game/world/props/mood_light.gd" id="13_mood"]
 [ext_resource type="PackedScene" uid="uid://cstandtorch01" path="res://game/world/props/standing_torch.tscn" id="14_approach_torch"]
-[ext_resource type="Resource" path="res://content/links/door_arcane_lock.tres" id="15_lock"]
+[ext_resource type="Resource" uid="uid://l6jdxe0xw46q" path="res://content/links/door_arcane_lock.tres" id="15_lock"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_door"]
 size = Vector3(1.52, 2.58, 0.2)

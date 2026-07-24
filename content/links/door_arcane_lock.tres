@@ -1,7 +1,6 @@
-[gd_resource type="Resource" script_class="ArcaneLockEffect" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="ArcaneLockEffect" format=3 uid="uid://l6jdxe0xw46q"]
 
-[ext_resource type="Script" path="res://game/spellcraft/links/effects/arcane_lock_effect.gd" id="1_lock"]
+[ext_resource type="Script" uid="uid://730vpdiojwkw" path="res://game/spellcraft/links/effects/arcane_lock_effect.gd" id="1_lock"]
 
 [resource]
 script = ExtResource("1_lock")
-invert = false
