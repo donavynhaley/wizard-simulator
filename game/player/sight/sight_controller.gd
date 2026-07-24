@@ -297,7 +297,12 @@ func _sever_pressed() -> void:
 		_flash_screen = _camera.unproject_position(link.gate_point())
 		_flash_color = link.marker_color()
 		_flash_age = 0.0
+	if _attuning_link == link:
+		_end_attunement()
 	link.sever()
+	# The aimed strand is gone; drop the reference now so nothing casts the
+	# freed object before the next marker pass re-aims.
+	_aimed = null
 	_consume_held_rune()
 	WizardHud.toast(self, "The thread parts")
 
@@ -464,12 +469,17 @@ func _hand_position() -> Vector3:
 func _set_aimed_target(aimed: Node3D) -> void:
 	if aimed == _aimed:
 		return
-	var previous := _aimed as MagicalLink
-	if previous != null and is_instance_valid(previous):
-		previous.set_aimed(false)
-	var previous_source := _aimed as ElementSource
-	if previous_source != null and is_instance_valid(previous_source):
-		previous_source.set_sight_aimed(false)
+	# The previously aimed node may have been freed since (a strand the player
+	# just severed). Casting a freed object throws "Trying to cast a freed
+	# object", so validate the whole reference before casting - only a live
+	# previous target needs telling it lost the aim.
+	if is_instance_valid(_aimed):
+		var previous := _aimed as MagicalLink
+		if previous != null:
+			previous.set_aimed(false)
+		var previous_source := _aimed as ElementSource
+		if previous_source != null:
+			previous_source.set_sight_aimed(false)
 	_aimed = aimed
 	var current := _aimed as MagicalLink
 	if current != null:
