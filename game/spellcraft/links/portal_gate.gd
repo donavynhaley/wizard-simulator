@@ -55,6 +55,9 @@ var _camera: Camera3D
 var _notifier: VisibleOnScreenNotifier3D
 var _cooldown := 0.0
 var _audio: AudioStreamPlayer3D
+## True when this door's lock was inherited from its partner rather than its own
+## ward, so it can be handed back when the binding ends.
+var _inherited_lock := false
 
 
 func _ready() -> void:
@@ -64,6 +67,7 @@ func _ready() -> void:
 	snap_to_frame()
 	if door != null and is_instance_valid(door):
 		door.open_state_changed.connect(_on_door_swung)
+		door.lock_state_changed.connect(_on_door_locked)
 
 
 ## The fixed doorway transform. A bound Door is reparented onto the imported
@@ -94,18 +98,57 @@ func _on_door_swung(is_door_open: bool) -> void:
 		far_gate.door.set_open(is_door_open)
 
 
-## Bring a freshly bound pair into agreement. Open wins: a portal you can walk
-## through is the point of building one. An arcane lock still refuses, and a
-## warded door simply stays shut until its ward is fed.
+## An arcane lock on one doorway is a lock on both: bind your door to a warded
+## one and you have warded your own. Only a lock the door did not already carry
+## counts as inherited, so a door with a ward of its own keeps it.
+func _on_door_locked(is_locked: bool) -> void:
+	if far_gate == null or not is_instance_valid(far_gate):
+		return
+	far_gate.follow_lock(is_locked)
+
+
+func follow_lock(locked: bool) -> void:
+	if door == null or not is_instance_valid(door):
+		return
+	if locked:
+		if not door.is_locked():
+			_inherited_lock = true
+			door.set_locked(true)
+	elif _inherited_lock:
+		_inherited_lock = false
+		# Loud: the partner's ward was fed, so this lock breaks with it.
+		door.set_locked(false)
+
+
+## Bring a freshly bound pair into agreement. The ward spreads first, because it
+## decides what the leaves are even allowed to do. Then the leaves: open wins
+## where it can, but where a lock refuses to open, the pair agrees on shut - two
+## leaves of one doorway are never left split.
 func agree_with_far() -> void:
 	if far_gate == null or not is_instance_valid(far_gate):
 		return
 	var theirs := far_gate.door
 	if door == null or theirs == null:
 		return
-	if door.is_open() or theirs.is_open():
-		door.set_open(true)
-		theirs.set_open(true)
+	if door.is_locked() or theirs.is_locked():
+		follow_lock(true)
+		far_gate.follow_lock(true)
+	var wanted := door.is_open() or theirs.is_open()
+	door.set_open(wanted)
+	theirs.set_open(wanted)
+	if door.is_open() != theirs.is_open():
+		door.set_open(false)
+		theirs.set_open(false)
+
+
+## Severing hands back a lock this door only inherited - quietly, since no ward
+## was fed to earn the swing. A door keeps a ward that was truly its own.
+func _exit_tree() -> void:
+	if not _inherited_lock:
+		return
+	_inherited_lock = false
+	if door != null and is_instance_valid(door):
+		door.set_locked(false, false)
 
 
 func _build_surface() -> void:

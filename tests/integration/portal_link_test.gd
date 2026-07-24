@@ -98,6 +98,15 @@ func _run() -> void:
 
 	var tower_frame := tower_door.get_parent() as Node3D
 
+	# The tower door is arcane-locked, and a ward on one doorway is a ward on
+	# both: binding to it has sealed the cottage door too.
+	_check(cottage_door.is_locked(),
+		"binding to a warded door wards the other door as well")
+	cottage_door.interact(player, cottage_door)
+	await create_timer(1.4).timeout
+	_check(not cottage_door.is_open(),
+		"the inherited ward refuses to let the cottage door open")
+
 	# A closed door is a closed portal.
 	_walk_into_doorway(player, cottage_gate, 1.0)
 	for _frame in 6:
@@ -105,11 +114,15 @@ func _run() -> void:
 	_check(player.global_position.distance_to(_doorway_point(cottage_gate)) < 3.0,
 		"a closed door carries nobody through")
 
-	# Open the cottage door and walk in: the far ROOM receives us, not the far
-	# doorstep. Two bound doorways are one doorway.
-	cottage_door.interact(player, cottage_door)
+	# Feed the ward the honest way - fire in the lantern - and BOTH locks break.
+	var lantern := level.get_node(
+		^"TowerArchitecture/GroundFloorProps/DoorLantern/MagicalFlame/FireSource") as ElementSource
+	lantern.restore(lantern.global_position + Vector3.UP * 0.5)
 	await create_timer(1.4).timeout
-	_check(cottage_door.is_open(), "the cottage door opens")
+	_check(not tower_door.is_locked() and not cottage_door.is_locked(),
+		"feeding the ward frees both bound doors")
+	_check(tower_door.is_open() and cottage_door.is_open(),
+		"breaking the ward swings both doors open")
 	_walk_into_doorway(player, cottage_gate, 1.0)
 	for _frame in 8:
 		await physics_frame
@@ -134,13 +147,6 @@ func _run() -> void:
 		await physics_frame
 	_check(player.is_on_floor(), "the traveller lands on solid ground")
 
-	# Back the other way. The tower door is arcane-locked, so feed the ward the
-	# honest way - fire in the lantern - and it swings itself open.
-	var lantern := level.get_node(
-		^"TowerArchitecture/GroundFloorProps/DoorLantern/MagicalFlame/FireSource") as ElementSource
-	lantern.restore(lantern.global_position + Vector3.UP * 0.5)
-	await create_timer(1.4).timeout
-	_check(tower_door.is_open(), "feeding the ward opens the tower door")
 	# Leaving the tower through its own door puts us OUTSIDE the cottage - the
 	# crossing is reversible, and direction is what decides which side you land.
 	_walk_into_doorway(player, tower_gate, -1.0)
@@ -152,8 +158,6 @@ func _run() -> void:
 		"the return arrives just outside the cottage doorway")
 
 	# One doorway, one leaf: with the ward fed, neither door moves alone.
-	_check(cottage_door.is_open(),
-		"the ward breaking open the tower door opens the bound cottage door too")
 	cottage_door.interact(player, cottage_door)
 	await create_timer(1.4).timeout
 	_check(not cottage_door.is_open() and not tower_door.is_open(),
@@ -179,7 +183,15 @@ func _run() -> void:
 	cottage_gate = link.get_node_or_null(^"GateA") as PortalGate
 	tower_gate = link.get_node_or_null(^"GateB") as PortalGate
 
-	# Severing takes the portal with it - the doors are only doors again.
+	# Re-seal the ward by taking its fire back: the tower door locks, and the
+	# bound cottage door inherits that lock.
+	lantern.consume(player.global_position + Vector3.UP)
+	await create_timer(0.9).timeout
+	_check(tower_door.is_locked() and cottage_door.is_locked(),
+		"re-sealing the ward wards both bound doors again")
+
+	# Severing takes the portal with it - the doors are only doors again, and the
+	# cottage hands back a lock it only ever inherited.
 	link.sever()
 	await process_frame
 	await process_frame
@@ -187,6 +199,10 @@ func _run() -> void:
 		"severing frees the cottage gate")
 	_check(not is_instance_valid(tower_gate) or tower_gate.is_queued_for_deletion(),
 		"severing frees the tower gate")
+	_check(not cottage_door.is_locked(),
+		"severing hands back the lock the cottage door only inherited")
+	_check(tower_door.is_locked(),
+		"the tower keeps the ward that was truly its own")
 	var parked := _doorway_point_from_door(cottage_door)
 	player.global_position = parked
 	player.velocity = Vector3.ZERO

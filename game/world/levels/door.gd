@@ -4,6 +4,9 @@ extends AnimatableBody3D
 ## Emitted whenever the door actually swings, so anything bound to it can follow
 ## (a portal's far leaf moves with this one - the two are one doorway).
 signal open_state_changed(is_open: bool)
+## Emitted when an arcane lock takes or releases this door, so a bound partner
+## can be warded and freed along with it.
+signal lock_state_changed(is_locked: bool)
 
 const LOCK_BREAK_STREAM := preload("res://assets/sounds/siphon_rip.wav")
 
@@ -50,11 +53,18 @@ func _ensure_link_anchor() -> void:
 ## An arcane lock holds the door shut. A magical link drives this: while the
 ## lock is active the door will not budge; when the link releases it (its power
 ## restored), the lock breaks audibly and the door swings itself open.
-func set_locked(locked: bool) -> void:
+## Take or release the lock. Releasing normally breaks it audibly and swings the
+## door - that is the ward's payoff. A lock a door only inherited from a binding
+## is handed back quietly instead (break_open false), since nothing was fed and
+## nothing was earned.
+func set_locked(locked: bool, break_open: bool = true) -> void:
 	if _locked == locked:
 		return
 	_locked = locked
-	if not locked and _is_bound and not _is_open:
+	# Announced before any swing: a partner must be freed before it is asked to
+	# open, or its own lock would refuse the swing.
+	lock_state_changed.emit(_locked)
+	if not locked and break_open and _is_bound and not _is_open:
 		set_open(true)
 		_play_lock_break()
 
