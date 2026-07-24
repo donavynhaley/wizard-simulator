@@ -100,9 +100,6 @@ func set_bookmarks(names: Array[String], active_index: int) -> void:
 		_bookmark_column.add_child(tab)
 	_bookmark_column.visible = not names.is_empty()
 	_update_render_mode()
-	if render_target_update_mode == SubViewport.UPDATE_DISABLED:
-		return
-	render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
 ## Resolves a normalized spread coordinate against the visible bookmark tabs.

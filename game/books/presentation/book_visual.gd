@@ -96,6 +96,9 @@ var _page_progress_ratio: float = 0.5
 var _settled_page_progress_ratio: float = 0.5
 var _turn_start_page_progress_ratio: float = 0.5
 var _turn_target_page_progress_ratio: float = 0.5
+var _built_stack_ratio := -1.0
+var _built_stack_open := -1.0
+var _scene_valid := false
 
 
 func _ready() -> void:
@@ -121,6 +124,17 @@ func _ready() -> void:
 	_open_audio = get_node_or_null(open_audio_path) as AudioStreamPlayer3D
 	_close_audio = get_node_or_null(close_audio_path) as AudioStreamPlayer3D
 	_page_audio = get_node_or_null(page_audio_path) as AudioStreamPlayer3D
+	var required := {
+		"visual root": _visual_root, "motion root": _motion_root,
+		"page surface": _page_surface, "world pose": _world_pose,
+		"held pose": _held_pose, "reading pose": _reading_pose,
+		"close-focus pose": _close_focus_pose, "table pose": _table_pose,
+	}
+	for label: String in required:
+		if required[label] == null:
+			push_error("BookVisual: missing required %s node; check the scene's exported paths." % label)
+			return
+	_scene_valid = true
 	_create_materials()
 	apply_profile(_profile)
 	show_world_closed()
@@ -137,7 +151,7 @@ func _process(_delta: float) -> void:
 
 func apply_profile(profile: BookVisualProfile) -> void:
 	_profile = profile if profile != null else default_profile
-	if not is_node_ready() or _profile == null:
+	if not is_node_ready() or _profile == null or not _scene_valid:
 		return
 	_replace_model(
 		_closed_model_socket,
@@ -521,6 +535,21 @@ func _rebuild_resting_page_geometry() -> void:
 	_right_page.mesh = _build_resting_page_mesh(1)
 	_left_page.material_override = _page_material
 	_right_page.material_override = _right_page_material
+	_configure_page_stacks(true)
+
+
+const STACK_REBUILD_EPSILON := 0.0015
+
+## Stack meshes depend only on the page ratio and open amount. A turn tween
+## moves the ratio by ~1/page_count in total, so unquantized per-tick rebuilds
+## regenerated near-identical stack geometry dozens of times per page turn.
+func _configure_page_stacks(force := false) -> void:
+	if not force \
+			and absf(_page_progress_ratio - _built_stack_ratio) < STACK_REBUILD_EPSILON \
+			and absf(_book_open_amount - _built_stack_open) < STACK_REBUILD_EPSILON:
+		return
+	_built_stack_ratio = _page_progress_ratio
+	_built_stack_open = _book_open_amount
 	_configure_page_stack(_left_page_stack, -1)
 	_configure_page_stack(_right_page_stack, 1)
 
@@ -530,8 +559,7 @@ func _apply_page_progress_ratio(progress_ratio: float) -> void:
 	if is_node_ready() and _profile != null:
 		# The readable sheets stay on one stable plane. Only the page blocks
 		# underneath them change depth as paper transfers between sides.
-		_configure_page_stack(_left_page_stack, -1)
-		_configure_page_stack(_right_page_stack, 1)
+		_configure_page_stacks()
 
 
 func _build_resting_page_mesh(side: int) -> ArrayMesh:

@@ -6,11 +6,7 @@ extends Item
 
 signal page_changed(spread_index: int)
 signal page_turn_started(from_spread: int, to_spread: int)
-signal page_turn_finished(spread_index: int)
-signal held_hint_changed(hint: String)
-signal reading_started(book: Book)
 signal reading_finished(book: Book)
-signal close_focus_changed(enabled: bool)
 
 @export var book_data: BookData:
 	set(value):
@@ -64,13 +60,6 @@ func get_display_name() -> String:
 	return book_data.get_display_name() if book_data != null else "Untitled Book"
 
 
-func get_held_hint() -> String:
-	if _is_reading:
-		return "%s  [A/D or Arrows pages / hold RMB focus / LMB close / G drop]" \
-			% get_display_name()
-	return "%s  [LMB read / G drop]" % get_display_name()
-
-
 func get_held_pose() -> Dictionary:
 	return {
 		"position": held_position,
@@ -81,10 +70,6 @@ func get_held_pose() -> Dictionary:
 
 func is_reading() -> bool:
 	return _is_reading
-
-
-func get_reading_hand_grips() -> Array[Transform3D]:
-	return _visual.get_hand_grip_transforms() if _visual != null else []
 
 
 func set_held(value: bool) -> void:
@@ -104,7 +89,6 @@ func set_held(value: bool) -> void:
 		_cancel_page_turn()
 		_set_physics_active(true)
 	_refresh_visual_state()
-	_emit_held_hint_changed()
 	if was_reading and not _is_reading:
 		reading_finished.emit(self)
 
@@ -240,8 +224,6 @@ func _open_reading() -> void:
 	_is_reading = true
 	_update_page_content()
 	_refresh_visual_state()
-	_emit_held_hint_changed()
-	reading_started.emit(self)
 
 
 func _close_reading() -> void:
@@ -256,7 +238,6 @@ func _close_reading() -> void:
 		_visual.close_held()
 	else:
 		_refresh_visual_state()
-	_emit_held_hint_changed()
 	reading_finished.emit(self)
 
 
@@ -264,7 +245,6 @@ func _set_close_focus(enabled: bool) -> void:
 	if _visual == null or _visual.is_close_focused() == enabled:
 		return
 	_visual.set_close_focus(enabled)
-	close_focus_changed.emit(enabled)
 
 
 func _previous_page_pressed(event: InputEvent) -> bool:
@@ -370,7 +350,6 @@ func _on_page_turn_finished() -> void:
 	_page_turning = false
 	if _page_renderer != null:
 		_page_renderer.set_rune_playback_enabled(true)
-	page_turn_finished.emit(current_page)
 
 
 func _cancel_page_turn() -> void:
@@ -412,7 +391,3 @@ func _set_physics_active(active: bool) -> void:
 	collision_layer = active_collision_layer if active or _is_stationed or not _is_held else 0
 	collision_mask = active_collision_mask if active or _is_stationed or not _is_held else 0
 
-
-func _emit_held_hint_changed() -> void:
-	if _is_held:
-		held_hint_changed.emit(get_held_hint())

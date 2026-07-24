@@ -11,11 +11,6 @@ var _recognized_by_category: Dictionary = {}
 var _quality_by_category: Dictionary = {}
 
 
-func reset_recognition() -> void:
-	_recognized_by_category.clear()
-	_quality_by_category.clear()
-
-
 func save_strokes(strokes: Array[PackedVector2Array]) -> void:
 	saved_strokes = duplicate_strokes(strokes)
 
